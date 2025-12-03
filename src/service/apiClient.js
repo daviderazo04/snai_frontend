@@ -1,4 +1,4 @@
-// src/api/apiClient.ts
+// src/api/apiClient.js
 import axios from 'axios';
 
 export const BACK_URL = 'https://snaibackend-production.up.railway.app';
