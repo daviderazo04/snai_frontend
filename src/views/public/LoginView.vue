@@ -7,6 +7,7 @@
       </div>
 
       <form @submit.prevent="handleLogin">
+        <!-- Input Correo -->
         <div class="input-group">
           <span class="input-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
@@ -20,6 +21,7 @@
           />
         </div>
 
+        <!-- Input Contraseña -->
         <div class="input-group">
           <span class="input-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
@@ -36,6 +38,7 @@
         <button type="submit" class="submit-btn">Entrar</button>
       </form>
 
+      <!-- Mensaje de Error -->
       <div v-if="error" class="error-banner">
         <span>{{ error }}</span>
       </div>
@@ -50,7 +53,7 @@
 
 <script>
 import { ref, reactive } from "vue";
-import { login, getProfile } from "../../service/auth.service.js";
+import { login } from "../../service/auth.service.js";
 import { useRouter } from "vue-router";
 
 export default {
@@ -70,23 +73,25 @@ export default {
           return;
         }
 
-        // 1️⃣ Guardar token
-        const token = response.data.data.accessToken;
-        localStorage.setItem("snai_token", token);
+        // --- LÓGICA CORREGIDA SEGÚN DTO ---
+        const { accessToken, user, posiblesPerfiles } = response.data.data;
 
-        // 2️⃣ Guardar usuario y perfiles
-        const user = response.data.data.user;
-        const perfiles = response.data.data.posiblesPerfiles;
+        // 1. Guardar Token (Persistente)
+        localStorage.setItem("snai_token", accessToken);
 
-        sessionStorage.setItem("snai_user", JSON.stringify(user));
-        sessionStorage.setItem("snai_posibles_perfiles", JSON.stringify(perfiles));
+        // 2. Guardar Usuario (Persistente para que se vea el nombre siempre)
+        // Guardamos el objeto entero: { id, nombre, apellido, correo... }
+        localStorage.setItem("snai_user", JSON.stringify(user));
 
-        // 3️⃣ Redirigir dependiendo de si tiene 1 o más perfiles
+        // 3. Guardar Perfiles (Temporal para la selección)
+        sessionStorage.setItem("snai_posibles_perfiles", JSON.stringify(posiblesPerfiles));
+
+        // 4. Redirigir al selector (Launchpad)
         router.push("/app/perfiles");
 
       } catch (err) {
         console.error(err);
-        error.value = "Error de conexión";
+        error.value = "Error de conexión con el servidor";
       }
     };
 
@@ -95,11 +100,10 @@ export default {
 };
 </script>
 
-
 <style scoped>
 /* ESTILOS GLOBALES DENTRO DEL COMPONENTE */
 * {
-  box-sizing: border-box; /* ESTO ARREGLA EL DESCUADRE */
+  box-sizing: border-box;
 }
 
 .auth-page {
