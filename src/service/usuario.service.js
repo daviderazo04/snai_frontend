@@ -2,12 +2,14 @@
 import { api } from './apiClient';
 
 /**
- * Asignar un perfil a un usuario
- * @param {PerfilAsignarPayload} payload
+ * Asignar perfiles a un usuario
+ * POST /usuario/:id/perfil
+ * @param {number} id
+ * @param {PerfilAsignarPayload} payload  // { perfiles: number[] }
  * @returns {Promise<import('./snai-dtos').ResultWithData<any>>}
  */
-export function asignarPerfil(payload) {
-  return api.post('/usuario/perfil', payload);
+export function asignarPerfil(id, payload) {
+  return api.post(`/usuario/${id}/perfil`, payload);
 }
 
 /**

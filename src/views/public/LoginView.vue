@@ -7,15 +7,24 @@
       </div>
 
       <form @submit.prevent="handleLogin">
-        <!-- Input Correo -->
+        <!-- Input Cédula -->
         <div class="input-group">
           <span class="input-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+            <!-- Icono de usuario/documento (puedes dejar el de correo si quieres) -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
           </span>
+
           <input
-            v-model="form.correo"
-            type="email"
-            placeholder="Correo electrónico"
+            v-model="form.cedula"
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]{10}"
+            maxlength="10"
+            placeholder="Número de cédula"
             required
             class="styled-input"
           />
@@ -24,8 +33,13 @@
         <!-- Input Contraseña -->
         <div class="input-group">
           <span class="input-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
           </span>
+
           <input
             v-model="form.password"
             type="password"
@@ -59,36 +73,31 @@ import { useRouter } from "vue-router";
 export default {
   setup() {
     const router = useRouter();
-    const form = reactive({ correo: "", password: "" });
+    const form = reactive({ cedula: "", password: "" });
     const error = ref("");
 
     const handleLogin = async () => {
       error.value = "";
 
       try {
-        const response = await login(form);
+        // Enviar { cedula, password }
+        const response = await login({
+          cedula: String(form.cedula).trim(),
+          password: form.password,
+        });
 
         if (!response.data?.success) {
-          error.value = "Credenciales incorrectas";
+          error.value = response.data?.message || "Credenciales incorrectas";
           return;
         }
 
-        // --- LÓGICA CORREGIDA SEGÚN DTO ---
         const { accessToken, user, posiblesPerfiles } = response.data.data;
 
-        // 1. Guardar Token (Persistente)
         localStorage.setItem("snai_token", accessToken);
-
-        // 2. Guardar Usuario (Persistente para que se vea el nombre siempre)
-        // Guardamos el objeto entero: { id, nombre, apellido, correo... }
         localStorage.setItem("snai_user", JSON.stringify(user));
-
-        // 3. Guardar Perfiles (Temporal para la selección)
         sessionStorage.setItem("snai_posibles_perfiles", JSON.stringify(posiblesPerfiles));
 
-        // 4. Redirigir al selector (Launchpad)
         router.push("/app/perfiles");
-
       } catch (err) {
         console.error(err);
         error.value = "Error de conexión con el servidor";
@@ -101,10 +110,7 @@ export default {
 </script>
 
 <style scoped>
-/* ESTILOS GLOBALES DENTRO DEL COMPONENTE */
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 .auth-page {
   display: flex;
@@ -154,7 +160,7 @@ export default {
 
 .styled-input {
   width: 100%;
-  padding: 12px 15px 12px 40px; /* Espacio para el icono */
+  padding: 12px 15px 12px 40px;
   border: 1px solid #ddd;
   border-radius: 8px;
   font-size: 1rem;
@@ -183,9 +189,7 @@ export default {
   transition: transform 0.2s;
 }
 
-.submit-btn:hover {
-  transform: scale(1.02);
-}
+.submit-btn:hover { transform: scale(1.02); }
 
 .error-banner {
   margin-top: 15px;
