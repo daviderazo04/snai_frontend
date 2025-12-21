@@ -13,6 +13,8 @@ import ProvinciasView from "../views/private/provincia/index.vue";
 import ProvinciaDetalle from "../views/private/provincia/[id]/index.vue";
 import CantonesView from "../views/private/cantones/index.vue";
 import CantonDetalle from "../views/private/cantones/[id]/index.vue";
+import CaisView from "../views/private/cai/index.vue";
+import CaiDetalle from "../views/private/cai/[id]/index.vue";
 
 // Formularios (privados)
 import DashboardView from "../views/formularios/DashboardView.vue";
@@ -80,6 +82,16 @@ const routes = [
         path: "cantones/:id",
         name: "cantonDetalle",
         component: CantonDetalle,
+      },
+      {
+        path: "cai",
+        name: "cai",
+        component: CaisView,
+      },
+      {
+        path: "cai/:id",
+        name: "caiDetalle",
+        component: CaiDetalle,
       },
 
       // Formularios privados
