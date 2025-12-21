@@ -5,6 +5,7 @@
         <thead>
           <tr>
             <th>ID</th>
+            <th>Canton</th>
             <th>Provincia</th>
             <th>Acciones</th>
           </tr>
@@ -16,6 +17,11 @@
               <div class="name-cell">
                 <span class="name">{{ item.nombre }}</span>
               </div>
+            </td>
+            <td>
+              <span class="provincia">
+                {{ item.provinciaNombre ? item.provinciaNombre : item.provinciaId || "-" }}
+              </span>
             </td>
             <td>
               <div class="actions">
@@ -32,10 +38,10 @@
             </td>
           </tr>
           <tr v-if="items.length === 0">
-            <td colspan="3">
+            <td colspan="4">
               <div class="empty">
                 <strong>Sin resultados</strong>
-                <span>Prueba ajustar el filtro o crear una provincia nueva.</span>
+                <span>Prueba ajustar el filtro o crear un canton nuevo.</span>
               </div>
             </td>
           </tr>
@@ -72,7 +78,7 @@ export default {
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 520px;
+  min-width: 640px;
 }
 
 th,
@@ -93,21 +99,25 @@ tbody tr {
   border-top: 1px solid #e2e8f0;
 }
 
+.id-cell {
+  color: #475569;
+  font-weight: 600;
+}
+
 .name-cell {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.id-cell {
-  color: #475569;
-  font-weight: 600;
-}
-
 .name {
   font-weight: 600;
 }
 
+.provincia {
+  font-size: 0.9rem;
+  color: #475569;
+}
 
 .actions {
   display: flex;
@@ -140,7 +150,6 @@ tbody tr {
   background: rgba(239, 68, 68, 0.2);
   transform: translateY(-1px);
 }
-
 
 .empty {
   display: flex;

@@ -4,35 +4,23 @@
       Volver a provincias
     </button>
 
-    <section class="detail-hero" v-if="provincia">
+    <section class="detail-hero">
       <div class="hero-content">
         <p class="eyebrow">Provincia</p>
-        <h1>{{ provincia.nombre }}</h1>
+        <h1>{{ provinciaInfo.nombre }}</h1>
         <p class="subtitle">
-          Detalle operativo para el catalogo de {{ provincia.nombre }}.
+          Detalle operativo para el catalogo de {{ provinciaInfo.nombre }}.
         </p>
       </div>
       <div class="hero-cards">
         <div class="info-card">
-          <span class="label">Codigo</span>
-          <strong>{{ provincia.codigo }}</strong>
-        </div>
-        <div class="info-card">
-          <span class="label">Region</span>
-          <strong>{{ provincia.region }}</strong>
-        </div>
-        <div class="info-card">
-          <span class="label">Capital</span>
-          <strong>{{ provincia.capital }}</strong>
-        </div>
-        <div class="info-card">
-          <span class="label">Estado</span>
-          <strong>{{ provincia.estado === "activa" ? "Activa" : "Inactiva" }}</strong>
+          <span class="label">ID</span>
+          <strong>#{{ provinciaInfo.id }}</strong>
         </div>
       </div>
     </section>
 
-    <section class="cantones" v-if="provincia">
+    <section class="cantones">
       <div class="section-header">
         <div>
           <h2>Cantones</h2>
@@ -40,101 +28,140 @@
         </div>
         <span class="counter">{{ cantones.length }} cantones</span>
       </div>
+      <div v-if="isLoading" class="status">Cargando cantones...</div>
+      <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
       <div class="cantones-grid">
-        <div v-for="canton in cantones" :key="canton" class="canton-card">
-          <span>{{ canton }}</span>
-          <span class="tag">Activo</span>
+        <div v-for="canton in cantones" :key="canton.id" class="canton-card">
+          <div class="canton-main">
+            <span class="canton-name">{{ canton.nombre }}</span>
+            <span class="canton-id">ID {{ canton.id }}</span>
+          </div>
+          <span class="tag">
+            {{
+              canton.provinciaNombre
+                ? canton.provinciaNombre
+                : canton.provinciaId
+                ? `Prov ${canton.provinciaId}`
+                : "Prov -"
+            }}
+          </span>
         </div>
       </div>
-    </section>
-
-    <section class="empty" v-else>
-      <h2>Provincia no encontrada</h2>
-      <p>Revisa el identificador o vuelve al listado principal.</p>
     </section>
   </div>
 </template>
 
 <script>
-import { computed } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { getCantones } from "../../../../service/cantones.service.js";
+import { getProvincias } from "../../../../service/provincias.service.js";
 
-const provincias = [
-  {
-    id: 1,
-    nombre: "Azuay",
-    codigo: "AZU",
-    region: "Sierra",
-    capital: "Cuenca",
-    estado: "activa",
-    cantones: ["Cuenca", "Gualaceo", "Paute", "Sigsig", "Nabon"],
-  },
-  {
-    id: 2,
-    nombre: "Bolivar",
-    codigo: "BOL",
-    region: "Sierra",
-    capital: "Guaranda",
-    estado: "activa",
-    cantones: ["Guaranda", "Chimbo", "San Miguel", "Echeandia"],
-  },
-  {
-    id: 3,
-    nombre: "Guayas",
-    codigo: "GYE",
-    region: "Costa",
-    capital: "Guayaquil",
-    estado: "activa",
-    cantones: ["Guayaquil", "Samborondon", "Daule", "Milagro", "Duran"],
-  },
-  {
-    id: 4,
-    nombre: "Manabi",
-    codigo: "MAB",
-    region: "Costa",
-    capital: "Portoviejo",
-    estado: "activa",
-    cantones: ["Portoviejo", "Manta", "Chone", "Jipijapa", "Pedernales"],
-  },
-  {
-    id: 5,
-    nombre: "Pichincha",
-    codigo: "PIC",
-    region: "Sierra",
-    capital: "Quito",
-    estado: "activa",
-    cantones: ["Quito", "Cayambe", "Mejia", "Ruminahui"],
-  },
-  {
-    id: 6,
-    nombre: "Orellana",
-    codigo: "ORE",
-    region: "Amazonia",
-    capital: "Francisco de Orellana",
-    estado: "activa",
-    cantones: ["Orellana", "Aguarico", "La Joya", "Loreto"],
-  },
-];
+const resolveList = (response) => {
+  const payload = response?.data?.data ?? response?.data;
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.rows)) return payload.rows;
+  if (Array.isArray(payload?.provincias)) return payload.provincias;
+  return [];
+};
+
+const mapCanton = (item) => {
+  const rawId = item?.id ?? item?.cantonId ?? item?.idCanton;
+  const rawProvinciaId = item?.provinciaId ?? item?.idProvincia ?? item?.provincia?.id;
+  return {
+    id: Number.isNaN(Number(rawId)) ? rawId : Number(rawId),
+    nombre: item?.nombre ?? item?.name ?? item?.canton ?? "",
+    provinciaId: Number.isNaN(Number(rawProvinciaId)) ? rawProvinciaId : Number(rawProvinciaId),
+    provinciaNombre: item?.provincia?.nombre ?? item?.provinciaNombre ?? "",
+  };
+};
 
 export default {
   setup() {
     const route = useRoute();
     const router = useRouter();
     const provinciaId = computed(() => Number(route.params.id));
+    const provinciaNombre = ref("");
+    const cantones = ref([]);
+    const isLoading = ref(false);
+    const errorMessage = ref("");
 
-    const provincia = computed(() =>
-      provincias.find((item) => item.id === provinciaId.value)
-    );
+    const provinciaInfo = computed(() => {
+      const id = provinciaId.value;
+      const nombre = provinciaNombre.value
+        ? provinciaNombre.value
+        : id
+        ? `Provincia #${id}`
+        : "Provincia";
+      return { id, nombre };
+    });
 
-    const cantones = computed(() => (provincia.value ? provincia.value.cantones : []));
+    const loadProvincia = async () => {
+      try {
+        const res = await getProvincias();
+        if (res.data?.success === false) {
+          provinciaNombre.value = "";
+          return;
+        }
+        const list = resolveList(res);
+        const match = list.find((item) => Number(item?.id) === provinciaId.value);
+        provinciaNombre.value = match?.nombre ?? match?.name ?? match?.provincia ?? "";
+      } catch (err) {
+        console.error("Error cargando provincia:", err);
+        provinciaNombre.value = "";
+      }
+    };
+
+    const loadCantones = async () => {
+      isLoading.value = true;
+      errorMessage.value = "";
+      try {
+        const res = await getCantones({ provinciaId: provinciaId.value });
+        if (res.data?.success === false) {
+          errorMessage.value = res.data?.message || "No se pudo cargar cantones.";
+          cantones.value = [];
+          return;
+        }
+        const list = resolveList(res);
+        const mapped = list.map(mapCanton).filter((item) => item.nombre);
+        const idValue = Number(provinciaId.value);
+        cantones.value = mapped.filter((item) => {
+          if (!idValue) return true;
+          return Number(item.provinciaId) === idValue;
+        });
+        if (!provinciaNombre.value && cantones.value.length) {
+          provinciaNombre.value = cantones.value[0].provinciaNombre;
+        }
+      } catch (err) {
+        console.error("Error cargando cantones:", err);
+        errorMessage.value = "Error de conexion con el servidor.";
+        cantones.value = [];
+      } finally {
+        isLoading.value = false;
+      }
+    };
 
     const goBack = () => {
       router.push("/app/provincias");
     };
 
+    watch(provinciaId, () => {
+      loadProvincia();
+      loadCantones();
+    });
+
+    onMounted(() => {
+      loadProvincia();
+      loadCantones();
+    });
+
     return {
-      provincia,
+      provinciaInfo,
       cantones,
+      isLoading,
+      errorMessage,
       goBack,
     };
   },
@@ -265,6 +292,22 @@ export default {
   background: #f8fafc;
 }
 
+.canton-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.canton-name {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.canton-id {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
 .tag {
   background: rgba(34, 197, 94, 0.12);
   color: #15803d;
@@ -280,6 +323,20 @@ export default {
   border-radius: 18px;
   border: 1px solid #e2e8f0;
   color: #475569;
+}
+
+.status {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.92rem;
+  margin-bottom: 12px;
+}
+
+.status.error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
 }
 
 @media (max-width: 640px) {

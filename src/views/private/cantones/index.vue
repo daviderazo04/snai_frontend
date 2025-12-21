@@ -1,19 +1,18 @@
 <template>
-  <div class="provincias-page">
+  <div class="cantones-page">
     <section class="hero">
       <div class="hero-main">
         <p class="eyebrow">Catalogos</p>
-        <h1>Provincias</h1>
+        <h1>Cantones</h1>
         <p class="subtitle">
-          Controla la informacion territorial y prepara el catalogo para la
-          integracion con los servicios.
+          Gestiona el catalogo de cantones para las provincias registradas.
         </p>
       </div>
       <div class="hero-stats">
         <div class="stat-card">
           <span class="label">Total</span>
-          <strong>{{ totalProvincias }}</strong>
-          <span class="hint">Provincias registradas</span>
+          <strong>{{ totalCantones }}</strong>
+          <span class="hint">Cantones registrados</span>
         </div>
         <div class="stat-card">
           <span class="label">Visibles</span>
@@ -29,24 +28,27 @@
     </section>
 
     <section class="panel">
-      <ProvinciaToolbar
+      <CantonToolbar
         :search="search"
+        :province-id="selectedProvinceId"
+        :provincias="provincias"
         :total="filteredCount"
         @update:search="search = $event"
+        @update:province="selectedProvinceId = $event"
         @create="openCreate"
       />
 
-      <div v-if="isLoading" class="status">Cargando provincias...</div>
+      <div v-if="isLoading" class="status">Cargando cantones...</div>
       <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
 
-      <ProvinciaTable
-        :items="pagedProvincias"
+      <CantonTable
+        :items="pagedCantones"
         @view="goToDetail"
         @edit="openEdit"
-        @remove="removeProvincia"
+        @remove="removeCanton"
       />
 
-      <ProvinciaPagination
+      <CantonPagination
         :current-page="currentPage"
         :total-pages="totalPages"
         :page-size="pageSize"
@@ -55,13 +57,14 @@
       />
     </section>
 
-    <ProvinciaFormModal
+    <CantonFormModal
       :open="modalOpen"
       :mode="modalMode"
       :initial-data="modalInitial"
+      :provincias="provincias"
       :saving="isSaving"
       @close="closeModal"
-      @save="saveProvincia"
+      @save="saveCanton"
     />
   </div>
 </template>
@@ -70,24 +73,16 @@
 import { ref, computed, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import {
-  getProvincias,
-  createProvincia,
-  updateProvincia,
-  deleteProvincia,
-} from "../../../service/provincias.service.js";
-import ProvinciaToolbar from "./components/ProvinciaToolbar.vue";
-import ProvinciaTable from "./components/ProvinciaTable.vue";
-import ProvinciaPagination from "./components/ProvinciaPagination.vue";
-import ProvinciaFormModal from "./components/ProvinciaFormModal.vue";
-
-const mapProvincia = (item) => {
-  const rawId = item?.id ?? item?.provinciaId ?? item?.idProvincia;
-  const numericId = Number(rawId);
-  return {
-    id: Number.isNaN(numericId) ? rawId : numericId,
-    nombre: item?.nombre ?? item?.name ?? item?.provincia ?? "",
-  };
-};
+  getCantones,
+  createCanton,
+  updateCanton,
+  deleteCanton,
+} from "../../../service/cantones.service.js";
+import { getProvincias } from "../../../service/provincias.service.js";
+import CantonToolbar from "./components/CantonToolbar.vue";
+import CantonTable from "./components/CantonTable.vue";
+import CantonPagination from "./components/CantonPagination.vue";
+import CantonFormModal from "./components/CantonFormModal.vue";
 
 const resolveList = (response) => {
   const payload = response?.data?.data ?? response?.data;
@@ -95,25 +90,46 @@ const resolveList = (response) => {
   if (Array.isArray(payload?.data)) return payload.data;
   if (Array.isArray(payload?.items)) return payload.items;
   if (Array.isArray(payload?.rows)) return payload.rows;
-  if (Array.isArray(payload?.provincias)) return payload.provincias;
+  if (Array.isArray(payload?.cantones)) return payload.cantones;
   return [];
+};
+
+const mapCanton = (item) => {
+  const rawId = item?.id ?? item?.cantonId ?? item?.idCanton;
+  const rawProvinciaId = item?.provinciaId ?? item?.idProvincia ?? item?.provincia?.id;
+  return {
+    id: Number.isNaN(Number(rawId)) ? rawId : Number(rawId),
+    nombre: item?.nombre ?? item?.name ?? item?.canton ?? "",
+    provinciaId: Number.isNaN(Number(rawProvinciaId)) ? rawProvinciaId : Number(rawProvinciaId),
+    provinciaNombre: item?.provincia?.nombre ?? item?.provinciaNombre ?? "",
+  };
+};
+
+const mapProvincia = (item) => {
+  const rawId = item?.id ?? item?.provinciaId ?? item?.idProvincia;
+  return {
+    id: Number.isNaN(Number(rawId)) ? rawId : Number(rawId),
+    nombre: item?.nombre ?? item?.name ?? item?.provincia ?? "",
+  };
 };
 
 export default {
   components: {
-    ProvinciaToolbar,
-    ProvinciaTable,
-    ProvinciaPagination,
-    ProvinciaFormModal,
+    CantonToolbar,
+    CantonTable,
+    CantonPagination,
+    CantonFormModal,
   },
   setup() {
     const router = useRouter();
+    const cantones = ref([]);
     const provincias = ref([]);
     const isLoading = ref(false);
     const isSaving = ref(false);
     const errorMessage = ref("");
 
     const search = ref("");
+    const selectedProvinceId = ref("");
     const currentPage = ref(1);
     const pageSize = ref(6);
 
@@ -122,29 +138,33 @@ export default {
     const modalInitial = ref(null);
     const editingId = ref(null);
 
-    const filteredProvincias = computed(() => {
+    const filteredCantones = computed(() => {
       const term = search.value.trim().toLowerCase();
-      return provincias.value.filter((item) => {
-        if (!term) return true;
-        const haystack = `${item.nombre} ${item.id}`.toLowerCase();
-        return haystack.includes(term);
+      return cantones.value.filter((item) => {
+        const matchesTerm = term
+          ? (item.nombre || "").toLowerCase().includes(term)
+          : true;
+        const matchesProvince = selectedProvinceId.value
+          ? Number(item.provinciaId) === Number(selectedProvinceId.value)
+          : true;
+        return matchesTerm && matchesProvince;
       });
     });
 
-    const filteredCount = computed(() => filteredProvincias.value.length);
+    const filteredCount = computed(() => filteredCantones.value.length);
 
     const totalPages = computed(() => {
-      return Math.max(1, Math.ceil(filteredProvincias.value.length / pageSize.value));
+      return Math.max(1, Math.ceil(filteredCantones.value.length / pageSize.value));
     });
 
-    const pagedProvincias = computed(() => {
+    const pagedCantones = computed(() => {
       const start = (currentPage.value - 1) * pageSize.value;
-      return filteredProvincias.value.slice(start, start + pageSize.value);
+      return filteredCantones.value.slice(start, start + pageSize.value);
     });
 
-    const totalProvincias = computed(() => provincias.value.length);
+    const totalCantones = computed(() => cantones.value.length);
 
-    watch(search, () => {
+    watch([search, selectedProvinceId], () => {
       currentPage.value = 1;
     });
 
@@ -154,13 +174,31 @@ export default {
       }
     });
 
-    const loadProvincias = async () => {
+    const loadCantones = async () => {
       isLoading.value = true;
       errorMessage.value = "";
       try {
+        const res = await getCantones();
+        if (res.data?.success === false) {
+          errorMessage.value = res.data?.message || "No se pudo cargar cantones.";
+          cantones.value = [];
+          return;
+        }
+        const list = resolveList(res);
+        cantones.value = list.map(mapCanton).filter((item) => item.nombre);
+      } catch (err) {
+        console.error("Error cargando cantones:", err);
+        errorMessage.value = "Error de conexion con el servidor.";
+        cantones.value = [];
+      } finally {
+        isLoading.value = false;
+      }
+    };
+
+    const loadProvincias = async () => {
+      try {
         const res = await getProvincias();
         if (res.data?.success === false) {
-          errorMessage.value = res.data?.message || "No se pudo cargar provincias.";
           provincias.value = [];
           return;
         }
@@ -168,10 +206,7 @@ export default {
         provincias.value = list.map(mapProvincia).filter((item) => item.nombre);
       } catch (err) {
         console.error("Error cargando provincias:", err);
-        errorMessage.value = "Error de conexion con el servidor.";
         provincias.value = [];
-      } finally {
-        isLoading.value = false;
       }
     };
 
@@ -195,9 +230,10 @@ export default {
       editingId.value = null;
     };
 
-    const saveProvincia = async (payload) => {
+    const saveCanton = async (payload) => {
       const nombre = payload?.nombre ? String(payload.nombre).trim() : "";
-      if (!nombre) return;
+      const provinciaId = Number(payload?.provinciaId);
+      if (!nombre || !provinciaId) return;
       if (modalMode.value === "edit" && editingId.value === null) return;
 
       isSaving.value = true;
@@ -205,83 +241,88 @@ export default {
       try {
         const res =
           modalMode.value === "create"
-            ? await createProvincia({ nombre })
-            : await updateProvincia(editingId.value, { nombre });
+            ? await createCanton({ nombre, provinciaId })
+            : await updateCanton(editingId.value, { nombre, provinciaId });
         if (res.data?.success === false) {
-          errorMessage.value = res.data?.message || "No se pudo guardar la provincia.";
+          errorMessage.value = res.data?.message || "No se pudo guardar el canton.";
           return;
         }
         const saved = res.data?.data;
         if (modalMode.value === "create") {
           if (saved?.id) {
-            provincias.value = [...provincias.value, mapProvincia(saved)];
+            cantones.value = [...cantones.value, mapCanton(saved)];
           } else {
-            await loadProvincias();
+            await loadCantones();
           }
         } else if (editingId.value !== null) {
           if (saved?.id) {
-            provincias.value = provincias.value.map((item) =>
-              item.id === editingId.value ? mapProvincia(saved) : item
+            cantones.value = cantones.value.map((item) =>
+              item.id === editingId.value ? mapCanton(saved) : item
             );
           } else {
-            provincias.value = provincias.value.map((item) =>
-              item.id === editingId.value ? { ...item, nombre } : item
+            cantones.value = cantones.value.map((item) =>
+              item.id === editingId.value
+                ? { ...item, nombre, provinciaId }
+                : item
             );
           }
         }
         closeModal();
       } catch (err) {
-        console.error("Error guardando provincia:", err);
+        console.error("Error guardando canton:", err);
         errorMessage.value = "Error de conexion con el servidor.";
       } finally {
         isSaving.value = false;
       }
     };
 
-    const removeProvincia = async (item) => {
+    const removeCanton = async (item) => {
       const confirmed = window.confirm(
-        `Eliminar la provincia ${item.nombre}? Esta accion no se puede revertir.`
+        `Eliminar el canton ${item.nombre}? Esta accion no se puede revertir.`
       );
       if (!confirmed) return;
       errorMessage.value = "";
       try {
-        const res = await deleteProvincia(item.id);
+        const res = await deleteCanton(item.id);
         if (res.data?.success === false) {
-          errorMessage.value = res.data?.message || "No se pudo eliminar la provincia.";
+          errorMessage.value = res.data?.message || "No se pudo eliminar el canton.";
           return;
         }
-        provincias.value = provincias.value.filter((p) => p.id !== item.id);
+        cantones.value = cantones.value.filter((canton) => canton.id !== item.id);
       } catch (err) {
-        console.error("Error eliminando provincia:", err);
+        console.error("Error eliminando canton:", err);
         errorMessage.value = "Error de conexion con el servidor.";
       }
     };
 
     const goToDetail = (item) => {
-      router.push(`/app/provincias/${item.id}`);
+      router.push(`/app/cantones/${item.id}`);
     };
 
+    onMounted(loadCantones);
     onMounted(loadProvincias);
 
     return {
       search,
+      selectedProvinceId,
       currentPage,
       pageSize,
       totalPages,
-      pagedProvincias,
+      pagedCantones,
       filteredCount,
-      totalProvincias,
+      totalCantones,
       modalOpen,
       modalMode,
       modalInitial,
+      provincias,
       isLoading,
       isSaving,
       errorMessage,
       openCreate,
       openEdit,
       closeModal,
-      saveProvincia,
-      removeProvincia,
+      saveCanton,
+      removeCanton,
       goToDetail,
     };
   },
@@ -289,7 +330,7 @@ export default {
 </script>
 
 <style scoped>
-.provincias-page {
+.cantones-page {
   display: flex;
   flex-direction: column;
   gap: 24px;

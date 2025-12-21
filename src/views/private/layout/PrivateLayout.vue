@@ -37,6 +37,12 @@
           </span>
           Provincias
         </router-link>
+        <router-link to="/app/cantones" class="nav-item" active-class="active">
+          <span class="icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18"></path><path d="M3 12h18"></path><path d="M3 19h18"></path></svg>
+          </span>
+          Cantones
+        </router-link>
       </nav>
 
       <div class="sidebar-footer">
