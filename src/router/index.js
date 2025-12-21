@@ -15,6 +15,7 @@ import CantonesView from "../views/private/cantones/index.vue";
 import CantonDetalle from "../views/private/cantones/[id]/index.vue";
 import CaisView from "../views/private/cai/index.vue";
 import CaiDetalle from "../views/private/cai/[id]/index.vue";
+import EstadoCivilView from "../views/private/estado-civil/index.vue";
 
 // Formularios (privados)
 import DashboardView from "../views/formularios/DashboardView.vue";
@@ -92,6 +93,11 @@ const routes = [
         path: "cai/:id",
         name: "caiDetalle",
         component: CaiDetalle,
+      },
+      {
+        path: "estado-civil",
+        name: "estadoCivil",
+        component: EstadoCivilView,
       },
 
       // Formularios privados
