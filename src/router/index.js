@@ -9,6 +9,8 @@ import RegisterView from "../views/public/RegisterView.vue";
 import PrivateLayout from "../views/private/layout/PrivateLayout.vue";
 import HomeApp from "../views/private/HomeApp.vue";
 import Perfiles from "../views/private/perfiles.vue";
+import ProvinciasView from "../views/private/provincia/index.vue";
+import ProvinciaDetalle from "../views/private/provincia/[id]/index.vue";
 
 // Formularios (privados)
 import DashboardView from "../views/formularios/DashboardView.vue";
@@ -56,6 +58,16 @@ const routes = [
         path: "perfiles",
         name: "perfiles",
         component: Perfiles,
+      },
+      {
+        path: "provincias",
+        name: "provincias",
+        component: ProvinciasView,
+      },
+      {
+        path: "provincias/:id",
+        name: "provinciaDetalle",
+        component: ProvinciaDetalle,
       },
 
       // Formularios privados

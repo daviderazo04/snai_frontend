@@ -25,11 +25,17 @@
           </span>
           Mi Perfil
         </router-link>
-                <router-link to="/app/dashboard" class="nav-item" active-class="active">
+        <router-link to="/app/dashboard" class="nav-item" active-class="active">
           <span class="icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
           </span>
           Dashboard
+        </router-link>
+        <router-link to="/app/provincias" class="nav-item" active-class="active">
+          <span class="icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"></circle><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"></path></svg>
+          </span>
+          Provincias
         </router-link>
       </nav>
 
