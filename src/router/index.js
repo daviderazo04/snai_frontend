@@ -9,6 +9,13 @@ import RegisterView from "../views/public/RegisterView.vue";
 import PrivateLayout from "../views/private/layout/PrivateLayout.vue";
 import HomeApp from "../views/private/HomeApp.vue";
 import Perfiles from "../views/private/perfiles.vue";
+import ProvinciasView from "../views/private/provincia/index.vue";
+import ProvinciaDetalle from "../views/private/provincia/[id]/index.vue";
+import CantonesView from "../views/private/cantones/index.vue";
+import CantonDetalle from "../views/private/cantones/[id]/index.vue";
+import CaisView from "../views/private/cai/index.vue";
+import CaiDetalle from "../views/private/cai/[id]/index.vue";
+import EstadoCivilView from "../views/private/estado-civil/index.vue";
 
 // Formularios (privados)
 import DashboardView from "../views/formularios/DashboardView.vue";
@@ -56,6 +63,41 @@ const routes = [
         path: "perfiles",
         name: "perfiles",
         component: Perfiles,
+      },
+      {
+        path: "provincias",
+        name: "provincias",
+        component: ProvinciasView,
+      },
+      {
+        path: "provincias/:id",
+        name: "provinciaDetalle",
+        component: ProvinciaDetalle,
+      },
+      {
+        path: "cantones",
+        name: "cantones",
+        component: CantonesView,
+      },
+      {
+        path: "cantones/:id",
+        name: "cantonDetalle",
+        component: CantonDetalle,
+      },
+      {
+        path: "cai",
+        name: "cai",
+        component: CaisView,
+      },
+      {
+        path: "cai/:id",
+        name: "caiDetalle",
+        component: CaiDetalle,
+      },
+      {
+        path: "estado-civil",
+        name: "estadoCivil",
+        component: EstadoCivilView,
       },
 
       // Formularios privados

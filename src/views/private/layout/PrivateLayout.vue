@@ -25,11 +25,35 @@
           </span>
           Mi Perfil
         </router-link>
-                <router-link to="/app/dashboard" class="nav-item" active-class="active">
+        <router-link to="/app/dashboard" class="nav-item" active-class="active">
           <span class="icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
           </span>
           Dashboard
+        </router-link>
+        <router-link to="/app/provincias" class="nav-item" active-class="active">
+          <span class="icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"></circle><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"></path></svg>
+          </span>
+          Provincias
+        </router-link>
+        <router-link to="/app/cantones" class="nav-item" active-class="active">
+          <span class="icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18"></path><path d="M3 12h18"></path><path d="M3 19h18"></path></svg>
+          </span>
+          Cantones
+        </router-link>
+        <router-link to="/app/cai" class="nav-item" active-class="active">
+          <span class="icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="6" rx="2"></rect><rect x="3" y="14" width="18" height="6" rx="2"></rect></svg>
+          </span>
+          CAI
+        </router-link>
+        <router-link to="/app/estado-civil" class="nav-item" active-class="active">
+          <span class="icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3"></circle><path d="M4 20c1.5-4 6-6 8-6s6.5 2 8 6"></path></svg>
+          </span>
+          Estado civil
         </router-link>
       </nav>
 

@@ -18,3 +18,22 @@ export function createEstadoCivil(payload) {
 export function getEstadosCiviles(params) {
   return api.get('/estado-civil', { params });
 }
+
+/**
+ * Actualizar un estado civil
+ * @param {number|string} id
+ * @param {{ nombre: string }} payload
+ * @returns {Promise<import('./snai-dtos').ResultWithData<any>>}
+ */
+export function updateEstadoCivil(id, payload) {
+  return api.put(`/estado-civil/${id}`, payload);
+}
+
+/**
+ * Eliminar un estado civil
+ * @param {number|string} id
+ * @returns {Promise<any>}
+ */
+export function deleteEstadoCivil(id) {
+  return api.delete(`/estado-civil/${id}`);
+}

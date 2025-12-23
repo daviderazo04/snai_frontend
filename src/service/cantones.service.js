@@ -18,3 +18,22 @@ export function createCanton(payload) {
 export function getCantones(params) {
   return api.get('/cantones', { params });
 }
+
+/**
+ * Actualizar un canton
+ * @param {number|string} id
+ * @param {CantonPayload} payload
+ * @returns {Promise<import('./snai-dtos').ResultWithData<any>>}
+ */
+export function updateCanton(id, payload) {
+  return api.put(`/cantones/${id}`, payload);
+}
+
+/**
+ * Eliminar un canton
+ * @param {number|string} id
+ * @returns {Promise<any>}
+ */
+export function deleteCanton(id) {
+  return api.delete(`/cantones/${id}`);
+}
