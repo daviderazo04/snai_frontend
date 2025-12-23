@@ -1,110 +1,184 @@
 <template>
   <div class="layout">
     <aside class="sidebar">
-      
       <div class="brand">
-        <div class="logo-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        <div class="logo-icon" aria-hidden="true">
+          <!-- Shield -->
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
         </div>
-        <h3>SNAI <span class="brand-subtitle">Control</span></h3>
+        <div class="brand-text">
+          <h3>SNAI</h3>
+          <span class="brand-subtitle">Control</span>
+        </div>
       </div>
 
-      <nav class="nav-menu">
+      <nav class="nav-menu" aria-label="Menú principal">
         <p class="menu-label">MENU</p>
-        
+
         <router-link to="/app" class="nav-item" exact-active-class="active">
-          <span class="icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          <span class="icon" aria-hidden="true">
+            <!-- Grid / Home -->
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+              <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+              <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+              <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+            </svg>
           </span>
-          Inicio
+          <span class="label">Inicio</span>
         </router-link>
 
         <router-link to="/app/perfiles" class="nav-item" active-class="active">
-          <span class="icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          <span class="icon" aria-hidden="true">
+            <!-- User -->
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
           </span>
-          Mi Perfil
+          <span class="label">Mi Perfil</span>
         </router-link>
+
         <router-link to="/app/dashboard" class="nav-item" active-class="active">
-          <span class="icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          <span class="icon" aria-hidden="true">
+            <!-- Bar chart -->
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19V5" />
+              <path d="M4 19h16" />
+              <path d="M8 17v-6" />
+              <path d="M12 17V9" />
+              <path d="M16 17v-3" />
+            </svg>
           </span>
-          Dashboard
+          <span class="label">Dashboard</span>
         </router-link>
+
         <router-link to="/app/etnia" class="nav-item" active-class="active">
-          <span class="icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="7" r="4"></circle>
-              <path d="M5.5 21a6.5 6.5 0 0 1 13 0"></path>
+          <span class="icon" aria-hidden="true">
+            <!-- Users -->
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9.5" cy="7" r="3.5" />
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.3a3.5 3.5 0 0 1 0 6.8" />
             </svg>
           </span>
-          Etnia
+          <span class="label">Etnia</span>
         </router-link>
+
         <router-link to="/app/nacionalidad" class="nav-item" active-class="active">
-          <span class="icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="7" r="4"></circle>
-              <path d="M5.5 21a6.5 6.5 0 0 1 13 0"></path>
+          <span class="icon" aria-hidden="true">
+            <!-- Flag -->
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 22V3" />
+              <path d="M4 4h12l-2 4 2 4H4" />
             </svg>
           </span>
-          Nacionalidad
+          <span class="label">Nacionalidad</span>
         </router-link>
+
         <router-link to="/app/gdos" class="nav-item" active-class="active">
-          <span class="icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="7" r="4"></circle>
-              <path d="M5.5 21a6.5 6.5 0 0 1 13 0"></path>
+          <span class="icon" aria-hidden="true">
+            <!-- Layers -->
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2 2 7l10 5 10-5-10-5z" />
+              <path d="M2 17l10 5 10-5" />
+              <path d="M2 12l10 5 10-5" />
             </svg>
           </span>
-          G2
+          <span class="label">G2</span>
         </router-link>
+
         <router-link to="/app/parentesco" class="nav-item" active-class="active">
-        <span class="icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="7" r="4"></circle>
-            <path d="M5.5 21a6.5 6.5 0 0 1 13 0"></path>
-          </svg>
-        </span>
-        Parentesco
-      </router-link>
+          <span class="icon" aria-hidden="true">
+            <!-- Link -->
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.43" />
+              <path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 1 0 7.07 7.07L12.5 19.57" />
+            </svg>
+          </span>
+          <span class="label">Parentesco</span>
+        </router-link>
 
         <router-link to="/app/provincias" class="nav-item" active-class="active">
-          <span class="icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"></circle><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"></path></svg>
+          <span class="icon" aria-hidden="true">
+            <!-- Map pin -->
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 21s7-4.5 7-11a7 7 0 1 0-14 0c0 6.5 7 11 7 11z" />
+              <circle cx="12" cy="10" r="2.5" />
+            </svg>
           </span>
-          Provincias
+          <span class="label">Provincias</span>
         </router-link>
+
         <router-link to="/app/cantones" class="nav-item" active-class="active">
-          <span class="icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18"></path><path d="M3 12h18"></path><path d="M3 19h18"></path></svg>
+          <span class="icon" aria-hidden="true">
+            <!-- List -->
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 6h13" />
+              <path d="M8 12h13" />
+              <path d="M8 18h13" />
+              <path d="M3 6h.01" />
+              <path d="M3 12h.01" />
+              <path d="M3 18h.01" />
+            </svg>
           </span>
-          Cantones
+          <span class="label">Cantones</span>
         </router-link>
+
         <router-link to="/app/cai" class="nav-item" active-class="active">
-          <span class="icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="6" rx="2"></rect><rect x="3" y="14" width="18" height="6" rx="2"></rect></svg>
+          <span class="icon" aria-hidden="true">
+            <!-- Database -->
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <ellipse cx="12" cy="5" rx="8" ry="3" />
+              <path d="M4 5v7c0 1.66 3.58 3 8 3s8-1.34 8-3V5" />
+              <path d="M4 12v7c0 1.66 3.58 3 8 3s8-1.34 8-3v-7" />
+            </svg>
           </span>
-          CAI
+          <span class="label">CAI</span>
         </router-link>
+
         <router-link to="/app/estado-civil" class="nav-item" active-class="active">
-          <span class="icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3"></circle><path d="M4 20c1.5-4 6-6 8-6s6.5 2 8 6"></path></svg>
+          <span class="icon" aria-hidden="true">
+            <!-- Heart -->
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path
+                d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 22l7.8-8.6 1-1a5.5 5.5 0 0 0 0-7.8z" />
+            </svg>
           </span>
-          Estado civil
+          <span class="label">Estado civil</span>
         </router-link>
       </nav>
 
       <div class="sidebar-footer">
         <button class="logout-btn" @click="logout">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
           <span>Cerrar sesión</span>
         </button>
       </div>
     </aside>
 
     <main class="content-area">
-      <header class="top-bar">
-        </header>
+      <header class="top-bar"></header>
 
       <section class="page-container">
         <router-view v-slot="{ Component }">
@@ -125,12 +199,9 @@ export default {
     const router = useRouter();
 
     const logout = () => {
-      // Limpieza completa
       localStorage.removeItem("snai_token");
       localStorage.removeItem("snai_user");
       sessionStorage.clear();
-      
-      // Redirección suave
       router.push("/login");
     };
 
@@ -140,113 +211,191 @@ export default {
 </script>
 
 <style scoped>
-/* Reset */
+/* scoped NO afecta html/body/#app */
+:global(html, body, #app) {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+}
+:global(body) {
+  overflow: hidden;
+}
+
+/* Base */
 * {
   box-sizing: border-box;
 }
 
 .layout {
+  position: fixed;
+  inset: 0;
   display: flex;
-  height: 100vh;
-  background-color: #f3f4f6; /* Fondo gris muy suave para el contenido */
-  font-family: 'Segoe UI', sans-serif;
+  min-height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+  background: #f3f4f6;
+  font-family: "Segoe UI", sans-serif;
 }
 
-/* --- SIDEBAR --- */
+/* Sidebar */
 .sidebar {
-  width: 260px;
-  background: #1e293b; /* Slate Dark */
-  color: white;
+  width: 280px;
+  height: 100%;
+  background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
+  color: #e5e7eb;
   display: flex;
   flex-direction: column;
-  box-shadow: 4px 0 10px rgba(0,0,0,0.05);
-  z-index: 10;
-  transition: width 0.3s;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  overflow: hidden;
 }
 
-/* Marca / Logo */
+/* Brand */
 .brand {
-  padding: 25px 20px;
+  padding: 18px 18px;
   display: flex;
   align-items: center;
   gap: 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .logo-icon {
-  background: #2575fc;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 30% 30%, #3b82f6 0%, #2563eb 40%, #1d4ed8 100%);
+  color: #fff;
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.28);
 }
 
+.brand-text {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
 .brand h3 {
   margin: 0;
   font-size: 1.2rem;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
+  color: #fff;
 }
-
 .brand-subtitle {
-  font-weight: 300;
-  opacity: 0.7;
-  font-size: 0.9rem;
+  opacity: 0.75;
+  font-weight: 400;
+  font-size: 0.95rem;
 }
 
-/* Navegación */
+/* Nav */
 .nav-menu {
   flex: 1;
-  padding: 20px 15px;
+  min-height: 0;
+  padding: 14px 12px 18px;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  /* ✅ Scroll bonito (Firefox) */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+
+/* ✅ Scroll bonito (Chrome/Edge/Safari) */
+.nav-menu::-webkit-scrollbar {
+  width: 8px;
+}
+.nav-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+.nav-menu::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.nav-menu:hover::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.38);
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
 
 .menu-label {
   font-size: 0.75rem;
   text-transform: uppercase;
   color: #94a3b8;
-  margin-bottom: 10px;
+  margin: 10px 0 10px;
   padding-left: 10px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 1px;
 }
 
+/* Items */
 .nav-item {
+  position: relative;
   display: flex;
   align-items: center;
-  padding: 12px 15px;
-  margin-bottom: 8px;
+  gap: 12px;
+  padding: 12px 12px;
+  margin: 6px 4px;
+  border-radius: 12px;
   color: #cbd5e1;
   text-decoration: none;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-  font-size: 0.95rem;
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
 }
 
-.nav-item .icon {
-  margin-right: 12px;
-  display: flex;
-  align-items: center;
+.icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  color: #cbd5e1;
+  transition: background 0.18s ease, color 0.18s ease;
 }
 
-/* Hover Effect */
+.label {
+  font-size: 0.98rem;
+  font-weight: 500;
+}
+
+/* Hover */
 .nav-item:hover {
-  background: rgba(255,255,255,0.05);
-  color: white;
-  transform: translateX(4px);
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+.nav-item:hover .icon {
+  background: rgba(255, 255, 255, 0.07);
+  color: #ffffff;
 }
 
-/* Active State (Cuando estás en la página) */
+/* Active */
 .nav-item.active {
-  background: linear-gradient(90deg, #2575fc 0%, #6a11cb 100%);
-  color: white;
-  box-shadow: 0 4px 15px rgba(37, 117, 252, 0.4);
+  color: #ffffff;
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.95) 0%, rgba(124, 58, 237, 0.95) 100%);
+  box-shadow: 0 10px 26px rgba(37, 99, 235, 0.22);
+}
+.nav-item.active .icon {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
 }
 
-/* --- FOOTER SIDEBAR --- */
+/* Indicador lateral */
+.nav-item.active::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 10px;
+  bottom: 10px;
+  width: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
+}
+
+/* Footer */
 .sidebar-footer {
-  padding: 20px;
-  border-top: 1px solid rgba(255,255,255,0.1);
+  padding: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0) 0%, rgba(17, 24, 39, 0.6) 100%);
 }
 
 .logout-btn {
@@ -256,51 +405,53 @@ export default {
   justify-content: center;
   gap: 10px;
   padding: 12px;
-  background: rgba(239, 68, 68, 0.1); /* Rojo muy suave transparente */
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #fca5a5;
-  border-radius: 8px;
+  border-radius: 12px;
+
+  background: rgba(239, 68, 68, 0.10);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #fecaca;
+
   cursor: pointer;
-  transition: all 0.2s;
-  font-size: 0.9rem;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
-
 .logout-btn:hover {
-  background: #ef4444;
-  color: white;
-  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.95);
+  border-color: rgba(239, 68, 68, 0.95);
+  color: #ffffff;
 }
 
-/* --- MAIN CONTENT --- */
+/* Content */
 .content-area {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Evita doble scrollbar */
+  overflow: hidden;
 }
 
 .top-bar {
   height: 60px;
-  background: white;
-  border-bottom: 1px solid #e2e8f0;
-  display: flex;
-  align-items: center;
-  padding: 0 30px;
-  /* Aquí puedes añadir elementos a la derecha si quieres en el futuro */
+  flex: 0 0 auto;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .page-container {
   flex: 1;
-  padding: 30px;
-  overflow-y: auto; /* Scroll solo en el contenido */
+  min-height: 0;
+  padding: 26px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
-/* --- TRANSICIONES DE VUE --- */
+/* Vue transitions */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.2s ease;
 }
-
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
