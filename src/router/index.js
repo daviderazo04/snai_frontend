@@ -25,6 +25,11 @@ import OcupacionalForm from "../views/formularios/OcupacionalFormView.vue";
 import JuridicaForm from "../views/formularios/JuridicaFormView.vue";
 import TrasladoForm from "../views/formularios/TrasladoFormView.vue";
 
+// Etnia (catálogo)
+import EtniaList from "../views/private/etnia/index.vue";
+import EtniaForm from "../views/private/etnia/[id]/index.vue";
+
+
 const routes = [
   // =======================
   // RUTAS PÚBLICAS
@@ -64,6 +69,61 @@ const routes = [
         name: "perfiles",
         component: Perfiles,
       },
+      // =======================
+      // CATÁLOGOS - ETNIA
+      // =======================
+      {
+        path: "etnia",
+        name: "etnia-list",
+        component: EtniaList,
+      },
+      {
+        path: "etnia/:id",
+        name: "etnia-form",
+        component: EtniaForm,
+      },
+      {
+        path: 'nacionalidad',
+        name: 'nacionalidad',
+        component: () => import('@/views/private/nacionalidad/index.vue')
+      },
+      {
+        path: 'nacionalidad/:id',
+        name: 'nacionalidad-form',
+        component: () => import('@/views/private/nacionalidad/[id]/index.vue')
+      },
+      {
+        path: 'gdos',
+        name: 'gdos',
+        component: () => import('@/views/private/gdos/index.vue')
+      },
+      {
+        path: 'gdos/new',
+        name: 'gdos-new',
+        component: () => import('@/views/private/gdos/[id]/index.vue')
+      },
+      {
+        path: 'gdos/:id',
+        name: 'gdos-edit',
+        component: () => import('@/views/private/gdos/[id]/index.vue')
+      },
+      {
+        path: 'parentesco',
+        name: 'parentesco',
+        component: () => import('@/views/private/parentesco/index.vue')
+      },
+      {
+        path: 'parentesco/new',
+        name: 'parentesco-new',
+        component: () => import('@/views/private/parentesco/[id]/index.vue')
+      },
+      {
+        path: 'parentesco/:id',
+        name: 'parentesco-edit',
+        component: () => import('@/views/private/parentesco/[id]/index.vue')
+      },
+
+
       {
         path: "provincias",
         name: "provincias",

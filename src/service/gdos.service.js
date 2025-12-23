@@ -1,20 +1,9 @@
-// src/api/gdos.service.js
-import { api } from './apiClient';
+import { api } from '@/service/apiClient'
 
-/**
- * Crear un GDOS
- * @param {{ nombre: string }} payload
- * @returns {Promise<import('./snai-dtos').ResultWithData<any>>}
- */
-export function createGdos(payload) {
-  return api.post('/gdos', payload);
+export function getGdos() {
+  return api.get('/gdos')
 }
 
-/**
- * Obtener lista de GDOS
- * @param {any} [params]
- * @returns {Promise<any>}
- */
-export function getGdos(params) {
-  return api.get('/gdos', { params });
+export function createGdo(payload) {
+  return api.post('/gdos', payload)
 }

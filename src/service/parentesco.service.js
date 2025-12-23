@@ -1,20 +1,9 @@
-// src/api/parentesco.service.js
-import { api } from './apiClient';
+import { api } from '@/service/apiClient'
 
-/**
- * Crear un tipo de parentesco
- * @param {{ nombre: string }} payload
- * @returns {Promise<import('./snai-dtos').ResultWithData<any>>}
- */
-export function createParentesco(payload) {
-  return api.post('/parentesco', payload);
+export function getParentescos() {
+  return api.get('/parentesco')
 }
 
-/**
- * Obtener lista de tipos de parentesco
- * @param {any} [params]
- * @returns {Promise<any>}
- */
-export function getParentescos(params) {
-  return api.get('/parentesco', { params });
+export function createParentesco(payload) {
+  return api.post('/parentesco', payload)
 }
