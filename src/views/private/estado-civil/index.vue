@@ -8,6 +8,7 @@
           Gestiona el catalogo de estados civiles para los registros del sistema.
         </p>
       </div>
+
       <div class="hero-stats">
         <div class="stat-card">
           <span class="label">Total</span>
@@ -120,16 +121,16 @@ export default {
 
     const filteredEstados = computed(() => {
       const term = search.value.trim().toLowerCase();
-      return estados.value.filter((item) => {
-        return term ? (item.nombre || "").toLowerCase().includes(term) : true;
-      });
+      return estados.value.filter((item) =>
+        term ? (item.nombre || "").toLowerCase().includes(term) : true
+      );
     });
 
     const filteredCount = computed(() => filteredEstados.value.length);
 
-    const totalPages = computed(() => {
-      return Math.max(1, Math.ceil(filteredEstados.value.length / pageSize.value));
-    });
+    const totalPages = computed(() =>
+      Math.max(1, Math.ceil(filteredEstados.value.length / pageSize.value))
+    );
 
     const pagedEstados = computed(() => {
       const start = (currentPage.value - 1) * pageSize.value;
@@ -138,14 +139,9 @@ export default {
 
     const totalEstados = computed(() => estados.value.length);
 
-    watch(search, () => {
-      currentPage.value = 1;
-    });
-
+    watch(search, () => (currentPage.value = 1));
     watch(totalPages, (value) => {
-      if (currentPage.value > value) {
-        currentPage.value = value;
-      }
+      if (currentPage.value > value) currentPage.value = value;
     });
 
     const loadEstados = async () => {
@@ -154,7 +150,8 @@ export default {
       try {
         const res = await getEstadosCiviles();
         if (res.data?.success === false) {
-          errorMessage.value = res.data?.message || "No se pudo cargar estados civiles.";
+          errorMessage.value =
+            res.data?.message || "No se pudo cargar estados civiles.";
           estados.value = [];
           return;
         }
@@ -201,17 +198,17 @@ export default {
           modalMode.value === "create"
             ? await createEstadoCivil({ nombre })
             : await updateEstadoCivil(editingId.value, { nombre });
+
         if (res.data?.success === false) {
-          errorMessage.value = res.data?.message || "No se pudo guardar el estado civil.";
+          errorMessage.value =
+            res.data?.message || "No se pudo guardar el estado civil.";
           return;
         }
+
         const saved = res.data?.data;
         if (modalMode.value === "create") {
-          if (saved?.id) {
-            estados.value = [...estados.value, mapEstado(saved)];
-          } else {
-            await loadEstados();
-          }
+          if (saved?.id) estados.value = [...estados.value, mapEstado(saved)];
+          else await loadEstados();
         } else if (editingId.value !== null) {
           if (saved?.id) {
             estados.value = estados.value.map((item) =>
@@ -223,6 +220,7 @@ export default {
             );
           }
         }
+
         closeModal();
       } catch (err) {
         console.error("Error guardando estado civil:", err);
@@ -237,11 +235,13 @@ export default {
         `Eliminar el estado civil ${item.nombre}? Esta accion no se puede revertir.`
       );
       if (!confirmed) return;
+
       errorMessage.value = "";
       try {
         const res = await deleteEstadoCivil(item.id);
         if (res.data?.success === false) {
-          errorMessage.value = res.data?.message || "No se pudo eliminar el estado civil.";
+          errorMessage.value =
+            res.data?.message || "No se pudo eliminar el estado civil.";
           return;
         }
         estados.value = estados.value.filter((estado) => estado.id !== item.id);
@@ -278,48 +278,71 @@ export default {
 </script>
 
 <style scoped>
+/* ✅ Paleta SNAI (logo) */
+:global(:root) {
+  --snai-navy: #0b1220;
+  --snai-navy-2: #0f172a;
+  --snai-blue: #1e3a8a;      /* institucional */
+  --snai-blue-2: #1d4ed8;    /* vivo */
+  --snai-sky: #38bdf8;       /* apoyo */
+  --snai-yellow: #fbbf24;    /* acento */
+  --snai-red: #ef4444;       /* alertas */
+  --snai-border: #e2e8f0;
+  --snai-muted: #64748b;
+}
+
 .estado-civil-page {
   display: flex;
   flex-direction: column;
   gap: 24px;
 }
 
+/* HERO: más institucional */
 .hero {
-  background: linear-gradient(125deg, #0f172a 0%, #1d4ed8 55%, #38bdf8 100%);
+  background: linear-gradient(
+    125deg,
+    var(--snai-navy-2) 0%,
+    var(--snai-blue) 45%,
+    var(--snai-blue-2) 100%
+  );
   color: white;
   padding: 28px;
   border-radius: 20px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.22);
 }
 
+/* Burbujas decorativas con acento amarillo/sky */
 .hero::before,
 .hero::after {
   content: "";
   position: absolute;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  filter: blur(0px);
+  opacity: 0.9;
 }
 
 .hero::before {
-  width: 220px;
-  height: 220px;
-  top: -60px;
-  right: -40px;
+  width: 240px;
+  height: 240px;
+  top: -70px;
+  right: -60px;
+  background: radial-gradient(circle at 30% 30%, rgba(251, 191, 36, 0.35), rgba(251, 191, 36, 0) 65%);
 }
 
 .hero::after {
-  width: 140px;
-  height: 140px;
-  bottom: -50px;
+  width: 160px;
+  height: 160px;
+  bottom: -60px;
   left: 40px;
+  background: radial-gradient(circle at 30% 30%, rgba(56, 189, 248, 0.30), rgba(56, 189, 248, 0) 65%);
 }
 
 .hero-main {
   position: relative;
   z-index: 1;
-  max-width: 540px;
+  max-width: 560px;
 }
 
 .eyebrow {
@@ -327,7 +350,7 @@ export default {
   letter-spacing: 2px;
   font-size: 0.7rem;
   margin-bottom: 8px;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .hero-main h1 {
@@ -338,7 +361,7 @@ export default {
 .subtitle {
   margin: 0;
   font-size: 0.98rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.86);
 }
 
 .hero-stats {
@@ -351,31 +374,45 @@ export default {
 }
 
 .stat-card {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: 16px;
   padding: 14px 16px;
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(8px);
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
+/* ✅ número con acento amarillo */
 .stat-card strong {
-  font-size: 1.4rem;
+  font-size: 1.5rem;
+  color: #fff;
+}
+.stat-card strong::after {
+  content: "";
+  display: block;
+  width: 28px;
+  height: 3px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: var(--snai-yellow);
+  opacity: 0.9;
 }
 
 .label {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .hint {
   font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.72);
 }
 
+/* PANEL: con borde/tono azul suave */
 .panel {
   display: flex;
   flex-direction: column;
@@ -383,28 +420,31 @@ export default {
   background: white;
   padding: 22px;
   border-radius: 18px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--snai-border);
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
 }
 
+/* Mensajes */
 .status {
   padding: 12px 14px;
   border-radius: 12px;
-  background: #f1f5f9;
-  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  color: var(--snai-muted);
   font-size: 0.92rem;
 }
 
 .status.error {
-  background: rgba(239, 68, 68, 0.12);
+  background: rgba(239, 68, 68, 0.10);
+  border: 1px solid rgba(239, 68, 68, 0.22);
   color: #b91c1c;
 }
 
+/* Responsive */
 @media (max-width: 720px) {
   .hero {
     padding: 22px;
   }
-
   .hero-main h1 {
     font-size: 1.6rem;
   }

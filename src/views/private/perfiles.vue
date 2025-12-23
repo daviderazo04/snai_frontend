@@ -25,7 +25,6 @@
       <div class="top-row">
         <h2 class="section-title">¿Con qué perfil deseas operar hoy?</h2>
 
-        <!-- Botón para re-abrir selección (útil cuando el usuario quiera cambiar) -->
         <button class="switch-btn" @click="reloadPerfiles">
           Cambiar perfil
         </button>
@@ -44,18 +43,9 @@
           </div>
 
           <div class="card-content">
-            <div class="icon-box">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="28"
-                height="28"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
+            <div class="icon-box" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
               </svg>
             </div>
@@ -72,26 +62,13 @@
       </div>
 
       <div class="action-footer">
-        <button
-          class="start-btn"
-          :disabled="!selectedPerfil || isLoading"
-          @click="asignarPerfil"
-        >
+        <button class="start-btn" :disabled="!selectedPerfil || isLoading" @click="asignarPerfil">
           <span v-if="!isLoading">Ingresar al Sistema</span>
           <span v-else class="loader"></span>
 
-          <svg
-            v-if="!isLoading"
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
+          <svg v-if="!isLoading" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            aria-hidden="true">
             <line x1="5" y1="12" x2="19" y2="12"></line>
             <polyline points="12 5 19 12 12 19"></polyline>
           </svg>
@@ -99,15 +76,15 @@
       </div>
     </main>
 
-    <!-- TOAST / NOTIFICACIÓN MODAL-LIKE -->
+    <!-- TOAST -->
     <transition name="toast-fade">
       <div v-if="toast.open" class="toast-overlay" @click.self="closeToast">
         <div class="toast-card" :class="toast.type">
           <div class="toast-left">
             <div class="toast-icon">
-              <span v-if="toast.type === 'success'">✅</span>
-              <span v-else-if="toast.type === 'error'">❌</span>
-              <span v-else>ℹ️</span>
+              <span v-if="toast.type === 'success'">✓</span>
+              <span v-else-if="toast.type === 'error'">!</span>
+              <span v-else>i</span>
             </div>
             <div class="toast-text">
               <div class="toast-title">{{ toastTitle }}</div>
@@ -144,9 +121,9 @@ export default {
     });
 
     const toastTitle = computed(() => {
-      if (toast.value.type === "success") return "¡Listo!";
-      if (toast.value.type === "error") return "Ocurrió un problema";
-      return "Aviso";
+      if (toast.value.type === "success") return "Operación exitosa";
+      if (toast.value.type === "error") return "Atención";
+      return "Información";
     });
 
     let toastTimer = null;
@@ -186,53 +163,35 @@ export default {
       toastTimer = null;
     };
 
-    /**
-     * Carga perfiles:
-     * 1) Primero intenta sessionStorage (flujo normal después del login)
-     * 2) Si no hay, usa localStorage (para "cambiar perfil" luego)
-     */
     const loadUserData = () => {
       user.value = safeParse(localStorage.getItem("snai_user"));
 
-      const perfilesSession =
-        safeParse(sessionStorage.getItem("snai_posibles_perfiles")) || null;
-
-      const perfilesLocal =
-        safeParse(localStorage.getItem("snai_posibles_perfiles")) || null;
+      const perfilesSession = safeParse(sessionStorage.getItem("snai_posibles_perfiles")) || null;
+      const perfilesLocal = safeParse(localStorage.getItem("snai_posibles_perfiles")) || null;
 
       const perfiles = perfilesSession || perfilesLocal || [];
       posiblesPerfiles.value = Array.isArray(perfiles) ? perfiles : [];
 
-      // Guardar persistente para poder cambiar luego
       if (posiblesPerfiles.value.length > 0) {
-        localStorage.setItem(
-          "snai_posibles_perfiles",
-          JSON.stringify(posiblesPerfiles.value)
-        );
+        localStorage.setItem("snai_posibles_perfiles", JSON.stringify(posiblesPerfiles.value));
       }
 
-      // Preseleccionar perfil activo si existe
       const perfilActivo = safeParse(localStorage.getItem("snai_perfil_activo"));
       if (perfilActivo?.id) {
         const found = posiblesPerfiles.value.find((p) => p.id === perfilActivo.id);
         if (found) selectedPerfil.value = found;
       }
 
-      // Si solo hay 1 perfil, selección automática
       if (!selectedPerfil.value && posiblesPerfiles.value.length === 1) {
         selectedPerfil.value = posiblesPerfiles.value[0];
       }
 
       const token = localStorage.getItem("snai_token");
-      if (!token || !user.value) {
-        router.replace("/login");
-      }
+      if (!token || !user.value) router.replace("/login");
     };
 
     const reloadPerfiles = () => {
       closeToast();
-      // Intenta volver a cargar desde localStorage/sessionStorage.
-      // Si en el futuro quieres refrescar desde backend, aquí sería el lugar.
       loadUserData();
 
       if (!posiblesPerfiles.value.length) {
@@ -254,11 +213,7 @@ export default {
       closeToast();
 
       try {
-        const payload = {
-          id: selectedPerfil.value.id,
-          nombre: selectedPerfil.value.nombre,
-        };
-
+        const payload = { id: selectedPerfil.value.id, nombre: selectedPerfil.value.nombre };
         const res = await gainAccess(payload);
 
         if (!res.data?.success) {
@@ -270,25 +225,18 @@ export default {
 
         const data = res.data.data;
 
-        // Actualiza token/user si vienen en gain-access
         if (data?.accessToken) localStorage.setItem("snai_token", data.accessToken);
         if (data?.user) {
           localStorage.setItem("snai_user", JSON.stringify(data.user));
           user.value = data.user;
         }
 
-        // Guarda permisos si vienen
         if (Array.isArray(data?.permisos)) {
           localStorage.setItem("snai_permisos", JSON.stringify(data.permisos));
         }
 
-        // Guarda perfil activo
         localStorage.setItem("snai_perfil_activo", JSON.stringify(selectedPerfil.value));
-
-        // IMPORTANTE:
-        // Ya NO borres posibles perfiles, porque quieres poder cambiar luego
-        // sessionStorage.removeItem("snai_posibles_perfiles");  <-- lo dejamos opcional
-        sessionStorage.removeItem("snai_posibles_perfiles"); // puedes dejarlo así si quieres
+        sessionStorage.removeItem("snai_posibles_perfiles");
 
         setTimeout(() => router.push("/app"), 800);
       } catch (err) {
@@ -319,278 +267,403 @@ export default {
 </script>
 
 <style scoped>
-/* añade esto arriba de selection-area */
+/* ✅ Paleta SNAI (formal/institucional) */
+:global(:root) {
+  --snai-navy: #0b1220;
+  --snai-blue: #1e3a8a;
+  --snai-blue-2: #1d4ed8;
+  --snai-yellow: #fbbf24;
+  --snai-red: #ef4444;
+
+  --text: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --bg: #f8fafc;
+  --card: #ffffff;
+}
+
+/* Layout general */
+.launchpad-container {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 34px;
+  font-family: "Segoe UI", sans-serif;
+}
+
+/* Header */
+.welcome-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
+.greeting {
+  font-size: 2rem;
+  color: var(--text);
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+}
+
+.highlight {
+  color: var(--snai-blue);
+}
+
+.subtitle {
+  color: var(--muted);
+  margin: 6px 0 0 0;
+  font-size: 1.02rem;
+}
+
+/* Badge usuario */
+.user-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card);
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+.avatar {
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(135deg, var(--snai-blue) 0%, var(--snai-blue-2) 100%);
+  color: white;
+  border-radius: 12px; /* más formal que círculo */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: 0.3px;
+}
+
+.badge-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.email {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  font-size: 0.74rem;
+  color: #0f766e;
+  background: rgba(16, 185, 129, 0.10);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  padding: 3px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+/* Divider */
+.divider {
+  border: none;
+  height: 1px;
+  background: var(--border);
+  margin: 18px 0 26px;
+}
+
+/* Top row */
 .top-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 14px;
 }
 
+.section-title {
+  font-size: 1.22rem;
+  color: #111827;
+  margin: 0;
+  font-weight: 800;
+}
+
+/* Botón secundario */
 .switch-btn {
-  border: 1px solid #e2e8f0;
-  background: white;
-  color: #334155;
-  font-weight: 700;
-  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: #0f172a;
+  font-weight: 800;
+  border-radius: 12px;
   padding: 10px 12px;
   cursor: pointer;
-  transition: transform 0.15s;
+  transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
 }
 .switch-btn:hover {
   transform: translateY(-1px);
+  border-color: rgba(30, 58, 138, 0.25);
+  background: #f8fafc;
 }
 
-/* (tu CSS original sigue igual; solo agregué top-row y switch-btn)
-   pega aquí tu CSS previo tal cual si ya lo tienes completo
-*/
-
-.launchpad-container {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 30px 40px;
-  font-family: "Segoe UI", sans-serif;
-}
-.welcome-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 25px;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-.greeting {
-  font-size: 2.2rem;
-  color: #1e293b;
-  margin: 0;
-  font-weight: 700;
-}
-.highlight { color: #2575fc; }
-.subtitle {
-  color: #64748b;
-  margin: 5px 0 0 0;
-  font-size: 1.1rem;
-}
-.user-badge {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: white;
-  padding: 8px 16px;
-  border-radius: 50px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
-}
-.avatar {
-  width: 42px;
-  height: 42px;
-  background: linear-gradient(135deg, #6a11cb, #2575fc);
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-weight: 600;
-  font-size: 1.1rem;
-}
-.badge-text { display: flex; flex-direction: column; }
-.email { font-size: 0.9rem; font-weight: 600; color: #334155; }
-.verified {
-  font-size: 0.75rem;
-  color: #10b981;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 700;
-}
-.divider {
-  border: none;
-  height: 1px;
-  background: #e2e8f0;
-  margin-bottom: 40px;
-}
-.section-title {
-  font-size: 1.4rem;
-  color: #334155;
-  margin: 0;
-  font-weight: 600;
-}
+/* Grid tarjetas */
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 25px;
-  margin-bottom: 30px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px;
+  margin-bottom: 22px;
 }
+
 .role-card {
-  background: white;
-  border: 2px solid #e2e8f0;
+  background: var(--card);
+  border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 30px;
+  padding: 20px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
   position: relative;
   display: flex;
   flex-direction: column;
-  height: 100%;
 }
+
 .role-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06);
-  border-color: #cbd5e0;
+  transform: translateY(-2px);
+  border-color: rgba(30, 58, 138, 0.25);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
 }
+
+/* Activo: borde azul + línea amarilla (más institucional) */
 .role-card.active {
-  border-color: #2575fc;
-  background-color: #f8fafc;
-  box-shadow: 0 0 0 4px rgba(37, 117, 252, 0.15);
+  border-color: rgba(29, 78, 216, 0.55);
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
 }
-.selection-indicator { position: absolute; top: 25px; right: 25px; }
+
+.role-card.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 4px;
+  border-radius: 999px;
+  background: var(--snai-yellow);
+}
+
+/* Check */
+.selection-indicator {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+}
+
 .check-circle {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 2px solid #cbd5e0;
-  transition: all 0.2s;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 2px solid #cbd5e1;
+  transition: all 0.18s ease;
+  background: transparent;
 }
+
 .role-card.active .check-circle {
-  border-color: #2575fc;
-  background: #2575fc;
+  border-color: var(--snai-blue-2);
+  background: var(--snai-blue-2);
   box-shadow: inset 0 0 0 4px white;
 }
+
+/* Icon */
 .icon-box {
-  width: 56px;
-  height: 56px;
-  background: #f1f5f9;
+  width: 52px;
+  height: 52px;
   border-radius: 14px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: #64748b;
-  margin-bottom: 20px;
-  transition: all 0.2s;
+  display: grid;
+  place-items: center;
+  background: #f1f5f9;
+  color: #334155;
+  margin-bottom: 14px;
+  border: 1px solid #e5e7eb;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
 }
-.role-card.active .icon-box { background: #dbeafe; color: #2575fc; }
+
+.role-card.active .icon-box {
+  background: rgba(29, 78, 216, 0.10);
+  border-color: rgba(29, 78, 216, 0.22);
+  color: var(--snai-blue);
+}
+
+/* Textos */
 .role-name {
-  margin: 0 0 8px 0;
-  font-size: 1.25rem;
-  color: #1e293b;
-  font-weight: 700;
+  margin: 0 0 6px 0;
+  font-size: 1.12rem;
+  color: #0f172a;
+  font-weight: 900;
 }
+
 .role-desc {
   margin: 0;
   font-size: 0.95rem;
-  color: #64748b;
+  color: var(--muted);
   line-height: 1.5;
 }
+
+/* Empty */
 .empty-state {
-  background: #fff;
-  border: 1px dashed #cbd5e0;
-  border-radius: 12px;
-  padding: 18px;
-  color: #64748b;
+  background: var(--card);
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  padding: 16px;
+  color: var(--muted);
 }
+
+/* Footer acciones */
 .action-footer {
   display: flex;
   justify-content: flex-end;
-  padding-top: 20px;
+  padding-top: 18px;
   border-top: 1px solid #f1f5f9;
 }
+
+/* Botón primario: azul institucional + acento amarillo sutil */
 .start-btn {
-  background: linear-gradient(90deg, #2575fc 0%, #6a11cb 100%);
+  background: linear-gradient(90deg, var(--snai-blue-2) 0%, var(--snai-blue) 100%);
   color: white;
-  padding: 16px 40px;
+  padding: 14px 28px;
   border: none;
-  border-radius: 10px;
-  font-size: 1.05rem;
-  font-weight: 600;
+  border-radius: 12px;
+  font-size: 1.02rem;
+  font-weight: 900;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 12px;
-  transition: all 0.2s;
-  box-shadow: 0 4px 15px rgba(37, 117, 252, 0.3);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+  box-shadow: 0 10px 24px rgba(29, 78, 216, 0.22);
 }
+
+.start-btn:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(29, 78, 216, 0.30);
+}
+
 .start-btn:disabled {
-  background: #cbd5e0;
+  background: #cbd5e1;
   cursor: not-allowed;
   box-shadow: none;
   transform: none;
 }
-.start-btn:not(:disabled):hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(37, 117, 252, 0.4);
-}
+
+/* Loader */
 .loader {
-  border: 3px solid rgba(255, 255, 255, 0.3);
+  border: 3px solid rgba(255, 255, 255, 0.35);
   width: 20px;
   height: 20px;
   border-radius: 50%;
   border-top-color: white;
   animation: spin 0.8s linear infinite;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 
-/* Toast */
+/* Toast (más sobrio) */
 .toast-overlay {
   position: fixed;
   inset: 0;
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding-top: 22px;
-  background: rgba(0, 0, 0, 0.08);
+  padding-top: 18px;
+  background: rgba(2, 6, 23, 0.18);
   z-index: 9999;
 }
+
 .toast-card {
-  width: min(680px, calc(100vw - 28px));
-  background: white;
+  width: min(720px, calc(100vw - 28px));
+  background: var(--card);
   border-radius: 14px;
-  padding: 14px;
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
-  border: 1px solid #e2e8f0;
+  padding: 14px 14px;
+  box-shadow: 0 22px 55px rgba(0, 0, 0, 0.20);
+  border: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   gap: 14px;
   align-items: center;
 }
+
 .toast-left { display: flex; gap: 12px; align-items: flex-start; }
+
 .toast-icon {
   width: 34px;
   height: 34px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
   background: #f1f5f9;
-  font-size: 18px;
-}
-.toast-title { font-weight: 800; color: #0f172a; margin-bottom: 2px; }
-.toast-message { color: #475569; font-size: 0.95rem; line-height: 1.35; }
-.toast-close {
-  border: none;
-  background: #f1f5f9;
+  font-weight: 900;
   color: #0f172a;
-  font-weight: 700;
-  border-radius: 10px;
+}
+
+.toast-title {
+  font-weight: 900;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.toast-message {
+  color: #475569;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+/* Variantes toast */
+.toast-card.success { border-color: rgba(16, 185, 129, 0.28); }
+.toast-card.success .toast-icon { background: rgba(16, 185, 129, 0.12); color: #0f766e; }
+
+.toast-card.error { border-color: rgba(239, 68, 68, 0.28); }
+.toast-card.error .toast-icon { background: rgba(239, 68, 68, 0.12); color: #b91c1c; }
+
+.toast-card.info { border-color: rgba(29, 78, 216, 0.22); }
+.toast-card.info .toast-icon { background: rgba(29, 78, 216, 0.12); color: var(--snai-blue); }
+
+/* Close */
+.toast-close {
+  border: 1px solid var(--border);
+  background: #f8fafc;
+  color: #0f172a;
+  font-weight: 900;
+  border-radius: 12px;
   padding: 10px 12px;
   cursor: pointer;
-  transition: transform 0.15s;
+  transition: transform 0.15s ease, background 0.15s ease;
 }
-.toast-close:hover { transform: translateY(-1px); }
-.toast-card.success { border-color: rgba(16, 185, 129, 0.35); }
-.toast-card.success .toast-icon { background: rgba(16, 185, 129, 0.12); }
-.toast-card.error { border-color: rgba(239, 68, 68, 0.35); }
-.toast-card.error .toast-icon { background: rgba(239, 68, 68, 0.12); }
-.toast-card.info { border-color: rgba(59, 130, 246, 0.35); }
-.toast-card.info .toast-icon { background: rgba(59, 130, 246, 0.12); }
-.toast-fade-enter-active,
-.toast-fade-leave-active { transition: opacity 0.18s ease, transform 0.18s ease; }
-.toast-fade-enter-from,
-.toast-fade-leave-to { opacity: 0; transform: translateY(-8px); }
+.toast-close:hover {
+  transform: translateY(-1px);
+  background: #f1f5f9;
+}
 
+.toast-fade-enter-active,
+.toast-fade-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.toast-fade-enter-from,
+.toast-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+/* Responsive */
 @media (max-width: 768px) {
+  .launchpad-container { padding: 22px 16px; }
   .welcome-header { flex-direction: column; align-items: flex-start; }
-  .user-badge { width: 100%; }
+  .user-badge { width: 100%; justify-content: space-between; }
   .start-btn { width: 100%; justify-content: center; }
   .top-row { flex-direction: column; align-items: flex-start; }
 }

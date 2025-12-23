@@ -2,17 +2,8 @@
   <div class="layout">
     <aside class="sidebar">
       <div class="brand">
-        <div class="logo-icon" aria-hidden="true">
-          <!-- Shield -->
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          </svg>
-        </div>
-        <div class="brand-text">
-          <h3>SNAI</h3>
-          <span class="brand-subtitle">Control</span>
-        </div>
+        <!-- ✅ Logo real -->
+        <img class="brand-logo" :src="logo" alt="SNAI - El Nuevo Ecuador" />
       </div>
 
       <nav class="nav-menu" aria-label="Menú principal">
@@ -20,7 +11,7 @@
 
         <router-link to="/app" class="nav-item" exact-active-class="active">
           <span class="icon" aria-hidden="true">
-            <!-- Grid / Home -->
+            <!-- Grid -->
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
               stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="3" width="7" height="7" rx="1"></rect>
@@ -178,7 +169,8 @@
     </aside>
 
     <main class="content-area">
-      <header class="top-bar"></header>
+      <!-- Si no lo usas, puedes borrar este header -->
+      <header class="top-bar" aria-hidden="true"></header>
 
       <section class="page-container">
         <router-view v-slot="{ Component }">
@@ -193,6 +185,7 @@
 
 <script>
 import { useRouter } from "vue-router";
+import logo from "@/assets/snai.png"; // ✅ src/assets/snai.png
 
 export default {
   setup() {
@@ -205,12 +198,24 @@ export default {
       router.push("/login");
     };
 
-    return { logout };
+    return { logout, logo };
   },
 };
 </script>
 
 <style scoped>
+/* ===== Paleta basada en el logo ===== */
+:global(:root) {
+  --snai-navy: #0b1220;
+  --snai-navy-2: #0f172a;
+  --snai-blue: #1e3a8a;   /* azul */
+  --snai-blue-2: #1d4ed8; /* azul vivo */
+  --snai-yellow: #fbbf24; /* amarillo */
+  --snai-red: #ef4444;    /* rojo */
+  --snai-text: #e5e7eb;
+  --snai-muted: #94a3b8;
+}
+
 /* scoped NO afecta html/body/#app */
 :global(html, body, #app) {
   height: 100%;
@@ -221,10 +226,7 @@ export default {
   overflow: hidden;
 }
 
-/* Base */
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 .layout {
   position: fixed;
@@ -239,51 +241,31 @@ export default {
 
 /* Sidebar */
 .sidebar {
-  width: 280px;
+  width: 300px;
   height: 100%;
-  background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
-  color: #e5e7eb;
+  background: linear-gradient(180deg, var(--snai-navy) 0%, var(--snai-navy-2) 100%);
+  color: var(--snai-text);
   display: flex;
   flex-direction: column;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
   overflow: hidden;
 }
 
-/* Brand */
+/* Brand con logo */
 .brand {
-  padding: 18px 18px;
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   align-items: center;
-  gap: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  justify-content: center;
 }
 
-.logo-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  background: radial-gradient(circle at 30% 30%, #3b82f6 0%, #2563eb 40%, #1d4ed8 100%);
-  color: #fff;
-  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.28);
-}
-
-.brand-text {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-.brand h3 {
-  margin: 0;
-  font-size: 1.2rem;
-  letter-spacing: 0.4px;
-  color: #fff;
-}
-.brand-subtitle {
-  opacity: 0.75;
-  font-weight: 400;
-  font-size: 0.95rem;
+.brand-logo {
+  width: 240px;
+  max-width: 100%;
+  height: 56px;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35));
 }
 
 /* Nav */
@@ -294,18 +276,11 @@ export default {
   overflow-y: auto;
   overflow-x: hidden;
 
-  /* ✅ Scroll bonito (Firefox) */
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
 }
-
-/* ✅ Scroll bonito (Chrome/Edge/Safari) */
-.nav-menu::-webkit-scrollbar {
-  width: 8px;
-}
-.nav-menu::-webkit-scrollbar-track {
-  background: transparent;
-}
+.nav-menu::-webkit-scrollbar { width: 8px; }
+.nav-menu::-webkit-scrollbar-track { background: transparent; }
 .nav-menu::-webkit-scrollbar-thumb {
   background: rgba(148, 163, 184, 0.25);
   border-radius: 999px;
@@ -321,7 +296,7 @@ export default {
 .menu-label {
   font-size: 0.75rem;
   text-transform: uppercase;
-  color: #94a3b8;
+  color: var(--snai-muted);
   margin: 10px 0 10px;
   padding-left: 10px;
   font-weight: 700;
@@ -355,7 +330,7 @@ export default {
 
 .label {
   font-size: 0.98rem;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 /* Hover */
@@ -368,18 +343,18 @@ export default {
   color: #ffffff;
 }
 
-/* Active */
+/* Active: azul con acentos del logo */
 .nav-item.active {
   color: #ffffff;
-  background: linear-gradient(90deg, rgba(37, 99, 235, 0.95) 0%, rgba(124, 58, 237, 0.95) 100%);
-  box-shadow: 0 10px 26px rgba(37, 99, 235, 0.22);
+  background: linear-gradient(90deg, rgba(29, 78, 216, 0.95) 0%, rgba(30, 58, 138, 0.95) 100%);
+  box-shadow: 0 10px 26px rgba(29, 78, 216, 0.18);
 }
 .nav-item.active .icon {
   background: rgba(255, 255, 255, 0.18);
   color: #ffffff;
 }
 
-/* Indicador lateral */
+/* Indicador lateral: amarillo (logo) */
 .nav-item.active::before {
   content: "";
   position: absolute;
@@ -388,14 +363,15 @@ export default {
   bottom: 10px;
   width: 4px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.75);
+  background: var(--snai-yellow);
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.15);
 }
 
 /* Footer */
 .sidebar-footer {
   padding: 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
-  background: linear-gradient(180deg, rgba(17, 24, 39, 0) 0%, rgba(17, 24, 39, 0.6) 100%);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 0.7) 100%);
 }
 
 .logout-btn {
@@ -414,7 +390,7 @@ export default {
   cursor: pointer;
   transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 700;
 }
 .logout-btn:hover {
   background: rgba(239, 68, 68, 0.95);
@@ -432,11 +408,10 @@ export default {
   overflow: hidden;
 }
 
+/* Top bar opcional (sin línea) */
 .top-bar {
-  height: 60px;
-  flex: 0 0 auto;
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
+  height: 10px; /* si no lo usas, mantenlo mínimo o elimínalo del template */
+  background: transparent;
 }
 
 .page-container {
