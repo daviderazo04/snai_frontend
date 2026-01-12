@@ -1,69 +1,85 @@
 <template>
-  <div class="detail-page">
-    <button class="back" type="button" @click="goBack">
-      Volver a provincias
-    </button>
-
-    <section class="detail-hero">
-      <div class="hero-content">
-        <p class="eyebrow">Provincia</p>
-        <h1>{{ provinciaInfo.nombre }}</h1>
-        <p class="subtitle">
-          Detalle operativo para el catalogo de {{ provinciaInfo.nombre }}.
-        </p>
+  <div class="page-container">
+    <div class="page-header">
+      <button class="btn-back" @click="goBack" title="Volver a provincias">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <div class="title-wrap">
+        <span class="eyebrow">Detalle de Provincia</span>
+        <h2>{{ provinciaInfo.nombre || 'Cargando...' }}</h2>
       </div>
-      <div class="hero-cards">
-        <div class="info-card">
-          <span class="label">ID</span>
-          <strong>#{{ provinciaInfo.id }}</strong>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon blue">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <div class="stat-content">
+          <span class="label">ID Provincia</span>
+          <strong class="value">#{{ provinciaInfo.id }}</strong>
         </div>
       </div>
-    </section>
 
-    <section class="cantones">
+      <div class="stat-card">
+        <div class="stat-icon green">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
+        </div>
+        <div class="stat-content">
+          <span class="label">Cantones</span>
+          <strong class="value">{{ cantones.length }} registrados</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-section">
       <div class="section-header">
-        <div>
-          <h2>Cantones</h2>
-          <p>Listado referencial para integracion con la API.</p>
-        </div>
-        <span class="counter">{{ cantones.length }} cantones</span>
+        <h3>Listado de Cantones</h3>
+        <p>Jurisdicciones asociadas a esta provincia</p>
       </div>
-      <div v-if="isLoading" class="status">Cargando cantones...</div>
-      <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
-      <div class="cantones-grid">
+
+      <div v-if="isLoading" class="loading-state">
+        <svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+        <span>Cargando datos...</span>
+      </div>
+
+      <div v-else-if="errorMessage" class="error-banner">
+        {{ errorMessage }}
+      </div>
+
+      <div v-else-if="cantones.length > 0" class="cantones-grid">
         <div v-for="canton in cantones" :key="canton.id" class="canton-card">
-          <div class="canton-main">
-            <span class="canton-name">{{ canton.nombre }}</span>
-            <span class="canton-id">ID {{ canton.id }}</span>
+          <div class="canton-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c0-2.5 1.5-4.5 4-4.5"/><path d="M7 16.5V21"/><path d="M11 21v-3.5c0-1.5 1-2.5 2.5-2.5s2.5 1 2.5 2.5V21"/><path d="M17 21v-1.8c0-2 1.5-3.7 3.5-3.7"/><path d="M21 21v-3.5"/><path d="M4 11V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6"/><path d="M8 3v2"/><path d="M16 3v2"/><path d="M4 11h16"/></svg>
           </div>
-          <span class="tag">
-            {{
-              canton.provinciaNombre
-                ? canton.provinciaNombre
-                : canton.provinciaId
-                ? `Prov ${canton.provinciaId}`
-                : "Prov -"
-            }}
-          </span>
+          <div class="canton-info">
+            <span class="canton-name">{{ canton.nombre }}</span>
+            <span class="canton-meta">ID: {{ canton.id }}</span>
+          </div>
         </div>
       </div>
-    </section>
+
+      <div v-else class="empty">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+        <strong>Sin cantones</strong>
+        <span>No hay cantones asociados a esta provincia.</span>
+      </div>
+    </div>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { getCantones } from "../../../../service/cantones.service.js";
-import { getProvincias } from "../../../../service/provincias.service.js";
+import { getCantones } from "@/service/cantones.service.js"; // Ajusta la ruta si es necesario
+import { getProvincias } from "@/service/provincias.service.js";
 
+// -- Helpers (Mantenidos de tu código original) --
 const resolveList = (response) => {
   const payload = response?.data?.data ?? response?.data;
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.data)) return payload.data;
   if (Array.isArray(payload?.items)) return payload.items;
-  if (Array.isArray(payload?.rows)) return payload.rows;
-  if (Array.isArray(payload?.provincias)) return payload.provincias;
   return [];
 };
 
@@ -78,271 +94,299 @@ const mapCanton = (item) => {
   };
 };
 
-export default {
-  setup() {
-    const route = useRoute();
-    const router = useRouter();
-    const provinciaId = computed(() => Number(route.params.id));
-    const provinciaNombre = ref("");
-    const cantones = ref([]);
-    const isLoading = ref(false);
-    const errorMessage = ref("");
+// -- Setup Logic --
+const route = useRoute();
+const router = useRouter();
 
-    const provinciaInfo = computed(() => {
-      const id = provinciaId.value;
-      const nombre = provinciaNombre.value
-        ? provinciaNombre.value
-        : id
-        ? `Provincia #${id}`
-        : "Provincia";
-      return { id, nombre };
-    });
+const provinciaId = computed(() => Number(route.params.id));
+const provinciaNombre = ref("");
+const cantones = ref([]);
+const isLoading = ref(false);
+const errorMessage = ref("");
 
-    const loadProvincia = async () => {
-      try {
-        const res = await getProvincias();
-        if (res.data?.success === false) {
-          provinciaNombre.value = "";
-          return;
-        }
-        const list = resolveList(res);
-        const match = list.find((item) => Number(item?.id) === provinciaId.value);
-        provinciaNombre.value = match?.nombre ?? match?.name ?? match?.provincia ?? "";
-      } catch (err) {
-        console.error("Error cargando provincia:", err);
-        provinciaNombre.value = "";
-      }
-    };
+const provinciaInfo = computed(() => ({
+  id: provinciaId.value,
+  nombre: provinciaNombre.value || (provinciaId.value ? `Provincia #${provinciaId.value}` : "")
+}));
 
-    const loadCantones = async () => {
-      isLoading.value = true;
-      errorMessage.value = "";
-      try {
-        const res = await getCantones({ provinciaId: provinciaId.value });
-        if (res.data?.success === false) {
-          errorMessage.value = res.data?.message || "No se pudo cargar cantones.";
-          cantones.value = [];
-          return;
-        }
-        const list = resolveList(res);
-        const mapped = list.map(mapCanton).filter((item) => item.nombre);
-        const idValue = Number(provinciaId.value);
-        cantones.value = mapped.filter((item) => {
-          if (!idValue) return true;
-          return Number(item.provinciaId) === idValue;
-        });
-        if (!provinciaNombre.value && cantones.value.length) {
-          provinciaNombre.value = cantones.value[0].provinciaNombre;
-        }
-      } catch (err) {
-        console.error("Error cargando cantones:", err);
-        errorMessage.value = "Error de conexion con el servidor.";
-        cantones.value = [];
-      } finally {
-        isLoading.value = false;
-      }
-    };
-
-    const goBack = () => {
-      router.push("/app/provincias");
-    };
-
-    watch(provinciaId, () => {
-      loadProvincia();
-      loadCantones();
-    });
-
-    onMounted(() => {
-      loadProvincia();
-      loadCantones();
-    });
-
-    return {
-      provinciaInfo,
-      cantones,
-      isLoading,
-      errorMessage,
-      goBack,
-    };
-  },
+const loadProvincia = async () => {
+  try {
+    const res = await getProvincias();
+    if (res.data?.success === false) return;
+    
+    const list = resolveList(res);
+    const match = list.find((item) => Number(item?.id) === provinciaId.value);
+    
+    if (match) {
+      provinciaNombre.value = match?.nombre ?? match?.name ?? match?.provincia ?? "";
+    }
+  } catch (err) {
+    console.error("Error cargando provincia:", err);
+  }
 };
+
+const loadCantones = async () => {
+  isLoading.value = true;
+  errorMessage.value = "";
+  
+  try {
+    const res = await getCantones({ provinciaId: provinciaId.value });
+    
+    if (res.data?.success === false) {
+      errorMessage.value = res.data?.message || "No se pudo cargar cantones.";
+      cantones.value = [];
+      return;
+    }
+    
+    const list = resolveList(res);
+    const mapped = list.map(mapCanton).filter((item) => item.nombre);
+    const idValue = Number(provinciaId.value);
+    
+    // Filtrado local por si la API devuelve todos
+    cantones.value = mapped.filter((item) => {
+      if (!idValue) return true;
+      return Number(item.provinciaId) === idValue;
+    });
+
+    // Fallback para el nombre si no se cargó por getProvincias
+    if (!provinciaNombre.value && cantones.value.length) {
+      provinciaNombre.value = cantones.value[0].provinciaNombre;
+    }
+  } catch (err) {
+    console.error("Error cargando cantones:", err);
+    errorMessage.value = "No se pudo conectar con el servidor.";
+    cantones.value = [];
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const goBack = () => {
+  router.push("/app/provincias");
+};
+
+watch(provinciaId, () => {
+  loadProvincia();
+  loadCantones();
+});
+
+onMounted(() => {
+  loadProvincia();
+  loadCantones();
+});
 </script>
 
 <style scoped>
-.detail-page {
+/* Layout */
+.page-container {
+  padding: 24px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+/* Header */
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.btn-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-back:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.title-wrap {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-}
-
-.back {
-  align-self: flex-start;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 8px 14px;
-  cursor: pointer;
-  color: #1e293b;
-  transition: background 0.2s ease;
-}
-
-.back:hover {
-  background: #f1f5f9;
-}
-
-.detail-hero {
-  background: linear-gradient(130deg, #1e293b, #0ea5e9);
-  color: white;
-  border-radius: 20px;
-  padding: 26px;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.2);
-}
-
-.hero-content h1 {
-  margin: 6px 0 10px;
 }
 
 .eyebrow {
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 2px;
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: #64748b;
+  font-weight: 600;
+  letter-spacing: 0.05em;
 }
 
-.subtitle {
+.title-wrap h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
   margin: 0;
-  color: rgba(255, 255, 255, 0.8);
 }
 
-.hero-cards {
+/* Stats Cards */
+.stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
-  margin-top: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
 }
 
-.info-card {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  padding: 12px 14px;
+.stat-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-icon.blue { background: #eff6ff; color: #2563eb; }
+.stat-icon.green { background: #f0fdf4; color: #16a34a; }
+
+.stat-content {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-
-.info-card strong {
-  font-size: 1.1rem;
 }
 
 .label {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+  color: #64748b;
 }
 
-.cantones {
+.value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Content Section */
+.content-section {
   background: white;
-  border-radius: 18px;
-  padding: 22px;
+  border-radius: 16px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 18px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 16px;
 }
 
-.section-header h2 {
-  margin: 0 0 6px;
-}
-
-.section-header p {
-  margin: 0;
-  color: #64748b;
-  font-size: 0.9rem;
-}
-
-.counter {
-  background: #e0f2fe;
-  color: #0369a1;
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.cantones-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-}
-
-.canton-card {
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 12px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #f8fafc;
-}
-
-.canton-main {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.canton-name {
+.section-header h3 {
+  margin: 0 0 4px;
+  font-size: 1.1rem;
   font-weight: 600;
   color: #0f172a;
 }
 
-.canton-id {
-  font-size: 0.8rem;
+.section-header p {
+  margin: 0;
+  font-size: 0.9rem;
   color: #64748b;
 }
 
-.tag {
-  background: rgba(34, 197, 94, 0.12);
-  color: #15803d;
-  border-radius: 999px;
-  padding: 4px 10px;
-  font-size: 0.75rem;
-  font-weight: 600;
+/* Cantones Grid */
+.cantones-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
 }
 
-.empty {
-  background: white;
-  padding: 26px;
-  border-radius: 18px;
+.canton-card {
   border: 1px solid #e2e8f0;
-  color: #475569;
+  border-radius: 10px;
+  padding: 16px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.status {
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: #f1f5f9;
-  color: #475569;
-  font-size: 0.92rem;
-  margin-bottom: 12px;
+.canton-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  border-color: #cbd5e1;
 }
 
-.status.error {
-  background: rgba(239, 68, 68, 0.12);
+.canton-icon {
+  width: 36px;
+  height: 36px;
+  background: #f8fafc;
+  color: #64748b;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.canton-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.canton-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #1e293b;
+}
+
+.canton-meta {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+/* Status States */
+.loading-state, .empty, .error-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+  gap: 12px;
+  color: #64748b;
+}
+
+.error-banner {
+  background: #fef2f2;
   color: #b91c1c;
+  border-radius: 8px;
+  padding: 16px;
 }
 
-@media (max-width: 640px) {
-  .section-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+.spinner {
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+  color: #2563eb;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>
