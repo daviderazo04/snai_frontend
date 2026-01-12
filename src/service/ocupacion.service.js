@@ -2,16 +2,17 @@
 import { api } from './apiClient';
 
 /**
- * Crear una ocupación para un adolescente
- * @param {CreateOcupacionDto} payload
- * @returns {Promise<import('./snai-dtos').ResultWithData<any>>}
+ * Crear una Ocupación
+ * @param {{ adolescenteId: number, taller: string, institucion: string, fecha: string, ... }} payload
+ * @returns {Promise<any>}
  */
 export function createOcupacion(payload) {
   return api.post('/ocupacion', payload);
 }
 
 /**
- * Obtener lista de ocupaciones
+ * Obtener lista de Ocupaciones paginadas
+ * Permite filtros: termino (nombre taller), adolescenteId, page, size
  * @param {any} [params]
  * @returns {Promise<any>}
  */
@@ -20,29 +21,28 @@ export function getOcupaciones(params) {
 }
 
 /**
- * Obtener ocupación por ID
+ * Obtener una Ocupación por ID
  * @param {number} id
- * @returns {Promise<import('./snai-dtos').ResultWithData<any>>}
+ * @returns {Promise<any>}
  */
-export function getOcupacion(id) {
+export function getOcupacionById(id) {
   return api.get(`/ocupacion/${id}`);
 }
 
 /**
- * Actualizar ocupación
+ * Actualizar una Ocupación
  * @param {number} id
- * @param {CreateOcupacionDto} payload
- * @returns {Promise<import('./snai-dtos').ResultWithData<any>>}
+ * @param {any} payload
+ * @returns {Promise<any>}
  */
 export function updateOcupacion(id, payload) {
   return api.patch(`/ocupacion/${id}`, payload);
 }
 
-/**
- * Eliminar ocupación
- * @param {number} id
- * @returns {Promise<import('./snai-dtos').SimpleResult>}
- */
+// Nota: El backend tiene el método DELETE comentado. 
+// Si decides habilitarlo en el futuro, sería así:
+/*
 export function deleteOcupacion(id) {
   return api.delete(`/ocupacion/${id}`);
 }
+*/

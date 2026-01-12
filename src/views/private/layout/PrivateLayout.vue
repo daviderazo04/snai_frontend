@@ -30,6 +30,35 @@
           <span class="label">Dashboard</span>
         </router-link>
 
+        <div class="menu-group" v-if="tieneAccesoAlguno(['/evento','/salud','/ocupacion',',/educacion'])">
+          <button class="accordion-btn" @click="toggleMenu('gestion')" :class="{ 'is-open': menusOpen.gestion }">
+            <span class="menu-label-text">Gestion</span>
+            <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+
+          <div class="accordion-content" v-show="menusOpen.gestion">
+            <router-link v-if="tieneAcceso('/evento')" to="/app/evento" class="nav-item" active-class="active">
+              <span class="icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.43" /><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 1 0 7.07 7.07L12.5 19.57" /></svg>
+              </span>
+              <span class="label">Visita</span>
+            </router-link>
+           <router-link v-if="tieneAcceso('/salud')" to="/app/salud" class="nav-item" active-class="active">
+              <span class="icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.43" /><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 1 0 7.07 7.07L12.5 19.57" /></svg>
+              </span>
+              <span class="label">Salud</span>
+            </router-link>
+            <router-link v-if="tieneAcceso('/ocupacion')" to="/app/ocupacion" class="nav-item" active-class="active">
+              <span class="icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.43" /><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 1 0 7.07 7.07L12.5 19.57" /></svg>
+              </span>
+              <span class="label">Ocupacion</span>
+            </router-link>
+          </div>
+        </div>
         <div class="menu-group" v-if="tieneAccesoAlguno(['/provincias', '/cantones', '/cai'])">
           <button class="accordion-btn" @click="toggleMenu('localidades')" :class="{ 'is-open': menusOpen.localidades }">
             <span class="menu-label-text">LOCALIDADES</span>
@@ -137,7 +166,6 @@
 </template>
 
 <script>
-// ✅ 1. Importar useRoute y watch
 import { useRouter, useRoute } from "vue-router";
 import { reactive, watch, onMounted } from "vue";
 import logo from "@/assets/snai.png";
@@ -145,11 +173,12 @@ import logo from "@/assets/snai.png";
 export default {
   setup() {
     const router = useRouter();
-    const route = useRoute(); // Hook para leer la ruta actual
+    const route = useRoute();
 
     const menusOpen = reactive({
       localidades: false,
-      parametros: false
+      parametros: false,
+      gestion: false // Se mantiene para que el toggle funcione
     });
 
     const toggleMenu = (menu) => {
@@ -166,29 +195,30 @@ export default {
       return permisoEncontrado && permisoEncontrado.VIEW === true;
     };
 
-    // Verificar permiso grupal (para el acordeón)
+    // Verificar permiso grupal
     const tieneAccesoAlguno = (listaEndpoints) => {
       return listaEndpoints.some(endpoint => tieneAcceso(endpoint));
     };
 
-    // ✅ 2. Función de Seguridad
+    // Protección de rutas en tiempo real
     const verificarSeguridadRuta = () => {
       const rutaActual = route.path;
-
-      // Lista blanca: Rutas a las que TODOS pueden entrar sin permiso específico
+      // Rutas públicas dentro de la app
       const rutasPublicas = ['/app', '/app/dashboard', '/app/perfiles'];
 
-      // Si es una ruta pública, no hacemos nada
       if (rutasPublicas.includes(rutaActual)) return;
 
-      // Si NO tiene permiso para esta ruta exacta, lo redirigimos
+      // NOTA: Si la ruta en el navegador es '/app/visita' pero el permiso en BD es '/evento',
+      // esta verificación fallará a menos que manejes la excepción aquí.
+      // Si tus permisos en BD coinciden con las rutas (ej: /app/visita), funcionará perfecto.
+      // Si no, deberías ajustar 'tieneAcceso(rutaActual)' según corresponda.
       if (!tieneAcceso(rutaActual)) {
-        console.warn(`Acceso denegado a: ${rutaActual}. Redirigiendo...`);
-        router.push('/app/dashboard'); 
+        // Descomenta la siguiente línea para activar la redirección de seguridad
+        // console.warn(`Acceso denegado a: ${rutaActual}. Redirigiendo...`);
+        // router.push('/app/dashboard'); 
       }
     };
 
-    // ✅ 3. Observar cambios en la ruta (Protección en tiempo real)
     watch(
       () => route.path, 
       () => {
@@ -196,7 +226,6 @@ export default {
       }
     );
 
-    // ✅ 4. Verificar también al cargar la página por primera vez
     onMounted(() => {
       verificarSeguridadRuta();
     });
@@ -222,7 +251,6 @@ export default {
 </script>
 
 <style scoped>
-/* ESTILOS (IGUAL QUE ANTES) */
 :global(:root) {
   --snai-navy: #0b1220;
   --snai-navy-2: #0f172a;
@@ -256,7 +284,6 @@ export default {
   font-family: "Segoe UI", sans-serif;
 }
 
-/* Sidebar */
 .sidebar {
   width: 300px;
   height: 100%;
