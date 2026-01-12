@@ -30,7 +30,7 @@
           <span class="label">Dashboard</span>
         </router-link>
 
-        <div class="menu-group" v-if="tieneAccesoAlguno(['/evento','/salud','/ocupacion',',/educacion'])">
+        <div class="menu-group" v-if="tieneAccesoAlguno(['/salud','/ocupacion',',/educacion'])">
           <button class="accordion-btn" @click="toggleMenu('gestion')" :class="{ 'is-open': menusOpen.gestion }">
             <span class="menu-label-text">Gestion</span>
             <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -39,12 +39,6 @@
           </button>
 
           <div class="accordion-content" v-show="menusOpen.gestion">
-            <router-link v-if="tieneAcceso('/evento')" to="/app/evento" class="nav-item" active-class="active">
-              <span class="icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.43" /><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 1 0 7.07 7.07L12.5 19.57" /></svg>
-              </span>
-              <span class="label">Visita</span>
-            </router-link>
            <router-link v-if="tieneAcceso('/salud')" to="/app/salud" class="nav-item" active-class="active">
               <span class="icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.43" /><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 1 0 7.07 7.07L12.5 19.57" /></svg>
@@ -91,7 +85,7 @@
           </div>
         </div>
 
-        <div class="menu-group" v-if="tieneAccesoAlguno(['/estado-civil', '/etnia', '/gdos', '/nacionalidad', '/parentesco'])">
+        <div class="menu-group" v-if="tieneAccesoAlguno(['/estado-civil', '/etnia', '/gdos', '/nacionalidad', '/parentesco','/evento'])">
           <button class="accordion-btn" @click="toggleMenu('parametros')" :class="{ 'is-open': menusOpen.parametros }">
             <span class="menu-label-text">PARÁMETROS</span>
             <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -100,6 +94,13 @@
           </button>
 
           <div class="accordion-content" v-show="menusOpen.parametros">
+            
+            <router-link v-if="tieneAcceso('/evento')" to="/app/evento" class="nav-item" active-class="active">
+              <span class="icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.43" /><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 1 0 7.07 7.07L12.5 19.57" /></svg>
+              </span>
+              <span class="label">Evento</span>
+            </router-link>
             <router-link v-if="tieneAcceso('/estado-civil')" to="/app/estado-civil" class="nav-item" active-class="active">
               <span class="icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 22l7.8-8.6 1-1a5.5 5.5 0 0 0 0-7.8z" /></svg>
