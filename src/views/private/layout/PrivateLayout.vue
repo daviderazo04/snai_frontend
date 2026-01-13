@@ -1,8 +1,23 @@
 <template>
   <div class="layout">
-    <aside class="sidebar">
+    <aside class="sidebar" :class="{ 'is-collapsed': isSidebarCollapsed }">
       <div class="brand">
         <img class="brand-logo" :src="logo" alt="SNAI - El Nuevo Ecuador" />
+        <button
+          class="collapse-btn"
+          type="button"
+          :aria-expanded="!isSidebarCollapsed"
+          :aria-label="isSidebarCollapsed ? 'Expandir menú' : 'Contraer menú'"
+          :title="isSidebarCollapsed ? 'Expandir menú' : 'Contraer menú'"
+          @click="toggleSidebar"
+        >
+          <svg v-if="isSidebarCollapsed" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+          <svg v-else viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
       </div>
 
       <nav class="nav-menu" aria-label="Menú principal">
@@ -168,7 +183,7 @@
 
 <script>
 import { useRouter, useRoute } from "vue-router";
-import { reactive, watch, onMounted } from "vue";
+import { reactive, watch, onMounted, ref } from "vue";
 import logo from "@/assets/snai.png";
 
 export default {
@@ -181,9 +196,25 @@ export default {
       parametros: false,
       gestion: false // Se mantiene para que el toggle funcione
     });
+    const isSidebarCollapsed = ref(false);
+    const previousMenus = ref(null);
 
     const toggleMenu = (menu) => {
       menusOpen[menu] = !menusOpen[menu];
+    };
+
+    const toggleSidebar = () => {
+      if (!isSidebarCollapsed.value) {
+        previousMenus.value = { ...menusOpen };
+        Object.keys(menusOpen).forEach((key) => {
+          menusOpen[key] = true;
+        });
+      } else if (previousMenus.value) {
+        Object.keys(menusOpen).forEach((key) => {
+          menusOpen[key] = !!previousMenus.value[key];
+        });
+      }
+      isSidebarCollapsed.value = !isSidebarCollapsed.value;
     };
 
     // Obtener permisos
@@ -245,7 +276,9 @@ export default {
       tieneAcceso, 
       tieneAccesoAlguno, 
       menusOpen, 
-      toggleMenu 
+      toggleMenu,
+      isSidebarCollapsed,
+      toggleSidebar
     };
   },
 };
@@ -261,6 +294,13 @@ export default {
   --snai-red: #ef4444;
   --snai-text: #e5e7eb;
   --snai-muted: #94a3b8;
+  --snai-sidebar-bg: #f8fafc;
+  --snai-sidebar-bg-2: #e2e8f0;
+  --snai-sidebar-text: #0f172a;
+  --snai-sidebar-muted: #64748b;
+  --snai-sidebar-border: rgba(15, 23, 42, 0.08);
+  --snai-sidebar-icon-bg: rgba(15, 23, 42, 0.06);
+  --snai-sidebar-hover: rgba(15, 23, 42, 0.06);
 }
 
 :global(html, body, #app) {
@@ -288,20 +328,22 @@ export default {
 .sidebar {
   width: 300px;
   height: 100%;
-  background: linear-gradient(180deg, var(--snai-navy) 0%, var(--snai-navy-2) 100%);
-  color: var(--snai-text);
+  background: linear-gradient(180deg, var(--snai-sidebar-bg) 0%, var(--snai-sidebar-bg-2) 100%);
+  color: var(--snai-sidebar-text);
   display: flex;
   flex-direction: column;
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  border-right: 1px solid var(--snai-sidebar-border);
   overflow: hidden;
+  transition: width 0.2s ease;
 }
 
 .brand {
   padding: 16px 16px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--snai-sidebar-border);
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
 
 .brand-logo {
@@ -309,7 +351,28 @@ export default {
   max-width: 100%;
   height: 56px;
   object-fit: contain;
-  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35));
+  filter: drop-shadow(0 10px 18px rgba(15, 23, 42, 0.2));
+}
+
+.collapse-btn {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--snai-sidebar-border);
+  background: #ffffff;
+  color: var(--snai-sidebar-text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.collapse-btn:hover {
+  background: #e2e8f0;
+  border-color: rgba(15, 23, 42, 0.18);
 }
 
 .nav-menu {
@@ -319,18 +382,18 @@ export default {
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
-  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+  scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
 }
 .nav-menu::-webkit-scrollbar { width: 8px; }
 .nav-menu::-webkit-scrollbar-track { background: transparent; }
 .nav-menu::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.25);
+  background: rgba(100, 116, 139, 0.25);
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: content-box;
 }
 .nav-menu:hover::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.38);
+  background: rgba(100, 116, 139, 0.38);
   border: 2px solid transparent;
   background-clip: content-box;
 }
@@ -349,7 +412,7 @@ export default {
   cursor: pointer;
   padding: 12px 10px 8px 10px;
   margin-top: 10px;
-  color: var(--snai-muted);
+  color: var(--snai-sidebar-muted);
   text-transform: uppercase;
   font-size: 0.75rem;
   font-weight: 700;
@@ -358,7 +421,7 @@ export default {
 }
 
 .accordion-btn:hover {
-  color: #fff;
+  color: var(--snai-sidebar-text);
 }
 
 .menu-label-text {
@@ -367,7 +430,7 @@ export default {
 
 .chevron {
   transition: transform 0.3s ease;
-  color: var(--snai-muted);
+  color: var(--snai-sidebar-muted);
   opacity: 0.7;
 }
 
@@ -387,7 +450,7 @@ export default {
 .menu-label {
   font-size: 0.75rem;
   text-transform: uppercase;
-  color: var(--snai-muted);
+  color: var(--snai-sidebar-muted);
   margin: 24px 0 10px;
   padding-left: 10px;
   font-weight: 700;
@@ -405,7 +468,7 @@ export default {
   padding: 12px 12px;
   margin: 6px 4px;
   border-radius: 12px;
-  color: #cbd5e1;
+  color: #1f2937;
   text-decoration: none;
   transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
 }
@@ -416,8 +479,8 @@ export default {
   border-radius: 12px;
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.04);
-  color: #cbd5e1;
+  background: var(--snai-sidebar-icon-bg);
+  color: #1f2937;
   transition: background 0.18s ease, color 0.18s ease;
 }
 
@@ -427,12 +490,12 @@ export default {
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #ffffff;
+  background: var(--snai-sidebar-hover);
+  color: var(--snai-sidebar-text);
 }
 .nav-item:hover .icon {
-  background: rgba(255, 255, 255, 0.07);
-  color: #ffffff;
+  background: rgba(15, 23, 42, 0.1);
+  color: var(--snai-sidebar-text);
 }
 
 .nav-item.active {
@@ -459,8 +522,8 @@ export default {
 
 .sidebar-footer {
   padding: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 0.7) 100%);
+  border-top: 1px solid var(--snai-sidebar-border);
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0) 0%, rgba(226, 232, 240, 0.9) 100%);
 }
 
 .logout-btn {
@@ -471,18 +534,66 @@ export default {
   gap: 10px;
   padding: 12px;
   border-radius: 12px;
-  background: rgba(239, 68, 68, 0.10);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  color: #fecaca;
+  background: rgba(239, 68, 68, 0.95);
+  border: 1px solid rgba(239, 68, 68, 0.95);
+  color: #ffffff;
   cursor: pointer;
   transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
   font-size: 0.95rem;
   font-weight: 700;
 }
 .logout-btn:hover {
-  background: rgba(239, 68, 68, 0.95);
-  border-color: rgba(239, 68, 68, 0.95);
+  background: rgba(255, 92, 92, 0.95);
+  border-color: rgba(255, 92, 92, 0.95);
   color: #ffffff;
+}
+
+.sidebar.is-collapsed {
+  width: 92px;
+}
+
+.sidebar.is-collapsed .brand {
+  padding: 16px 8px;
+}
+
+.sidebar.is-collapsed .brand-logo {
+  width: 56px;
+  height: 56px;
+}
+
+.sidebar.is-collapsed .collapse-btn {
+  right: 8px;
+  top: 10px;
+}
+
+.sidebar.is-collapsed .menu-label,
+.sidebar.is-collapsed .menu-label-text,
+.sidebar.is-collapsed .label {
+  display: none;
+}
+
+.sidebar.is-collapsed .nav-item {
+  justify-content: center;
+  padding: 10px 6px;
+  gap: 0;
+}
+
+.sidebar.is-collapsed .icon {
+  width: 40px;
+  height: 40px;
+}
+
+.sidebar.is-collapsed .nav-item.active::before {
+  left: -2px;
+}
+
+.sidebar.is-collapsed .accordion-btn {
+  justify-content: center;
+  padding: 6px 0;
+}
+
+.sidebar.is-collapsed .accordion-content {
+  padding-left: 0;
 }
 
 .content-area {
