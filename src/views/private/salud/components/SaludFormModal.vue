@@ -19,9 +19,16 @@
         <div class="modal-body">
           <div class="form-grid">
             
-            <label class="field">
-              <span>Adolescente ID <span class="required">*</span></span>
-              <input v-model="adolescenteId" type="number" min="1" placeholder="Ej: 1" />
+            <label class="field full-width">
+              <span>Adolescente <span class="required">*</span></span>
+              <div class="select-wrapper">
+                <select v-model="adolescenteId" :disabled="mode === 'edit'">
+                  <option value="" disabled>Seleccione el adolescente...</option>
+                  <option v-for="item in adolescentesList" :key="item.id" :value="item.id">
+                    {{ item.nombre }} {{ item.apellido }} ({{ item.cedula }})
+                  </option>
+                </select>
+              </div>
             </label>
 
             <label class="field">
@@ -104,6 +111,8 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
+// Importamos el servicio para traer los datos
+import { getAdolescentes } from "../../../../service/adolescente.service";
 
 const props = defineProps({
   open: Boolean,
@@ -114,6 +123,7 @@ const props = defineProps({
 
 const emit = defineEmits(["close", "save"]);
 
+// Variables del formulario
 const adolescenteId = ref("");
 const fecha = ref("");
 const diagnostico = ref("");
@@ -124,18 +134,51 @@ const numAtenMedica = ref("0");
 const discapacidad = ref("0");
 const observacion = ref("");
 
+// Lista para el select
+const adolescentesList = ref([]);
+
+// Función para cargar lista desde el backend
+const loadAdolescentes = async () => {
+  // Evitar recargar si ya tiene datos
+  if (adolescentesList.value.length > 0) return; 
+
+  try {
+    // Pedimos size: 100 para que traiga suficientes registros
+    const response = await getAdolescentes({ size: 100 });
+    
+    // Lógica para extraer el array dependiendo de cómo responda tu backend
+    if (Array.isArray(response)) {
+      adolescentesList.value = response;
+    } else if (response.data && Array.isArray(response.data.data)) {
+      adolescentesList.value = response.data.data;
+    } else if (response.data && Array.isArray(response.data)) {
+      adolescentesList.value = response.data;
+    }
+  } catch (error) {
+    console.error("Error cargando adolescentes:", error);
+  }
+};
+
 watch(
-  () => props.initialData,
-  (val) => {
-    adolescenteId.value = val?.adolescenteId != null ? String(val.adolescenteId) : "";
-    fecha.value = val?.fecha ? String(val.fecha).slice(0, 10) : "";
-    diagnostico.value = val?.diagnostico ?? "";
-    tomaMedicacion.value = val?.tomaMedicacion === "1" ? "1" : "0";
-    consumeSustancia.value = val?.consumeSustancia === "1" ? "1" : "0";
-    tipoSustancia.value = val?.tipoSustancia ?? "";
-    numAtenMedica.value = val?.numAtenMedica != null ? String(val.numAtenMedica) : "0";
-    discapacidad.value = val?.discapacidad === "1" ? "1" : "0";
-    observacion.value = val?.observacion ?? "";
+  () => props.open,
+  async (isOpen) => {
+    if (isOpen) {
+      // 1. Cargar la lista de adolescentes al abrir el modal
+      await loadAdolescentes();
+
+      // 2. Mapear datos si es edición
+      const val = props.initialData;
+      // Nota: aseguramos que adolescenteId sea el ID numérico que espera el select
+      adolescenteId.value = val?.adolescenteId != null ? val.adolescenteId : ""; 
+      fecha.value = val?.fecha ? String(val.fecha).slice(0, 10) : "";
+      diagnostico.value = val?.diagnostico ?? "";
+      tomaMedicacion.value = val?.tomaMedicacion === "1" ? "1" : "0";
+      consumeSustancia.value = val?.consumeSustancia === "1" ? "1" : "0";
+      tipoSustancia.value = val?.tipoSustancia ?? "";
+      numAtenMedica.value = val?.numAtenMedica != null ? String(val.numAtenMedica) : "0";
+      discapacidad.value = val?.discapacidad === "1" ? "1" : "0";
+      observacion.value = val?.observacion ?? "";
+    }
   },
   { immediate: true }
 );
@@ -202,7 +245,7 @@ const onSave = () => {
   inset: 0;
   background: rgba(15, 23, 42, 0.4);
   backdrop-filter: blur(4px);
-  display: flex; /* Flex para centrar */
+  display: flex;
   justify-content: center;
   align-items: center;
   padding: 16px;
@@ -210,7 +253,7 @@ const onSave = () => {
 }
 
 .modal {
-  width: min(720px, 96vw); /* Un poco más ancho por las 2 columnas */
+  width: min(720px, 96vw);
   background: white;
   border-radius: 20px;
   box-shadow: 
@@ -219,7 +262,7 @@ const onSave = () => {
   border: 1px solid rgba(255, 255, 255, 0.8);
   display: flex;
   flex-direction: column;
-  max-height: 90vh; /* Para evitar que se salga en pantallas bajas */
+  max-height: 90vh;
 }
 
 /* --- Header --- */
@@ -268,13 +311,13 @@ const onSave = () => {
 /* --- Body & Grid --- */
 .modal-body {
   padding: 24px;
-  overflow-y: auto; /* Scroll si es necesario en pantallas pequeñas */
+  overflow-y: auto;
 }
 
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr; /* 2 Columnas */
-  gap: 16px; /* Espaciado cómodo */
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
 }
 
 .field {
@@ -284,7 +327,7 @@ const onSave = () => {
 }
 
 .field.full-width {
-  grid-column: 1 / -1; /* Ocupa todo el ancho */
+  grid-column: 1 / -1;
 }
 
 .field span {
@@ -316,7 +359,7 @@ const onSave = () => {
 
 .field select {
   cursor: pointer;
-  appearance: none; /* Quitamos estilo por defecto para personalizar si quisieramos más */
+  appearance: none;
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
   background-position: right 0.5rem center;
   background-repeat: no-repeat;
@@ -403,7 +446,7 @@ const onSave = () => {
 /* --- Responsive --- */
 @media (max-width: 640px) {
   .form-grid {
-    grid-template-columns: 1fr; /* Una columna en móviles */
+    grid-template-columns: 1fr;
     gap: 12px;
   }
   

@@ -1,111 +1,174 @@
-<!-- src/views/private/evento/components/EventoTable.vue -->
 <template>
-  <table class="table">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Nombre</th>
-        <th>Acciones</th>
-      </tr>
-    </thead>
+  <div class="table-card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nombre del Evento</th>
+            <th class="text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in items" :key="item.id">
+            <td class="id-cell">#{{ item.id }}</td>
+            
+            <td>
+              <span class="name">{{ item.descripcion }}</span>
+            </td>
 
-    <tbody>
-      <tr v-for="row in items" :key="row.id">
-        <td>#{{ row.id }}</td>
-        <td>{{ row.nombre }}</td>
-        <td class="actions">
-          <button @click="$emit('edit', row)">Editar</button>
-          <button class="danger" @click="$emit('remove', row)">Eliminar</button>
-        </td>
-      </tr>
+            <td class="text-right">
+              <div class="actions">
+                <button class="ghost" @click="$emit('edit', item)">Editar</button>
+                <button class="danger" @click="$emit('remove', item)">Eliminar</button>
+              </div>
+            </td>
+          </tr>
 
-      <tr v-if="!items || items.length === 0">
-        <td class="empty" colspan="3">No hay eventos para mostrar.</td>
-      </tr>
-    </tbody>
-  </table>
+          <tr v-if="!items || items.length === 0">
+            <td colspan="3">
+              <div class="empty">
+                <div class="empty-icon">📅</div>
+                <strong>No hay eventos registrados</strong>
+                <span>Crea uno nuevo para comenzar.</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 </template>
 
 <script setup>
-defineProps({ items: Array });
+// Aseguramos que items siempre sea un array para evitar errores de renderizado
+defineProps({
+  items: {
+    type: Array,
+    default: () => [],
+  },
+});
+
+defineEmits(["edit", "remove"]);
 </script>
 
 <style scoped>
-.table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  overflow: hidden;
+/* Contenedor tipo Tarjeta */
+.table-card {
+  background: white;
   border-radius: 16px;
   border: 1px solid #e2e8f0;
-  background: white;
-  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.04);
+  overflow: hidden; 
 }
 
-.table thead th {
+.table-wrap {
+  overflow-x: auto; 
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+}
+
+th, td {
+  padding: 16px 20px;
   text-align: left;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #475569;
-  background: #f8fafc;
-  padding: 12px 14px;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.table tbody td {
-  padding: 12px 14px;
-  border-bottom: 1px solid #edf2f7;
-  color: #0f172a;
   font-size: 0.95rem;
+  color: #0f172a;
   vertical-align: middle;
 }
 
-.table tbody tr:hover td {
+th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s;
+}
+
+tbody tr:hover {
   background: #f8fafc;
 }
 
-.table tbody tr:last-child td {
+tbody tr:last-child {
   border-bottom: none;
 }
 
-.actions {
-  width: 220px;
-  white-space: nowrap;
+.id-cell {
+  color: #64748b;
+  font-family: monospace;
+  font-weight: 600;
+  width: 80px;
 }
 
-.table button {
+.name {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Botones */
+button {
   border: 1px solid #e2e8f0;
   background: white;
-  padding: 8px 10px;
-  border-radius: 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 600;
   color: #0f172a;
-  transition: transform 0.08s ease, box-shadow 0.15s ease, background 0.15s ease;
-  margin-right: 8px;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
 }
 
-.table button:hover {
-  background: #f8fafc;
-  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+.ghost:hover {
+  background: #f1f5f9;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
 }
 
-.table button:active {
-  transform: translateY(1px);
+.danger {
+  color: #b91c1c;
+  background: rgba(254, 242, 242, 0.5);
+  border-color: #fecaca;
 }
 
-.table button.danger {
-  border: none;
-  color: white;
-  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
-  box-shadow: 0 14px 28px rgba(239, 68, 68, 0.18);
+.danger:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
 }
 
+/* Estado Vacío */
 .empty {
-  text-align: center;
-  padding: 16px !important;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   color: #64748b;
-  background: #fff;
+}
+
+.empty-icon {
+  font-size: 2rem;
+  margin-bottom: 4px;
+  opacity: 0.6;
 }
 </style>

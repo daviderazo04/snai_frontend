@@ -109,8 +109,8 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { getEventoById } from "@/service/evento.service.js";
-import { getFamilias } from "@/service/familia.service.js";
+import { getEventoById } from "../../../../service/evento.service";
+import { getFamilias } from "../../../../service/familia.service";
 
 const route = useRoute();
 const router = useRouter();
