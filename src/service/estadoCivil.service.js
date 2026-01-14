@@ -26,7 +26,7 @@ export function getEstadosCiviles(params) {
  * @returns {Promise<import('./snai-dtos').ResultWithData<any>>}
  */
 export function updateEstadoCivil(id, payload) {
-  return api.put(`/estado-civil/${id}`, payload);
+  return api.patch(`/estado-civil/${id}`, payload);
 }
 
 /**

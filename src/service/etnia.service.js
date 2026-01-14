@@ -17,7 +17,7 @@ export function getEtniaById(id) {
 
 // Actualizar
 export function updateEtnia(id, payload) {
-  return api.put(`/etnia/${id}`, payload);
+  return api.patch(`/etnia/${id}`, payload);
 }
 
 // Eliminar

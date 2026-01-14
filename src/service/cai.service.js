@@ -26,7 +26,7 @@ export function getCais(params) {
  * @returns {Promise<import('./snai-dtos').ResultWithData<any>>}
  */
 export function updateCai(id, payload) {
-  return api.put(`/cai/${id}`, payload);
+  return api.patch(`/cai/${id}`, payload);
 }
 
 /**

@@ -44,7 +44,7 @@
                   <select v-model.number="form.eventoId" required>
                     <option :value="null" disabled>Seleccione un evento...</option>
                     <option v-for="evento in eventosList" :key="evento.id" :value="evento.id">
-                      {{ evento.descripcion }}
+                      {{ evento.descripcion || evento.nombre }}
                     </option>
                   </select>
                 </div>
@@ -91,9 +91,9 @@
 
 <script setup>
 import { ref, computed, watch, reactive } from "vue";
-// Importamos los servicios necesarios
+// Ajusta las rutas según tu estructura
 import { getAdolescentes } from '../../../../service/adolescente.service';
-import { getEventos } from '../../../../service/evento.service'; // Asegúrate de tener este servicio
+import { getEventos } from '../../../../service/evento.service'; 
 import { createFamilia, updateFamilia } from "../../../../service/familia.service";
 
 const props = defineProps({
@@ -116,7 +116,6 @@ const eventosList = ref([]);
 const loadingData = ref(false);
 const internalSaving = ref(false);
 
-// Función auxiliar para extraer arrays de las respuestas de la API
 const extractData = (res) => {
   if (Array.isArray(res)) return res;
   if (res.data && Array.isArray(res.data.data)) return res.data.data;
@@ -124,14 +123,11 @@ const extractData = (res) => {
   return [];
 };
 
-// Carga inicial de datos
 const loadCatalogs = async () => {
-  // Evitar recargar si ya tenemos datos
   if (adolescentesList.value.length > 0 && eventosList.value.length > 0) return;
   
   loadingData.value = true;
   try {
-    // Usamos Promise.all para cargar ambos catálogos en paralelo
     const [resAdolescentes, resEventos] = await Promise.all([
       getAdolescentes({ size: 100 }),
       getEventos({ size: 100 })
@@ -155,14 +151,21 @@ watch(
       internalSaving.value = false;
       
       if (props.initialData) {
-        // Modo Edición
+        // --- LÓGICA DE EDICIÓN CORREGIDA ---
         const d = props.initialData;
-        form.adolescenteId = Number(d.adolescenteId);
-        form.eventoId = Number(d.eventoId);
-        form.fecha = d.fecha ? String(d.fecha).slice(0, 10) : "";
+        
+        // Buscamos el ID dentro del objeto anidado (d.adolescente.id) O en la propiedad directa (d.adolescenteId)
+        const adolId = d.adolescente?.id || d.adolescenteId;
+        const evtId = d.evento?.id || d.eventoId;
+
+        form.adolescenteId = adolId ? Number(adolId) : null;
+        form.eventoId = evtId ? Number(evtId) : null;
+        
+        // Formateo seguro de fecha
+        form.fecha = d.fecha ? new Date(d.fecha).toISOString().slice(0, 10) : "";
         form.detalle = d.detalle || "";
       } else {
-        // Modo Crear
+        // --- MODO CREAR ---
         form.adolescenteId = null;
         form.eventoId = null;
         form.fecha = new Date().toISOString().slice(0, 10);
@@ -192,6 +195,7 @@ const handleSaveClick = async () => {
     if (props.mode === 'create') {
       await createFamilia(payload);
     } else {
+      // Usamos props.initialData.id para editar
       await updateFamilia(props.initialData.id, payload);
     }
 

@@ -34,7 +34,14 @@ function normalizeAdolescentePayload(payload = {}) {
 export function createAdolescente(payload) {
   return api.post("/adolescentes", normalizeAdolescentePayload(payload));
 }
-
+/**
+ * Obtener un Adolescente por ID
+ * @param {number} id
+ * @returns {Promise<any>}
+ */
+export function getAdolescenteById(id) {
+  return api.get(`/adolescente/${id}`);
+}
 /**
  * Obtener lista de adolescentes (paginado)
  * @param {{ nombre?: string, cedula?: string, page?: number, size?: number }} [params]
@@ -56,7 +63,7 @@ export function getAdolescentes(params = {}) {
  * @param {any} payload
  */
 export function updateAdolescente(id, payload) {
-  return api.put(`/adolescentes/${id}`, normalizeAdolescentePayload(payload));
+  return api.patch(`/adolescentes/${id}`, normalizeAdolescentePayload(payload));
 }
 
 /**

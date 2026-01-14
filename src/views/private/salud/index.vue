@@ -1,4 +1,3 @@
-<!-- src/views/private/salud/index.vue -->
 <template>
   <div class="salud-page">
     <section class="hero">
@@ -16,13 +15,11 @@
           <strong>{{ totalItems }}</strong>
           <span class="hint">Registros de salud</span>
         </div>
-
         <div class="stat-card">
           <span class="label">Visibles</span>
           <strong>{{ filteredCount }}</strong>
           <span class="hint">Resultado del filtro</span>
         </div>
-
         <div class="stat-card">
           <span class="label">Página</span>
           <strong>{{ currentPage }} / {{ totalPages }}</strong>
@@ -39,10 +36,14 @@
         @create="openCreate"
       />
 
-      <div v-if="isLoading" class="status">Cargando registros...</div>
+      <div v-if="isLoading" class="status">
+        <div class="spinner"></div>
+        <span>Cargando registros...</span>
+      </div>
       <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
 
       <SaludTable
+        v-else
         :items="pagedItems"
         @edit="openEdit"
         @remove="removeItem"
@@ -85,8 +86,6 @@ const resolveList = (response) => {
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.data)) return payload.data;
   if (Array.isArray(payload?.items)) return payload.items;
-  if (Array.isArray(payload?.rows)) return payload.rows;
-  if (Array.isArray(payload?.salud)) return payload.salud;
   return [];
 };
 
@@ -95,25 +94,29 @@ const normalize01 = (v, fallback = "0") => {
   return s === "1" || s === "0" ? s : fallback;
 };
 
+// --- CORRECCIÓN CLAVE AQUÍ ---
 const mapItem = (row) => {
   const rawId = row?.id ?? row?.saludId ?? row?.idSalud;
-  const idNum = Number(rawId);
-
-  const adolescenteRaw = row?.adolescenteId ?? row?.adolescente_id ?? row?.idAdolescente;
-  const adolescenteIdNum = Number(adolescenteRaw);
-
-  const numAtenRaw = row?.numAtenMedica ?? row?.num_aten_medica ?? row?.numAtenciones;
-  const numAtenNum = Number(numAtenRaw);
+  
+  // Buscamos el ID del adolescente en todas las ubicaciones posibles
+  // row.adolescente?.id -> Cuando viene el objeto completo (NestJS relations)
+  // row.adolescenteId -> Cuando viene plano
+  const adolescenteRaw = 
+    row?.adolescente?.id ?? 
+    row?.adolescenteId ?? 
+    row?.adolescente_id ?? 
+    row?.idAdolescente;
 
   return {
-    id: Number.isNaN(idNum) ? rawId : idNum,
-    adolescenteId: Number.isNaN(adolescenteIdNum) ? adolescenteRaw : adolescenteIdNum,
+    id: Number(rawId),
+    // Aseguramos que sea un número válido
+    adolescenteId: Number(adolescenteRaw) || 0, 
     fecha: row?.fecha ?? row?.date ?? "",
     diagnostico: row?.diagnostico ?? "",
     tomaMedicacion: normalize01(row?.tomaMedicacion, "0"),
     consumeSustancia: normalize01(row?.consumeSustancia, "0"),
     tipoSustancia: row?.tipoSustancia ?? "",
-    numAtenMedica: Number.isNaN(numAtenNum) ? 0 : numAtenNum,
+    numAtenMedica: Number(row?.numAtenMedica ?? 0),
     discapacidad: normalize01(row?.discapacidad, "0"),
     observacion: row?.observacion ?? "",
   };
@@ -132,7 +135,7 @@ const currentPage = ref(1);
 const pageSize = ref(6);
 
 const modalOpen = ref(false);
-const modalMode = ref("create"); // "create" | "edit"
+const modalMode = ref("create");
 const modalInitial = ref(null);
 const editingId = ref(null);
 
@@ -150,14 +153,8 @@ const filteredItems = computed(() => {
       i.fecha,
       i.diagnostico,
       i.tipoSustancia,
-      i.observacion,
-      i.tomaMedicacion === "1" ? "si" : "no",
-      i.consumeSustancia === "1" ? "si" : "no",
-      i.discapacidad === "1" ? "si" : "no",
-      i.numAtenMedica,
-    ]
-      .join(" ")
-      .toLowerCase();
+      i.observacion
+    ].join(" ").toLowerCase();
 
     return haystack.includes(term);
   });
@@ -178,13 +175,8 @@ const pagedItems = computed(() => {
 /* ======================
    WATCHERS
 ====================== */
-watch(search, () => {
-  currentPage.value = 1;
-});
-
-watch(totalPages, (val) => {
-  if (currentPage.value > val) currentPage.value = val;
-});
+watch(search, () => { currentPage.value = 1; });
+watch(totalPages, (val) => { if (currentPage.value > val) currentPage.value = val; });
 
 /* ======================
    METHODS
@@ -195,6 +187,7 @@ const loadItems = async () => {
   try {
     const res = await getSalud();
     const list = resolveList(res);
+    // Aplicamos el mapa corregido
     items.value = list.map(mapItem);
   } catch (e) {
     console.error("Error cargando salud:", e);
@@ -214,6 +207,7 @@ const openCreate = () => {
 
 const openEdit = (row) => {
   modalMode.value = "edit";
+  // Pasamos el objeto ya mapeado (que tiene el adolescenteId correcto)
   modalInitial.value = { ...row };
   editingId.value = row.id;
   modalOpen.value = true;
@@ -228,24 +222,19 @@ const closeModal = () => {
 const saveItem = async (payload) => {
   if (!payload) return;
 
-  const adolescenteIdNum = Number(payload.adolescenteId);
-  const numAtenNum = Number(payload.numAtenMedica);
-
   const clean = {
-    adolescenteId: Number.isNaN(adolescenteIdNum) ? 0 : adolescenteIdNum,
+    adolescenteId: Number(payload.adolescenteId),
     fecha: payload.fecha ? String(payload.fecha).trim() : "",
-    diagnostico: payload.diagnostico ? String(payload.diagnostico).trim() : "",
-    tomaMedicacion: payload.tomaMedicacion === "1" ? "1" : "0",
-    consumeSustancia: payload.consumeSustancia === "1" ? "1" : "0",
-    tipoSustancia: payload.tipoSustancia ? String(payload.tipoSustancia).trim() : "",
-    numAtenMedica: Number.isNaN(numAtenNum) ? 0 : numAtenNum,
-    discapacidad: payload.discapacidad === "1" ? "1" : "0",
-    observacion: payload.observacion ? String(payload.observacion).trim() : "",
+    diagnostico: payload.diagnostico?.trim() || "",
+    tomaMedicacion: payload.tomaMedicacion,
+    consumeSustancia: payload.consumeSustancia,
+    tipoSustancia: payload.tipoSustancia?.trim() || "",
+    numAtenMedica: Number(payload.numAtenMedica),
+    discapacidad: payload.discapacidad,
+    observacion: payload.observacion?.trim() || "",
   };
 
-  // mínimos obligatorios del DTO
-  if (!clean.adolescenteId) return;
-  if (!clean.fecha) return;
+  if (!clean.adolescenteId || !clean.fecha) return;
 
   isSaving.value = true;
   errorMessage.value = "";
@@ -255,49 +244,40 @@ const saveItem = async (payload) => {
       const res = await createSalud(clean);
       const saved = res?.data?.data ?? res?.data;
       if (saved?.id != null) {
-        items.value = [...items.value, mapItem(saved)];
+        items.value.push(mapItem(saved));
       } else {
         await loadItems();
       }
     } else {
       if (editingId.value == null) return;
-
       const res = await updateSalud(editingId.value, clean);
       const saved = res?.data?.data ?? res?.data;
-
+      
       if (saved?.id != null) {
-        items.value = items.value.map((i) =>
-          String(i.id) === String(editingId.value) ? mapItem(saved) : i
-        );
+        const updated = mapItem(saved);
+        const idx = items.value.findIndex(i => i.id === editingId.value);
+        if (idx !== -1) items.value[idx] = updated;
       } else {
-        items.value = items.value.map((i) =>
-          String(i.id) === String(editingId.value) ? { ...i, ...clean } : i
-        );
+        await loadItems();
       }
     }
-
     closeModal();
   } catch (e) {
-    console.error("Error guardando salud:", e);
-    errorMessage.value = "Error guardando el registro de salud.";
+    console.error("Error guardando:", e);
+    errorMessage.value = "Error al guardar el registro.";
   } finally {
     isSaving.value = false;
   }
 };
 
 const removeItem = async (row) => {
-  const confirmed = window.confirm(
-    `Eliminar el registro #${row.id}? Esta acción no se puede revertir.`
-  );
-  if (!confirmed) return;
-
-  errorMessage.value = "";
+  if (!confirm(`¿Eliminar registro #${row.id}?`)) return;
   try {
     await deleteSalud(row.id);
-    items.value = items.value.filter((i) => String(i.id) !== String(row.id));
+    items.value = items.value.filter((i) => i.id !== row.id);
   } catch (e) {
-    console.error("Error eliminando salud:", e);
-    errorMessage.value = "No se pudo eliminar el registro.";
+    console.error("Error eliminando:", e);
+    alert("No se pudo eliminar el registro.");
   }
 };
 
@@ -305,135 +285,55 @@ onMounted(loadItems);
 </script>
 
 <style scoped>
-.salud-page {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
+.salud-page { display: flex; flex-direction: column; gap: 24px; }
 
+/* Hero Section */
 .hero {
   background: linear-gradient(125deg, #0f172a 0%, #1d4ed8 55%, #38bdf8 100%);
-  color: white;
-  padding: 28px;
-  border-radius: 20px;
-  position: relative;
-  overflow: hidden;
+  color: white; padding: 28px; border-radius: 20px; position: relative; overflow: hidden;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
 }
-
-.hero::before,
-.hero::after {
-  content: "";
-  position: absolute;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+.hero::before, .hero::after {
+  content: ""; position: absolute; border-radius: 999px; background: rgba(255, 255, 255, 0.08);
 }
+.hero::before { width: 220px; height: 220px; top: -60px; right: -40px; }
+.hero::after { width: 140px; height: 140px; bottom: -50px; left: 40px; }
 
-.hero::before {
-  width: 220px;
-  height: 220px;
-  top: -60px;
-  right: -40px;
-}
+.hero-main { position: relative; z-index: 1; max-width: 640px; }
+.eyebrow { text-transform: uppercase; letter-spacing: 2px; font-size: 0.7rem; margin-bottom: 8px; opacity: 0.7; }
+.hero-main h1 { margin: 0 0 8px; font-size: 2rem; }
+.subtitle { margin: 0; font-size: 0.98rem; opacity: 0.85; }
 
-.hero::after {
-  width: 140px;
-  height: 140px;
-  bottom: -50px;
-  left: 40px;
-}
-
-.hero-main {
-  position: relative;
-  z-index: 1;
-  max-width: 640px;
-}
-
-.eyebrow {
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  font-size: 0.7rem;
-  margin-bottom: 8px;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.hero-main h1 {
-  margin: 0 0 8px;
-  font-size: 2rem;
-}
-
-.subtitle {
-  margin: 0;
-  font-size: 0.98rem;
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.hero-stats {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px;
-  margin-top: 20px;
-}
-
+/* Stats */
+.hero-stats { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-top: 20px; }
 .stat-card {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  padding: 14px 16px;
-  backdrop-filter: blur(6px);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  background: rgba(255, 255, 255, 0.12); border-radius: 16px; padding: 14px 16px;
+  backdrop-filter: blur(6px); display: flex; flex-direction: column; gap: 6px;
 }
+.stat-card strong { font-size: 1.4rem; }
+.label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; }
+.hint { font-size: 0.78rem; opacity: 0.7; }
 
-.stat-card strong {
-  font-size: 1.4rem;
-}
-
-.label {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.hint {
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.7);
-}
-
+/* Panel */
 .panel {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  background: white;
-  padding: 22px;
-  border-radius: 18px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  display: flex; flex-direction: column; gap: 18px; background: white; padding: 22px;
+  border-radius: 18px; border: 1px solid #e2e8f0; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
 }
 
+/* Status & Spinner */
 .status {
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: #f1f5f9;
-  color: #475569;
-  font-size: 0.92rem;
+  padding: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  color: #64748b; background: #f8fafc; border-radius: 12px; border: 1px dashed #cbd5e1;
 }
-
-.status.error {
-  background: rgba(239, 68, 68, 0.12);
-  color: #b91c1c;
+.status.error { background: #fef2f2; color: #ef4444; border-color: #fecaca; }
+.spinner {
+  width: 28px; height: 28px; border: 3px solid #e2e8f0; border-top-color: #3b82f6;
+  border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 12px;
 }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 720px) {
-  .hero {
-    padding: 22px;
-  }
-
-  .hero-main h1 {
-    font-size: 1.6rem;
-  }
+  .hero { padding: 22px; }
+  .hero-main h1 { font-size: 1.6rem; }
 }
 </style>

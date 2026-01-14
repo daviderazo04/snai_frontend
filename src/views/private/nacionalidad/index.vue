@@ -2,10 +2,10 @@
   <div class="nacionalidad-page">
     <section class="hero">
       <div class="hero-main">
-        <p class="eyebrow">Catalogos</p>
+        <p class="eyebrow">Catálogos</p>
         <h1>Nacionalidades</h1>
         <p class="subtitle">
-          Gestiona el catalogo de nacionalidades para los registros del sistema.
+          Gestiona el catálogo de nacionalidades para los registros del sistema.
         </p>
       </div>
 
@@ -21,9 +21,9 @@
           <span class="hint">Resultado del filtro actual</span>
         </div>
         <div class="stat-card">
-          <span class="label">Pagina</span>
+          <span class="label">Página</span>
           <strong>{{ currentPage }} / {{ totalPages }}</strong>
-          <span class="hint">Paginacion activa</span>
+          <span class="hint">Paginación activa</span>
         </div>
       </div>
     </section>
@@ -39,7 +39,12 @@
       <div v-if="isLoading" class="status">Cargando nacionalidades...</div>
       <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
 
-      <NacionalidadTable :items="pagedNacionalidades" @edit="openEdit" />
+      <NacionalidadTable 
+        v-else
+        :items="pagedNacionalidades" 
+        @edit="openEdit" 
+        @remove="removeItem"
+      />
 
       <NacionalidadPagination
         :current-page="currentPage"
@@ -66,7 +71,10 @@ import { ref, computed, watch, onMounted } from "vue";
 import {
   createNacionalidad,
   getNacionalidades,
+  updateNacionalidad, // Importante: Importar función de editar
+  deleteNacionalidad, // Importante: Importar función de eliminar
 } from "../../../service/nacionalidad.service.js";
+
 import NacionalidadToolbar from "./components/NacionalidadToolbar.vue";
 import NacionalidadTable from "./components/NacionalidadTable.vue";
 import NacionalidadPagination from "./components/NacionalidadPagination.vue";
@@ -77,16 +85,13 @@ const resolveList = (response) => {
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.data)) return payload.data;
   if (Array.isArray(payload?.items)) return payload.items;
-  if (Array.isArray(payload?.rows)) return payload.rows;
-  if (Array.isArray(payload?.nacionalidades)) return payload.nacionalidades;
-  if (Array.isArray(payload?.nacionalidad)) return payload.nacionalidad;
   return [];
 };
 
 const mapNacionalidad = (item) => {
   const rawId = item?.id ?? item?.nacionalidadId ?? item?.idNacionalidad;
   return {
-    id: Number.isNaN(Number(rawId)) ? rawId : Number(rawId),
+    id: Number(rawId),
     nombre: item?.nombre ?? item?.name ?? item?.nacionalidad ?? "",
   };
 };
@@ -111,6 +116,7 @@ export default {
     const modalOpen = ref(false);
     const modalMode = ref("create");
     const modalInitial = ref(null);
+    const editingId = ref(null); // Variable para almacenar el ID en edición
 
     const filteredNacionalidades = computed(() => {
       const term = search.value.trim().toLowerCase();
@@ -143,8 +149,7 @@ export default {
       try {
         const res = await getNacionalidades();
         if (res.data?.success === false) {
-          errorMessage.value =
-            res.data?.message || "No se pudo cargar nacionalidades.";
+          errorMessage.value = res.data?.message || "No se pudo cargar nacionalidades.";
           nacionalidades.value = [];
           return;
         }
@@ -164,18 +169,21 @@ export default {
     const openCreate = () => {
       modalMode.value = "create";
       modalInitial.value = null;
+      editingId.value = null;
       modalOpen.value = true;
     };
 
     const openEdit = (item) => {
       modalMode.value = "edit";
       modalInitial.value = { ...item };
+      editingId.value = item.id; // Guardamos el ID que vamos a editar
       modalOpen.value = true;
     };
 
     const closeModal = () => {
       modalOpen.value = false;
       modalInitial.value = null;
+      editingId.value = null;
     };
 
     const saveNacionalidad = async (payload) => {
@@ -184,13 +192,23 @@ export default {
 
       isSaving.value = true;
       errorMessage.value = "";
+      
       try {
-        const res = await createNacionalidad({ nombre });
-        if (res.data?.success === false) {
-          errorMessage.value =
-            res.data?.message || "No se pudo guardar la nacionalidad.";
-          return;
+        if (modalMode.value === "create") {
+          // Lógica de Creación
+          const res = await createNacionalidad({ nombre });
+          if (res.data?.success === false) {
+            throw new Error(res.data?.message || "No se pudo guardar la nacionalidad.");
+          }
+        } else {
+          // Lógica de Edición
+          if (!editingId.value) return;
+          const res = await updateNacionalidad(editingId.value, { nombre });
+          if (res.data?.success === false) {
+            throw new Error(res.data?.message || "No se pudo actualizar la nacionalidad.");
+          }
         }
+        
         await loadNacionalidades();
         closeModal();
       } catch (err) {
@@ -198,6 +216,18 @@ export default {
         errorMessage.value = "Error de conexion con el servidor.";
       } finally {
         isSaving.value = false;
+      }
+    };
+
+    const removeItem = async (item) => {
+      if (!confirm(`¿Estás seguro de eliminar la nacionalidad "${item.nombre}"?`)) return;
+      
+      try {
+        await deleteNacionalidad(item.id);
+        nacionalidades.value = nacionalidades.value.filter(i => i.id !== item.id);
+      } catch (err) {
+        console.error("Error eliminando:", err);
+        alert("No se pudo eliminar el registro.");
       }
     };
 
@@ -221,6 +251,7 @@ export default {
       openEdit,
       closeModal,
       saveNacionalidad,
+      removeItem // Retornamos la función para usarla en el template
     };
   },
 };

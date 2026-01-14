@@ -28,7 +28,7 @@ export function getSalud(params) {
  * @returns {Promise<any>}
  */
 export function updateSalud(id, payload) {
-  return api.put(`/salud/${id}`, payload);
+  return api.patch(`/salud/${id}`, payload);
 }
 
 /**

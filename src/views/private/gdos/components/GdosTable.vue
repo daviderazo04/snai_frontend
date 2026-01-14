@@ -6,21 +6,22 @@
           <tr>
             <th>ID</th>
             <th>Grupo G2</th>
-            <th>Acciones</th>
+            <th class="text-right">Acciones</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="item in items" :key="item.id">
             <td class="id-cell">#{{ item.id }}</td>
             <td>
-              <div class="name-cell">
-                <span class="name">{{ item.nombre }}</span>
-              </div>
+              <span class="name">{{ item.nombre }}</span>
             </td>
-            <td>
+            <td class="text-right">
               <div class="actions">
                 <button class="ghost" type="button" @click="$emit('edit', item)">
                   Editar
+                </button>
+                <button class="danger" type="button" @click="$emit('remove', item)">
+                  Eliminar
                 </button>
               </div>
             </td>
@@ -47,7 +48,7 @@ export default {
       default: () => [],
     },
   },
-  emits: ["edit"],
+  emits: ["edit", "remove"],
 };
 </script>
 
@@ -57,6 +58,7 @@ export default {
   border-radius: 16px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
 }
 
 .table-wrap {
@@ -69,8 +71,7 @@ table {
   min-width: 520px;
 }
 
-th,
- td {
+th, td {
   padding: 14px 16px;
   text-align: left;
   font-size: 0.95rem;
@@ -81,46 +82,70 @@ th {
   background: #f8fafc;
   color: #475569;
   font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 tbody tr {
-  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s;
+}
+
+tbody tr:hover {
+  background: #f8fafc;
 }
 
 .id-cell {
-  color: #475569;
+  color: #64748b;
   font-weight: 600;
-}
-
-.name-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  width: 80px;
 }
 
 .name {
   font-weight: 600;
+  color: #0f172a;
+}
+
+.text-right {
+  text-align: right;
 }
 
 .actions {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
-.ghost {
-  border: 1px solid transparent;
-  background: #f1f5f9;
-  padding: 6px 10px;
+/* Botones */
+button {
+  border: 1px solid #e2e8f0;
+  padding: 6px 12px;
   border-radius: 8px;
   font-size: 0.85rem;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
+  font-weight: 600;
+  transition: all 0.2s ease;
 }
 
+.ghost {
+  background: white;
+  color: #0f172a;
+}
 .ghost:hover {
-  background: #e2e8f0;
-  transform: translateY(-1px);
+  background: #f1f5f9;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.danger {
+  background: rgba(254, 242, 242, 0.5);
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+.danger:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
 }
 
 .empty {
@@ -128,14 +153,7 @@ tbody tr {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 24px 0;
+  padding: 30px 0;
   color: #64748b;
-}
-
-@media (max-width: 720px) {
-  th,
-  td {
-    padding: 12px;
-  }
 }
 </style>

@@ -1,11 +1,12 @@
 <template>
   <div class="gdos-page">
+    
     <section class="hero">
       <div class="hero-main">
-        <p class="eyebrow">Catalogos</p>
-        <h1>G2</h1>
+        <p class="eyebrow">Catálogos</p>
+        <h1>G2 (Grupos Organizados)</h1>
         <p class="subtitle">
-          Administracion del catalogo de grupos G2 para el sistema.
+          Administración del catálogo de grupos G2 para el sistema penitenciario.
         </p>
       </div>
 
@@ -13,17 +14,17 @@
         <div class="stat-card">
           <span class="label">Total</span>
           <strong>{{ totalGdos }}</strong>
-          <span class="hint">Grupos G2 registrados</span>
+          <span class="hint">Grupos registrados</span>
         </div>
         <div class="stat-card">
           <span class="label">Visibles</span>
           <strong>{{ filteredCount }}</strong>
-          <span class="hint">Resultado del filtro actual</span>
+          <span class="hint">Filtrados</span>
         </div>
         <div class="stat-card">
-          <span class="label">Pagina</span>
+          <span class="label">Página</span>
           <strong>{{ currentPage }} / {{ totalPages }}</strong>
-          <span class="hint">Paginacion activa</span>
+          <span class="hint">Paginación activa</span>
         </div>
       </div>
     </section>
@@ -36,10 +37,18 @@
         @create="openCreate"
       />
 
-      <div v-if="isLoading" class="status">Cargando G2...</div>
+      <div v-if="isLoading" class="status">
+        <div class="spinner"></div>
+        <span>Cargando G2...</span>
+      </div>
       <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
 
-      <GdosTable :items="pagedGdos" @edit="openEdit" />
+      <GdosTable 
+        v-else
+        :items="pagedGdos" 
+        @edit="openEdit" 
+        @remove="removeItem" 
+      />
 
       <GdosPagination
         :current-page="currentPage"
@@ -63,28 +72,34 @@
 
 <script>
 import { ref, computed, watch, onMounted } from "vue";
-import { createGdo, getGdos } from "../../../service/gdos.service.js";
+// Importamos el servicio completo con CRUD
+import { 
+  createGdo, 
+  getGdos, 
+  updateGdo, 
+  deleteGdo 
+} from "../../../service/gdos.service.js";
+
 import GdosToolbar from "./components/GdosToolbar.vue";
 import GdosTable from "./components/GdosTable.vue";
 import GdosPagination from "./components/GdosPagination.vue";
 import GdosFormModal from "./components/GdosFormModal.vue";
 
+// Helper para extraer datos de la respuesta
 const resolveList = (response) => {
   const payload = response?.data?.data ?? response?.data;
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.data)) return payload.data;
   if (Array.isArray(payload?.items)) return payload.items;
-  if (Array.isArray(payload?.rows)) return payload.rows;
-  if (Array.isArray(payload?.gdos)) return payload.gdos;
-  if (Array.isArray(payload?.gdo)) return payload.gdo;
   return [];
 };
 
+// Mapeo seguro de datos
 const mapGdo = (item) => {
-  const rawId = item?.id ?? item?.gdoId ?? item?.idGdo;
+  const rawId = item?.id ?? item?.gdoId;
   return {
-    id: Number.isNaN(Number(rawId)) ? rawId : Number(rawId),
-    nombre: item?.nombre ?? item?.name ?? item?.gdo ?? "",
+    id: Number(rawId),
+    nombre: item?.nombre ?? item?.name ?? "",
   };
 };
 
@@ -96,30 +111,34 @@ export default {
     GdosFormModal,
   },
   setup() {
-    const gdos = ref([]);
+    const items = ref([]);
     const isLoading = ref(false);
     const isSaving = ref(false);
     const errorMessage = ref("");
 
     const search = ref("");
     const currentPage = ref(1);
-    const pageSize = ref(6);
+    const pageSize = ref(10); // 10 items por página
 
+    // Estado del Modal
     const modalOpen = ref(false);
     const modalMode = ref("create");
     const modalInitial = ref(null);
+    const editingId = ref(null);
 
+    // Filtros Frontend
     const filteredGdos = computed(() => {
       const term = search.value.trim().toLowerCase();
-      return gdos.value.filter((item) =>
-        term ? (item.nombre || "").toLowerCase().includes(term) : true
+      if (!term) return items.value;
+      return items.value.filter((item) =>
+        (item.nombre || "").toLowerCase().includes(term)
       );
     });
 
     const filteredCount = computed(() => filteredGdos.value.length);
-
+    const totalGdos = computed(() => items.value.length);
     const totalPages = computed(() =>
-      Math.max(1, Math.ceil(filteredGdos.value.length / pageSize.value))
+      Math.max(1, Math.ceil(filteredCount.value / pageSize.value))
     );
 
     const pagedGdos = computed(() => {
@@ -127,70 +146,101 @@ export default {
       return filteredGdos.value.slice(start, start + pageSize.value);
     });
 
-    const totalGdos = computed(() => gdos.value.length);
-
     watch(search, () => (currentPage.value = 1));
-    watch(totalPages, (value) => {
-      if (currentPage.value > value) currentPage.value = value;
-    });
 
+    // --- CARGAR DATOS ---
     const loadGdos = async () => {
       isLoading.value = true;
       errorMessage.value = "";
       try {
         const res = await getGdos();
+        // Verificamos si el backend devuelve success false explícitamente
         if (res.data?.success === false) {
-          errorMessage.value = res.data?.message || "No se pudo cargar G2.";
-          gdos.value = [];
-          return;
+          throw new Error(res.data?.message || "Error al cargar");
         }
         const list = resolveList(res);
-        gdos.value = list.map(mapGdo).filter((item) => item.nombre);
+        items.value = list.map(mapGdo).filter((i) => i.nombre);
       } catch (err) {
         console.error("Error cargando G2:", err);
-        errorMessage.value = "Error de conexion con el servidor.";
-        gdos.value = [];
+        errorMessage.value = "No se pudo cargar la lista de G2.";
+        items.value = [];
       } finally {
         isLoading.value = false;
       }
     };
 
+    // --- ACCIONES MODAL ---
     const openCreate = () => {
       modalMode.value = "create";
       modalInitial.value = null;
+      editingId.value = null;
       modalOpen.value = true;
     };
 
     const openEdit = (item) => {
       modalMode.value = "edit";
       modalInitial.value = { ...item };
+      editingId.value = item.id;
       modalOpen.value = true;
     };
 
     const closeModal = () => {
       modalOpen.value = false;
       modalInitial.value = null;
+      editingId.value = null;
     };
 
+    // --- GUARDAR (Crear / Editar) ---
     const saveGdo = async (payload) => {
       const nombre = payload?.nombre ? String(payload.nombre).trim() : "";
       if (!nombre) return;
 
       isSaving.value = true;
       errorMessage.value = "";
+
       try {
-        const res = await createGdo({ nombre });
-        if (res.data?.success === false) {
-          errorMessage.value = res.data?.message || "No se pudo guardar el G2.";
-          return;
+        if (modalMode.value === "create") {
+          // CREAR
+          const res = await createGdo({ nombre });
+          if (res.data?.success === false) throw new Error(res.data?.message);
+          
+          const saved = res?.data?.data ?? res?.data;
+          if (saved?.id) items.value.push(mapGdo(saved));
+          else await loadGdos();
+
+        } else {
+          // EDITAR
+          if (!editingId.value) return;
+          const res = await updateGdo(editingId.value, { nombre });
+          if (res.data?.success === false) throw new Error(res.data?.message);
+          
+          const saved = res?.data?.data ?? res?.data;
+          if (saved?.id) {
+            const idx = items.value.findIndex(i => i.id === editingId.value);
+            if (idx !== -1) items.value[idx] = mapGdo(saved);
+          } else {
+            await loadGdos();
+          }
         }
-        await loadGdos();
         closeModal();
       } catch (err) {
         console.error("Error guardando G2:", err);
-        errorMessage.value = "Error de conexion con el servidor.";
+        errorMessage.value = "Error al guardar el registro.";
       } finally {
         isSaving.value = false;
+      }
+    };
+
+    // --- ELIMINAR ---
+    const removeItem = async (item) => {
+      if (!confirm(`¿Eliminar el GDO "${item.nombre}"?`)) return;
+
+      try {
+        await deleteGdo(item.id);
+        items.value = items.value.filter(i => i.id !== item.id);
+      } catch (err) {
+        console.error("Error eliminando G2:", err);
+        alert("No se pudo eliminar el registro.");
       }
     };
 
@@ -214,6 +264,7 @@ export default {
       openEdit,
       closeModal,
       saveGdo,
+      removeItem // Importante exportarlo para la tabla
     };
   },
 };
@@ -225,7 +276,6 @@ export default {
   --snai-navy-2: #0f172a;
   --snai-blue: #1e3a8a;
   --snai-blue-2: #1d4ed8;
-  --snai-sky: #38bdf8;
   --snai-yellow: #fbbf24;
   --snai-red: #ef4444;
   --snai-border: #e2e8f0;
@@ -238,6 +288,7 @@ export default {
   gap: 24px;
 }
 
+/* Hero Section */
 .hero {
   background: linear-gradient(
     125deg,
@@ -258,32 +309,17 @@ export default {
   content: "";
   position: absolute;
   border-radius: 999px;
-  filter: blur(0px);
   opacity: 0.9;
 }
 
 .hero::before {
-  width: 240px;
-  height: 240px;
-  top: -70px;
-  right: -60px;
-  background: radial-gradient(
-    circle at 30% 30%,
-    rgba(251, 191, 36, 0.35),
-    rgba(251, 191, 36, 0) 65%
-  );
+  width: 240px; height: 240px; top: -70px; right: -60px;
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.35), transparent 65%);
 }
 
 .hero::after {
-  width: 160px;
-  height: 160px;
-  bottom: -60px;
-  left: 40px;
-  background: radial-gradient(
-    circle at 30% 30%,
-    rgba(56, 189, 248, 0.3),
-    rgba(56, 189, 248, 0) 65%
-  );
+  width: 160px; height: 160px; bottom: -60px; left: 40px;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.3), transparent 65%);
 }
 
 .hero-main {
@@ -297,7 +333,7 @@ export default {
   letter-spacing: 2px;
   font-size: 0.7rem;
   margin-bottom: 8px;
-  color: rgba(255, 255, 255, 0.72);
+  opacity: 0.8;
 }
 
 .hero-main h1 {
@@ -308,9 +344,10 @@ export default {
 .subtitle {
   margin: 0;
   font-size: 0.98rem;
-  color: rgba(255, 255, 255, 0.86);
+  opacity: 0.9;
 }
 
+/* Stats */
 .hero-stats {
   position: relative;
   z-index: 1;
@@ -336,29 +373,19 @@ export default {
   color: #fff;
 }
 
-.stat-card strong::after {
-  content: "";
-  display: block;
-  width: 28px;
-  height: 3px;
-  margin-top: 6px;
-  border-radius: 999px;
-  background: var(--snai-yellow);
-  opacity: 0.9;
-}
-
 .label {
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: rgba(255, 255, 255, 0.75);
+  opacity: 0.8;
 }
 
 .hint {
   font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.72);
+  opacity: 0.7;
 }
 
+/* Panel */
 .panel {
   display: flex;
   flex-direction: column;
@@ -370,28 +397,41 @@ export default {
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
 }
 
+/* Status & Spinner */
 .status {
-  padding: 12px 14px;
-  border-radius: 12px;
+  padding: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   background: #f8fafc;
-  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  border: 1px dashed #e5e7eb;
   color: var(--snai-muted);
-  font-size: 0.92rem;
 }
 
 .status.error {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.22);
-  color: #b91c1c;
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #ef4444;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 10px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 @media (max-width: 720px) {
-  .hero {
-    padding: 22px;
-  }
-
-  .hero-main h1 {
-    font-size: 1.6rem;
-  }
+  .hero { padding: 22px; }
+  .hero-main h1 { font-size: 1.6rem; }
 }
 </style>

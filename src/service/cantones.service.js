@@ -26,7 +26,7 @@ export function getCantones(params) {
  * @returns {Promise<import('./snai-dtos').ResultWithData<any>>}
  */
 export function updateCanton(id, payload) {
-  return api.put(`/cantones/${id}`, payload);
+  return api.patch(`/cantones/${id}`, payload);
 }
 
 /**

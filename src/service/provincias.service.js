@@ -26,7 +26,7 @@ export function getProvincias(params) {
  * @returns {Promise<import('./snai-dtos').ResultWithData<any>>}
  */
 export function updateProvincia(id, payload) {
-  return api.put(`/provincias/${id}`, payload);
+  return api.patch(`/provincias/${id}`, payload);
 }
 
 /**
