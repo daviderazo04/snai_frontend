@@ -1,6 +1,5 @@
 <template>
   <div class="launchpad-container">
-    <!-- HEADER -->
     <header class="welcome-header">
       <div class="user-info">
         <h1 class="greeting">
@@ -20,7 +19,6 @@
 
     <hr class="divider" />
 
-    <!-- ÁREA PRINCIPAL -->
     <main class="selection-area">
       <div class="top-row">
         <h2 class="section-title">¿Con qué perfil deseas operar hoy?</h2>
@@ -76,7 +74,6 @@
       </div>
     </main>
 
-    <!-- TOAST -->
     <transition name="toast-fade">
       <div v-if="toast.open" class="toast-overlay" @click.self="closeToast">
         <div class="toast-card" :class="toast.type">
@@ -206,6 +203,7 @@ export default {
       closeToast();
     };
 
+    // --- FUNCIÓN MODIFICADA PARA RECARGA COMPLETA ---
     const asignarPerfil = async () => {
       if (!selectedPerfil.value) return;
 
@@ -218,6 +216,7 @@ export default {
 
         if (!res.data?.success) {
           openToast("error", res.data?.message || "No se pudo asignar el perfil", 2800);
+          isLoading.value = false; // Solo detenemos el loading si falló
           return;
         }
 
@@ -238,11 +237,14 @@ export default {
         localStorage.setItem("snai_perfil_activo", JSON.stringify(selectedPerfil.value));
         sessionStorage.removeItem("snai_posibles_perfiles");
 
-        setTimeout(() => router.push("/app"), 800);
+        // FORZAMOS RECARGA COMPLETA para actualizar el menú lateral
+        setTimeout(() => {
+          window.location.href = "/app";
+        }, 800);
+
       } catch (err) {
         console.error("Error asignando perfil:", err);
         openToast("error", "Error de conexión con el servidor", 3000);
-      } finally {
         isLoading.value = false;
       }
     };

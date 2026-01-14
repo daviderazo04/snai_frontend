@@ -172,7 +172,6 @@ export default {
         items: [
           { label: 'Inicio', path: '/app', iconSvg: icons.home, exact: true },
           { label: 'Mi Perfil', path: '/app/perfiles', iconSvg: icons.user },
-          { label: 'Dashboard', path: '/app/dashboard', iconSvg: icons.dashboard },
         ]
       },
       {
