@@ -4,8 +4,8 @@
       <div class="modal">
         <div class="modal-header">
           <div class="header-text">
-            <h3>{{ mode === "create" ? "Nuevo registro educativo" : "Editar registro educativo" }}</h3>
-            <p class="subtitle">Complete la información académica</p>
+            <h3>{{ mode === "create" ? "Nuevo Traslado" : "Editar Traslado" }}</h3>
+            <p class="subtitle">Complete la información del traslado</p>
           </div>
           <button class="btn-close" @click="$emit('close')" title="Cerrar">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -25,10 +25,25 @@
             <label class="field full-width">
               <span>Adolescente <span class="required">*</span></span>
               <div class="select-wrapper">
-                <select v-model.number="adolescenteId">
+                <select v-model.number="adolescenteId" :disabled="mode === 'edit'">
                   <option value="" disabled>Seleccione el adolescente...</option>
                   <option v-for="item in adolescentesList" :key="item.id" :value="item.id">
                     {{ item.nombre }} {{ item.apellido }} ({{ item.cedula }})
+                  </option>
+                </select>
+              </div>
+              <small v-if="mode === 'edit'" class="helper-text">
+                ID seleccionado: {{ adolescenteId }}
+              </small>
+            </label>
+
+            <label class="field full-width">
+              <span>CAI destino <span class="required">*</span></span>
+              <div class="select-wrapper">
+                <select v-model.number="caiId">
+                  <option value="" disabled>Seleccione el CAI...</option>
+                  <option v-for="item in caisList" :key="item.id" :value="item.id">
+                    {{ item.nombre }}
                   </option>
                 </select>
               </div>
@@ -39,80 +54,9 @@
               <input v-model="fecha" type="date" />
             </label>
 
-            <label class="field">
-              <span>¿Estudia? <span class="required">*</span></span>
-              <div class="select-wrapper">
-                <select v-model="estudia">
-                  <option value="1">Sí</option>
-                  <option value="0">No</option>
-                </select>
-              </div>
-            </label>
-
-            <label class="field full-width" :class="{ muted: estudia !== '0' }">
-              <span>Razón no estudia</span>
-              <input
-                v-model="razonNoEstudia"
-                type="text"
-                maxlength="255"
-                placeholder="Ej: Falta de recursos o desinterés"
-                :disabled="estudia !== '0'"
-              />
-            </label>
-
-            <label class="field">
-              <span>Nivel</span>
-              <input v-model="nivel" type="text" maxlength="127" placeholder="Ej: Bachillerato" />
-            </label>
-
-            <label class="field">
-              <span>Ciclo académico</span>
-              <input
-                v-model="cicloAcademico"
-                type="text"
-                maxlength="63"
-                placeholder="Ej: Segundo de Bachillerato"
-              />
-            </label>
-
-            <label class="field">
-              <span>Carrera</span>
-              <input
-                v-model="carrera"
-                type="text"
-                maxlength="127"
-                placeholder="Ej: Ciencias Físico-Matemáticas"
-              />
-            </label>
-
-            <label class="field">
-              <span>Institución</span>
-              <input
-                v-model="institucion"
-                type="text"
-                maxlength="127"
-                placeholder="Ej: Colegio Nacional Central"
-              />
-            </label>
-
-            <label class="field">
-              <span>Modalidad</span>
-              <input v-model="modalidad" type="text" maxlength="15" placeholder="Ej: Presencial" />
-            </label>
-
-            <label class="field">
-              <span>Contacto</span>
-              <input v-model="contacto" type="text" maxlength="63" placeholder="Ej: 022345678" />
-            </label>
-
             <label class="field full-width">
-              <span>Observación</span>
-              <textarea
-                v-model="observacion"
-                rows="3"
-                maxlength="255"
-                placeholder="Ej: El adolescente muestra interés en matemáticas."
-              ></textarea>
+              <span>Observaciones</span>
+              <textarea v-model="observaciones" rows="3" placeholder="Detalle del traslado..."></textarea>
             </label>
           </div>
         </div>
@@ -131,6 +75,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
+import { getCais } from "../../../../service/cai.service.js";
 import { getAdolescentes, getAdolescenteById } from "../../../../service/adolescente.service.js";
 
 const props = defineProps({
@@ -143,18 +88,12 @@ const props = defineProps({
 const emit = defineEmits(["close", "save"]);
 
 const adolescenteId = ref("");
+const caiId = ref("");
 const fecha = ref("");
-const estudia = ref("1");
-const razonNoEstudia = ref("");
-const nivel = ref("");
-const cicloAcademico = ref("");
-const carrera = ref("");
-const institucion = ref("");
-const modalidad = ref("");
-const contacto = ref("");
-const observacion = ref("");
+const observaciones = ref("");
 
 const adolescentesList = ref([]);
+const caisList = ref([]);
 const loadingData = ref(false);
 
 const extractList = (response) => {
@@ -163,6 +102,7 @@ const extractList = (response) => {
   if (Array.isArray(payload?.data)) return payload.data;
   if (Array.isArray(payload?.items)) return payload.items;
   if (Array.isArray(payload?.rows)) return payload.rows;
+  if (Array.isArray(payload?.cais)) return payload.cais;
   if (Array.isArray(payload?.adolescentes)) return payload.adolescentes;
   return [];
 };
@@ -174,6 +114,16 @@ const loadAdolescentes = async () => {
     adolescentesList.value = extractList(response);
   } catch (error) {
     console.error("Error listando adolescentes:", error);
+  }
+};
+
+const loadCais = async () => {
+  if (caisList.value.length > 0) return;
+  try {
+    const response = await getCais({ size: 100 });
+    caisList.value = extractList(response);
+  } catch (error) {
+    console.error("Error listando CAI:", error);
   }
 };
 
@@ -192,6 +142,16 @@ const ensureAdolescenteLoaded = async (id) => {
   }
 };
 
+const ensureCaiLoaded = (id) => {
+  if (!id) return;
+  const exists = caisList.value.some((c) => Number(c.id) === Number(id));
+  if (exists) return;
+  const source = props.initialData?.cai;
+  if (source && source.id) {
+    caisList.value.push({ id: source.id, nombre: source.nombre || "CAI" });
+  }
+};
+
 watch(
   () => props.open,
   async (isOpen) => {
@@ -199,73 +159,66 @@ watch(
 
     loadingData.value = true;
     try {
-      await loadAdolescentes();
+      await Promise.all([loadAdolescentes(), loadCais()]);
     } finally {
       loadingData.value = false;
     }
 
     if (props.initialData) {
       const val = props.initialData;
-      if (val?.adolescenteId) {
-        await ensureAdolescenteLoaded(Number(val.adolescenteId));
-        adolescenteId.value = Number(val.adolescenteId);
+      const adolescenteRaw = val.adolescenteId ?? val.adolecente?.id ?? val.adolescente?.id;
+      const caiRaw = val.caiId ?? val.cai?.id;
+
+      if (adolescenteRaw) {
+        await ensureAdolescenteLoaded(Number(adolescenteRaw));
+        adolescenteId.value = Number(adolescenteRaw);
       } else {
         adolescenteId.value = "";
       }
 
-      fecha.value = val?.fecha ? String(val.fecha).slice(0, 10) : "";
-      estudia.value = val?.estudia === "0" ? "0" : "1";
-      razonNoEstudia.value = val?.razonNoEstudia ?? "";
-      nivel.value = val?.nivel ?? "";
-      cicloAcademico.value = val?.cicloAcademico ?? "";
-      carrera.value = val?.carrera ?? "";
-      institucion.value = val?.institucion ?? "";
-      modalidad.value = val?.modalidad ?? "";
-      contacto.value = val?.contacto ?? "";
-      observacion.value = val?.observacion ?? "";
+      if (caiRaw) {
+        ensureCaiLoaded(Number(caiRaw));
+        caiId.value = Number(caiRaw);
+      } else {
+        caiId.value = "";
+      }
+
+      fecha.value = val.fecha ? String(val.fecha).slice(0, 10) : "";
+      observaciones.value = val.observaciones ?? "";
     } else {
       adolescenteId.value = "";
+      caiId.value = "";
       fecha.value = new Date().toISOString().slice(0, 10);
-      estudia.value = "1";
-      razonNoEstudia.value = "";
-      nivel.value = "";
-      cicloAcademico.value = "";
-      carrera.value = "";
-      institucion.value = "";
-      modalidad.value = "";
-      contacto.value = "";
-      observacion.value = "";
+      observaciones.value = "";
     }
   },
   { immediate: true }
 );
 
-watch(estudia, (v) => {
-  if (v !== "0") razonNoEstudia.value = "";
-});
-
 const canSave = computed(() => {
-  const aId = Number(adolescenteId.value);
-  if (!aId || Number.isNaN(aId)) return false;
-  if (!fecha.value) return false;
-  if (estudia.value !== "0" && estudia.value !== "1") return false;
+  const caiOk = Number(caiId.value);
+  const fechaOk = Boolean(fecha.value);
+  if (!caiOk || !fechaOk) return false;
+
+  if (props.mode === "create") {
+    const adolOk = Number(adolescenteId.value);
+    if (!adolOk) return false;
+  }
   return true;
 });
 
 const onSave = () => {
-  emit("save", {
-    adolescenteId: Number(adolescenteId.value),
+  const payload = {
+    caiId: Number(caiId.value),
     fecha: fecha.value,
-    estudia: estudia.value === "1" ? "1" : "0",
-    razonNoEstudia: razonNoEstudia.value.trim(),
-    nivel: nivel.value.trim(),
-    cicloAcademico: cicloAcademico.value.trim(),
-    carrera: carrera.value.trim(),
-    institucion: institucion.value.trim(),
-    modalidad: modalidad.value.trim(),
-    contacto: contacto.value.trim(),
-    observacion: observacion.value.trim(),
-  });
+    observaciones: String(observaciones.value || "").trim(),
+  };
+
+  if (props.mode === "create") {
+    payload.adolescenteId = Number(adolescenteId.value);
+  }
+
+  emit("save", payload);
 };
 </script>
 
@@ -277,7 +230,7 @@ const onSave = () => {
 .modal-fade-enter-from .modal { transform: scale(0.95) translateY(10px); }
 .modal-fade-leave-to .modal { transform: scale(0.98) translateY(10px); }
 .modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; padding: 16px; z-index: 60; }
-.modal { width: min(860px, 96vw); background: white; border-radius: 20px; box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.1); border: 1px solid rgba(255, 255, 255, 0.8); display: flex; flex-direction: column; max-height: 90vh; }
+.modal { width: min(720px, 96vw); background: white; border-radius: 20px; box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.1); border: 1px solid rgba(255, 255, 255, 0.8); display: flex; flex-direction: column; max-height: 90vh; }
 .modal-header { padding: 24px 24px 0 24px; display: flex; justify-content: space-between; align-items: flex-start; }
 .modal-header h3 { margin: 0; font-size: 1.25rem; font-weight: 700; color: #0f172a; }
 .subtitle { margin: 4px 0 0; font-size: 0.875rem; color: #64748b; }
@@ -294,10 +247,10 @@ const onSave = () => {
 .required { color: #ef4444; }
 .field input, .field select, .field textarea { width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0; outline: none; font-size: 0.95rem; color: #0f172a; background: #f8fafc; transition: all 0.2s ease; font-family: inherit; }
 .field select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; padding-right: 2.5rem; }
-.field textarea { min-height: 90px; resize: vertical; line-height: 1.5; }
+.field textarea { min-height: 80px; resize: vertical; line-height: 1.5; }
 .field input:focus, .field select:focus, .field textarea:focus { background: #fff; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); position: relative; z-index: 2; }
 .field input:disabled, .field select:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; border-color: #f1f5f9; }
-.field.muted { opacity: 0.75; }
+.helper-text { font-size: 0.75rem; color: #64748b; margin-top: -4px; }
 .actions { display: flex; justify-content: flex-end; gap: 12px; padding: 0 24px 24px 24px; background: transparent; flex-shrink: 0; }
 .actions button { padding: 10px 20px; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: all 0.2s ease; }
 .btn-ghost { border: 1px solid transparent; background: transparent; color: #64748b; }

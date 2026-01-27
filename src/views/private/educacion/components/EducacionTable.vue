@@ -19,7 +19,7 @@
       <tbody>
         <tr v-for="row in items" :key="row.id">
           <td>#{{ row.id }}</td>
-          <td>#{{ row.adolescenteId }}</td>
+          <td>{{ row.adolescenteId != null && row.adolescenteId !== '' ? `#${row.adolescenteId}` : "—" }}</td>
           <td>{{ row.fecha || "—" }}</td>
           <td>
             <span class="pill" :class="row.estudia === '1' ? 'pill-yes' : 'pill-no'">
