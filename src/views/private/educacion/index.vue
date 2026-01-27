@@ -34,8 +34,14 @@
     <section class="panel">
       <EducacionToolbar
         :search="search"
+        :estudia="estudiaFilter"
+        :nivel="nivelFilter"
+        :institucion="institucionFilter"
         :total="filteredCount"
         @update:search="search = $event"
+        @update:estudia="estudiaFilter = $event"
+        @update:nivel="nivelFilter = $event"
+        @update:institucion="institucionFilter = $event"
         @create="openCreate"
       />
 
@@ -48,6 +54,7 @@
       <EducacionTable
         v-else
         :items="pagedItems"
+        @view="goToDetail"
         @edit="openEdit"
         @remove="removeItem"
       />
@@ -72,12 +79,14 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import {
   getEducaciones,
   createEducacion,
   updateEducacion,
   deleteEducacion,
 } from "@/service/educacion.service.js";
+import { getAdolescentes } from "@/service/adolescente.service.js";
 
 import EducacionToolbar from "./components/EducacionToolbar.vue";
 import EducacionTable from "./components/EducacionTable.vue";
@@ -105,17 +114,27 @@ const normalize01 = (v, fallback = "0") => {
   return s === "1" || s === "0" ? s : fallback;
 };
 
-const mapItem = (row) => {
+const mapItem = (row, adolescentesById) => {
   const rawId = row?.id ?? row?.educaId ?? row?.educacionId ?? row?.idEduca ?? row?.idEducacion;
   const idNum = Number(rawId);
 
   const adolescenteRaw =
     row?.adolescenteId ?? row?.adolescente_id ?? row?.idAdolescente ?? row?.adolescente?.id;
   const adolescenteIdNum = Number(adolescenteRaw);
+  const adolescenteKey = adolescenteIdNum ? String(adolescenteIdNum) : null;
+
+  const adolObj = row?.adolescente ?? null;
+  const nombres = adolObj?.nombre ?? adolObj?.nombres ?? "";
+  const apellidos = adolObj?.apellido ?? adolObj?.apellidos ?? "";
+  const fullName = `${nombres} ${apellidos}`.trim();
+
+  const lookup = adolescenteKey ? adolescentesById?.get(adolescenteKey) : null;
 
   return {
     id: Number.isNaN(idNum) ? rawId : idNum,
     adolescenteId: Number.isNaN(adolescenteIdNum) ? adolescenteRaw : adolescenteIdNum,
+    adolescenteNombre: fullName || lookup?.nombre || "",
+    adolescenteCedula: adolObj?.cedula ?? lookup?.cedula ?? "",
     fecha: row?.fecha ?? row?.date ?? "",
     estudia: normalize01(row?.estudia, "0"),
     razonNoEstudia: row?.razonNoEstudia ?? row?.razon_no_estudia ?? "",
@@ -129,12 +148,17 @@ const mapItem = (row) => {
   };
 };
 
+const router = useRouter();
 const items = ref([]);
+const adolescentes = ref([]);
 const isLoading = ref(false);
 const isSaving = ref(false);
 const errorMessage = ref("");
 
 const search = ref("");
+const estudiaFilter = ref("");
+const nivelFilter = ref("");
+const institucionFilter = ref("");
 const currentPage = ref(1);
 const pageSize = ref(6);
 
@@ -143,29 +167,58 @@ const modalMode = ref("create");
 const modalInitial = ref(null);
 const editingId = ref(null);
 
+const adolescentesById = computed(() => {
+  const map = new Map();
+  adolescentes.value.forEach((item) => {
+    if (!item?.id) return;
+    const nombres = item?.nombre ?? item?.nombres ?? "";
+    const apellidos = item?.apellido ?? item?.apellidos ?? "";
+    map.set(String(item.id), {
+      nombre: `${nombres} ${apellidos}`.trim() || `Adolescente #${item.id}`,
+      cedula: item?.cedula ?? "",
+    });
+  });
+  return map;
+});
+
+const itemsWithMeta = computed(() =>
+  items.value.map((item) => {
+    if (!item.adolescenteId) return item;
+    const lookup = adolescentesById.value.get(String(item.adolescenteId));
+    if (!lookup) return item;
+    return {
+      ...item,
+      adolescenteNombre: item.adolescenteNombre || lookup.nombre,
+      adolescenteCedula: item.adolescenteCedula || lookup.cedula,
+    };
+  })
+);
+
 const filteredItems = computed(() => {
   const term = search.value.trim().toLowerCase();
-  if (!term) return items.value;
+  const nivelTerm = nivelFilter.value.trim().toLowerCase();
+  const institucionTerm = institucionFilter.value.trim().toLowerCase();
+  const estudiaValue = estudiaFilter.value;
 
-  return items.value.filter((i) => {
-    const haystack = [
-      i.id,
-      i.adolescenteId,
-      i.fecha,
-      i.estudia === "1" ? "si" : "no",
-      i.razonNoEstudia,
-      i.nivel,
-      i.cicloAcademico,
-      i.carrera,
-      i.institucion,
-      i.modalidad,
-      i.contacto,
-      i.observacion,
-    ]
-      .join(" ")
-      .toLowerCase();
+  return itemsWithMeta.value.filter((i) => {
+    if (term) {
+      const haystack = `${i.adolescenteNombre || ""} ${i.adolescenteCedula || ""}`.toLowerCase();
+      if (!haystack.includes(term)) return false;
+    }
 
-    return haystack.includes(term);
+    if (estudiaValue === "1" || estudiaValue === "0") {
+      if (i.estudia !== estudiaValue) return false;
+    }
+
+    if (nivelTerm && !String(i.nivel || "").toLowerCase().includes(nivelTerm)) {
+      return false;
+    }
+
+    if (institucionTerm && !String(i.institucion || "").toLowerCase().includes(institucionTerm)) {
+      return false;
+    }
+
+    return true;
   });
 });
 
@@ -181,7 +234,9 @@ const pagedItems = computed(() => {
   return filteredItems.value.slice(start, start + pageSize.value);
 });
 
-watch(search, () => (currentPage.value = 1));
+watch([search, estudiaFilter, nivelFilter, institucionFilter], () => {
+  currentPage.value = 1;
+});
 
 watch(totalPages, (val) => {
   if (currentPage.value > val) currentPage.value = val;
@@ -198,13 +253,32 @@ const loadItems = async () => {
       return;
     }
     const list = resolveList(res);
-    items.value = list.map(mapItem);
+    items.value = list.map((row) => mapItem(row, adolescentesById.value));
   } catch (e) {
     console.error("Error cargando educación:", e);
     errorMessage.value = "No se pudo cargar registros educativos.";
     items.value = [];
   } finally {
     isLoading.value = false;
+  }
+};
+
+const loadAdolescentes = async () => {
+  try {
+    const res = await getAdolescentes({ size: 500 });
+    const payload = res?.data?.data ?? res?.data;
+    if (Array.isArray(payload)) {
+      adolescentes.value = payload;
+    } else if (Array.isArray(payload?.data)) {
+      adolescentes.value = payload.data;
+    } else if (Array.isArray(payload?.items)) {
+      adolescentes.value = payload.items;
+    } else {
+      adolescentes.value = [];
+    }
+  } catch (e) {
+    console.error("Error cargando adolescentes:", e);
+    adolescentes.value = [];
   }
 };
 
@@ -268,7 +342,7 @@ const saveItem = async (payload) => {
 
     const saved = res?.data?.data ?? res?.data;
     if (saved?.id != null) {
-      const mapped = mapItem(saved);
+      const mapped = mapItem(saved, adolescentesById.value);
       if (modalMode.value === "create") {
         items.value = [...items.value, mapped];
       } else {
@@ -309,7 +383,14 @@ const removeItem = async (row) => {
   }
 };
 
-onMounted(loadItems);
+const goToDetail = (row) => {
+  router.push(`/app/educacion/${row.id}`);
+};
+
+onMounted(async () => {
+  await loadAdolescentes();
+  await loadItems();
+});
 </script>
 
 <style scoped>

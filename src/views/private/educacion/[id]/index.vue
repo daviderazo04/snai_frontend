@@ -63,8 +63,18 @@
           </div>
 
           <div class="field">
+            <span class="field-label">Cédula</span>
+            <span class="field-value">{{ item.adolescenteCedula || "—" }}</span>
+          </div>
+
+          <div class="field">
             <span class="field-label">Fecha</span>
             <span class="field-value">{{ item.fecha || "—" }}</span>
+          </div>
+
+          <div class="field">
+            <span class="field-label">Estado</span>
+            <span class="field-value">{{ item.estudia === "1" ? "Estudia" : "No estudia" }}</span>
           </div>
 
           <div class="field">
@@ -102,14 +112,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { getEducaciones } from "@/service/";
+import { getEducaciones } from "@/service/educacion.service.js";
+import { getAdolescentes, getAdolescenteById } from "@/service/adolescente.service.js";
 
 const route = useRoute();
 const router = useRouter();
 
 const item = ref(null);
+const adolescentes = ref([]);
 const loading = ref(true);
 const errorMessage = ref("");
 
@@ -134,22 +146,40 @@ const normalize01 = (v, fallback = "0") => {
   return s === "1" || s === "0" ? s : fallback;
 };
 
+const adolescentesById = computed(() => {
+  const map = new Map();
+  adolescentes.value.forEach((ad) => {
+    if (!ad?.id) return;
+    const nombres = ad?.nombre ?? ad?.nombres ?? "";
+    const apellidos = ad?.apellido ?? ad?.apellidos ?? "";
+    map.set(String(ad.id), {
+      nombre: `${nombres} ${apellidos}`.trim() || `Adolescente #${ad.id}`,
+      cedula: ad?.cedula ?? "",
+    });
+  });
+  return map;
+});
+
 const mapItem = (row) => {
   const rawId = row?.id ?? row?.educaId ?? row?.educacionId ?? row?.idEduca ?? row?.idEducacion;
   const idNum = Number(rawId);
 
-  const adolescenteRaw = row?.adolescenteId ?? row?.adolescente_id ?? row?.idAdolescente;
+  const adolescenteRaw =
+    row?.adolescenteId ?? row?.adolescente_id ?? row?.idAdolescente ?? row?.adolescente?.id;
   const adolescenteIdNum = Number(adolescenteRaw);
 
-  const nombres = row?.adolescente?.nombres ?? row?.adolescente?.nombre ?? "";
-  const apellidos = row?.adolescente?.apellidos ?? "";
+  const adolObj = row?.adolescente ?? null;
+  const nombres = adolObj?.nombres ?? adolObj?.nombre ?? "";
+  const apellidos = adolObj?.apellidos ?? adolObj?.apellido ?? "";
   const fullName = `${nombres} ${apellidos}`.trim();
+  const lookup = adolescentesById.value.get(String(adolescenteIdNum));
 
   return {
     id: Number.isNaN(idNum) ? rawId : idNum,
     adolescenteId: Number.isNaN(adolescenteIdNum) ? adolescenteRaw : adolescenteIdNum,
     adolescenteNombre:
-      fullName || (adolescenteRaw ? `Adolescente #${adolescenteRaw}` : "Adolescente"),
+      fullName || lookup?.nombre || (adolescenteRaw ? `Adolescente #${adolescenteRaw}` : "Adolescente"),
+    adolescenteCedula: adolObj?.cedula ?? lookup?.cedula ?? "",
     fecha: row?.fecha ?? row?.date ?? "",
     estudia: normalize01(row?.estudia, "0"),
     razonNoEstudia: row?.razonNoEstudia ?? row?.razon_no_estudia ?? "",
@@ -169,6 +199,16 @@ onMounted(async () => {
   item.value = null;
 
   try {
+    try {
+      const adolsRes = await getAdolescentes({ size: 500 });
+      const payload = adolsRes?.data?.data ?? adolsRes?.data;
+      if (Array.isArray(payload)) adolescentes.value = payload;
+      else if (Array.isArray(payload?.data)) adolescentes.value = payload.data;
+      else if (Array.isArray(payload?.items)) adolescentes.value = payload.items;
+    } catch (err) {
+      console.warn("No se pudo cargar adolescentes:", err);
+    }
+
     // por si tu servicio acepta params { page, size }
     let res;
     try {
@@ -181,6 +221,24 @@ onMounted(async () => {
     const idParam = String(route.params.id);
 
     item.value = list.find((x) => String(x.id) === idParam) || null;
+
+    if (item.value?.adolescenteId && !item.value?.adolescenteCedula) {
+      try {
+        const adolRes = await getAdolescenteById(item.value.adolescenteId);
+        const adol = adolRes?.data?.data ?? adolRes?.data ?? null;
+        if (adol?.id) {
+          const nombres = adol?.nombre ?? adol?.nombres ?? "";
+          const apellidos = adol?.apellido ?? adol?.apellidos ?? "";
+          item.value = {
+            ...item.value,
+            adolescenteNombre: `${nombres} ${apellidos}`.trim() || item.value.adolescenteNombre,
+            adolescenteCedula: adol?.cedula ?? item.value.adolescenteCedula,
+          };
+        }
+      } catch (err) {
+        console.warn("No se pudo cargar adolescente individual:", err);
+      }
+    }
   } catch (e) {
     console.error("Error cargando detalle educación:", e);
     errorMessage.value = "No se pudo cargar el detalle del registro.";

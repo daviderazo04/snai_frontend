@@ -58,6 +58,7 @@ import FamiliaFormView from "../views/private/familia/[id]/index.vue"; // <-- FI
 import SaludView from "../views/private/salud/index.vue";
 import SaludDetalle from "../views/private/salud/[id]/index.vue";
 import EducacionView from "../views/private/educacion/index.vue";
+import EducacionDetalle from "../views/private/educacion/[id]/index.vue";
 
 /* =======================
    EVENTO (CATÁLOGO)
@@ -147,6 +148,7 @@ const routes = [
       { path: "salud", name: "salud", component: SaludView },
       { path: "salud/:id", name: "saludDetalle", component: SaludDetalle },
       { path: "educacion", name: "educacion", component: EducacionView },
+      { path: "educacion/:id", name: "educacionDetalle", component: EducacionDetalle },
 
       /* ===== EVENTO ===== */
       { path: "evento", name: "eventos", component: EventoView },
