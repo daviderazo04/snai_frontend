@@ -57,11 +57,18 @@ import FamiliaFormView from "../views/private/familia/[id]/index.vue"; // <-- FI
 ======================= */
 import SaludView from "../views/private/salud/index.vue";
 import SaludDetalle from "../views/private/salud/[id]/index.vue";
+import EducacionView from "../views/private/educacion/index.vue";
+import EducacionDetalle from "../views/private/educacion/[id]/index.vue";
 
 /* =======================
    EVENTO (CATÁLOGO)
 ======================= */
 import EventoView from "../views/private/evento/index.vue";
+
+/* =======================
+   TRASLADOS
+======================= */
+import TrasladosView from "../views/private/traslados/index.vue";
 
 /* =======================
    VISITAS / DETALLE EVENTO
@@ -140,9 +147,14 @@ const routes = [
       /* ===== SALUD ===== */
       { path: "salud", name: "salud", component: SaludView },
       { path: "salud/:id", name: "saludDetalle", component: SaludDetalle },
+      { path: "educacion", name: "educacion", component: EducacionView },
+      { path: "educacion/:id", name: "educacionDetalle", component: EducacionDetalle },
 
       /* ===== EVENTO ===== */
       { path: "evento", name: "eventos", component: EventoView },
+
+      /* ===== TRASLADOS ===== */
+      { path: "traslados", name: "traslados", component: TrasladosView },
 
       /* ===== VISITAS / DETALLE EVENTO ===== */
       { path: "visitas/:id", name: "visitas-detalle-evento", component: VisitasDetalleEvento },

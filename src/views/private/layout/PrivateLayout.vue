@@ -159,7 +159,9 @@ export default {
       userCheck: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 22l7.8-8.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>`,
       users: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3.5"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.3a3.5 3.5 0 0 1 0 6.8"/></svg>`,
       star: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>`,
-      flag: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V3"/><path d="M4 4h12l-2 4 2 4H4"/></svg>`
+      flag: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V3"/><path d="M4 4h12l-2 4 2 4H4"/></svg>`,
+      transfer: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3h4v4"/><path d="M7 21H3v-4"/><path d="M21 3L10 14"/><path d="M3 21l11-11"/></svg>`,
+      book: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/></svg>`
     };
 
     // --- CONFIGURACIÓN DEL MENÚ ---
@@ -182,7 +184,9 @@ export default {
           { label: 'Adolescentes', path: '/app/adolescentes', permission: '/adolescentes', iconSvg: icons.youth }, // Icono: Cara feliz
           { label: 'Familia', path: '/app/familia', permission: '/familia', iconSvg: icons.family }, // Icono: Casa/Hogar
           { label: 'Salud', path: '/app/salud', permission: '/salud', iconSvg: icons.health }, // Icono: Pulso cardiaco
+          { label: 'Educación', path: '/app/educacion', permission: '/educacion', iconSvg: icons.book },
           { label: 'Ocupacion', path: '/app/ocupacion', permission: '/ocupacion', iconSvg: icons.job }, // Icono: Maletín
+          { label: 'Traslados', path: '/app/traslados', permission: '/traslados', iconSvg: icons.transfer },
         ]
       },
       {

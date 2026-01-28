@@ -3,7 +3,7 @@
   <div class="educacion-page">
     <section class="hero">
       <div class="hero-main">
-        <p class="eyebrow">Catálogos</p>
+        <p class="eyebrow">Gestión</p>
         <h1>Educación</h1>
         <p class="subtitle">
           Administra los registros educativos asociados a adolescentes.
@@ -34,15 +34,30 @@
     <section class="panel">
       <EducacionToolbar
         :search="search"
+        :estudia="estudiaFilter"
+        :nivel="nivelFilter"
+        :institucion="institucionFilter"
         :total="filteredCount"
         @update:search="search = $event"
+        @update:estudia="estudiaFilter = $event"
+        @update:nivel="nivelFilter = $event"
+        @update:institucion="institucionFilter = $event"
         @create="openCreate"
       />
 
-      <div v-if="isLoading" class="status">Cargando registros...</div>
+      <div v-if="isLoading" class="status">
+        <div class="spinner"></div>
+        <span>Cargando registros...</span>
+      </div>
       <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
 
-      <EducacionTable :items="pagedItems" @edit="openEdit" @remove="removeItem" />
+      <EducacionTable
+        v-else
+        :items="pagedItems"
+        @view="goToDetail"
+        @edit="openEdit"
+        @remove="removeItem"
+      />
 
       <EducacionPagination
         :current-page="currentPage"
@@ -64,12 +79,14 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import {
   getEducaciones,
   createEducacion,
   updateEducacion,
   deleteEducacion,
 } from "@/service/educacion.service.js";
+import { getAdolescentes } from "@/service/adolescente.service.js";
 
 import EducacionToolbar from "./components/EducacionToolbar.vue";
 import EducacionTable from "./components/EducacionTable.vue";
@@ -97,16 +114,27 @@ const normalize01 = (v, fallback = "0") => {
   return s === "1" || s === "0" ? s : fallback;
 };
 
-const mapItem = (row) => {
+const mapItem = (row, adolescentesById) => {
   const rawId = row?.id ?? row?.educaId ?? row?.educacionId ?? row?.idEduca ?? row?.idEducacion;
   const idNum = Number(rawId);
 
-  const adolescenteRaw = row?.adolescenteId ?? row?.adolescente_id ?? row?.idAdolescente;
+  const adolescenteRaw =
+    row?.adolescenteId ?? row?.adolescente_id ?? row?.idAdolescente ?? row?.adolescente?.id;
   const adolescenteIdNum = Number(adolescenteRaw);
+  const adolescenteKey = adolescenteIdNum ? String(adolescenteIdNum) : null;
+
+  const adolObj = row?.adolescente ?? null;
+  const nombres = adolObj?.nombre ?? adolObj?.nombres ?? "";
+  const apellidos = adolObj?.apellido ?? adolObj?.apellidos ?? "";
+  const fullName = `${nombres} ${apellidos}`.trim();
+
+  const lookup = adolescenteKey ? adolescentesById?.get(adolescenteKey) : null;
 
   return {
     id: Number.isNaN(idNum) ? rawId : idNum,
     adolescenteId: Number.isNaN(adolescenteIdNum) ? adolescenteRaw : adolescenteIdNum,
+    adolescenteNombre: fullName || lookup?.nombre || "",
+    adolescenteCedula: adolObj?.cedula ?? lookup?.cedula ?? "",
     fecha: row?.fecha ?? row?.date ?? "",
     estudia: normalize01(row?.estudia, "0"),
     razonNoEstudia: row?.razonNoEstudia ?? row?.razon_no_estudia ?? "",
@@ -120,15 +148,17 @@ const mapItem = (row) => {
   };
 };
 
-/* ======================
-   STATE
-====================== */
+const router = useRouter();
 const items = ref([]);
+const adolescentes = ref([]);
 const isLoading = ref(false);
 const isSaving = ref(false);
 const errorMessage = ref("");
 
 const search = ref("");
+const estudiaFilter = ref("");
+const nivelFilter = ref("");
+const institucionFilter = ref("");
 const currentPage = ref(1);
 const pageSize = ref(6);
 
@@ -137,32 +167,58 @@ const modalMode = ref("create");
 const modalInitial = ref(null);
 const editingId = ref(null);
 
-/* ======================
-   COMPUTED
-====================== */
+const adolescentesById = computed(() => {
+  const map = new Map();
+  adolescentes.value.forEach((item) => {
+    if (!item?.id) return;
+    const nombres = item?.nombre ?? item?.nombres ?? "";
+    const apellidos = item?.apellido ?? item?.apellidos ?? "";
+    map.set(String(item.id), {
+      nombre: `${nombres} ${apellidos}`.trim() || `Adolescente #${item.id}`,
+      cedula: item?.cedula ?? "",
+    });
+  });
+  return map;
+});
+
+const itemsWithMeta = computed(() =>
+  items.value.map((item) => {
+    if (!item.adolescenteId) return item;
+    const lookup = adolescentesById.value.get(String(item.adolescenteId));
+    if (!lookup) return item;
+    return {
+      ...item,
+      adolescenteNombre: item.adolescenteNombre || lookup.nombre,
+      adolescenteCedula: item.adolescenteCedula || lookup.cedula,
+    };
+  })
+);
+
 const filteredItems = computed(() => {
   const term = search.value.trim().toLowerCase();
-  if (!term) return items.value;
+  const nivelTerm = nivelFilter.value.trim().toLowerCase();
+  const institucionTerm = institucionFilter.value.trim().toLowerCase();
+  const estudiaValue = estudiaFilter.value;
 
-  return items.value.filter((i) => {
-    const haystack = [
-      i.id,
-      i.adolescenteId,
-      i.fecha,
-      i.estudia === "1" ? "si" : "no",
-      i.razonNoEstudia,
-      i.nivel,
-      i.cicloAcademico,
-      i.carrera,
-      i.institucion,
-      i.modalidad,
-      i.contacto,
-      i.observacion,
-    ]
-      .join(" ")
-      .toLowerCase();
+  return itemsWithMeta.value.filter((i) => {
+    if (term) {
+      const haystack = `${i.adolescenteNombre || ""} ${i.adolescenteCedula || ""}`.toLowerCase();
+      if (!haystack.includes(term)) return false;
+    }
 
-    return haystack.includes(term);
+    if (estudiaValue === "1" || estudiaValue === "0") {
+      if (i.estudia !== estudiaValue) return false;
+    }
+
+    if (nivelTerm && !String(i.nivel || "").toLowerCase().includes(nivelTerm)) {
+      return false;
+    }
+
+    if (institucionTerm && !String(i.institucion || "").toLowerCase().includes(institucionTerm)) {
+      return false;
+    }
+
+    return true;
   });
 });
 
@@ -178,31 +234,51 @@ const pagedItems = computed(() => {
   return filteredItems.value.slice(start, start + pageSize.value);
 });
 
-/* ======================
-   WATCHERS
-====================== */
-watch(search, () => (currentPage.value = 1));
+watch([search, estudiaFilter, nivelFilter, institucionFilter], () => {
+  currentPage.value = 1;
+});
 
 watch(totalPages, (val) => {
   if (currentPage.value > val) currentPage.value = val;
 });
 
-/* ======================
-   METHODS
-====================== */
 const loadItems = async () => {
   isLoading.value = true;
   errorMessage.value = "";
   try {
     const res = await getEducaciones();
+    if (res?.data?.success === false) {
+      errorMessage.value = res?.data?.message || "No se pudo cargar registros educativos.";
+      items.value = [];
+      return;
+    }
     const list = resolveList(res);
-    items.value = list.map(mapItem);
+    items.value = list.map((row) => mapItem(row, adolescentesById.value));
   } catch (e) {
     console.error("Error cargando educación:", e);
     errorMessage.value = "No se pudo cargar registros educativos.";
     items.value = [];
   } finally {
     isLoading.value = false;
+  }
+};
+
+const loadAdolescentes = async () => {
+  try {
+    const res = await getAdolescentes({ size: 500 });
+    const payload = res?.data?.data ?? res?.data;
+    if (Array.isArray(payload)) {
+      adolescentes.value = payload;
+    } else if (Array.isArray(payload?.data)) {
+      adolescentes.value = payload.data;
+    } else if (Array.isArray(payload?.items)) {
+      adolescentes.value = payload.items;
+    } else {
+      adolescentes.value = [];
+    }
+  } catch (e) {
+    console.error("Error cargando adolescentes:", e);
+    adolescentes.value = [];
   }
 };
 
@@ -244,37 +320,38 @@ const saveItem = async (payload) => {
     observacion: payload.observacion ? String(payload.observacion).trim() : "",
   };
 
-  // obligatorios del DTO
   if (!clean.adolescenteId) return;
   if (!clean.fecha) return;
-
-  // si NO estudia, razonNoEstudia es opcional en DTO, pero útil validarlo en UI:
-  // si quieres obligarlo: if (clean.estudia === "0" && !clean.razonNoEstudia) return;
 
   isSaving.value = true;
   errorMessage.value = "";
 
   try {
+    let res;
     if (modalMode.value === "create") {
-      const res = await createEducacion(clean);
-      const saved = res?.data?.data ?? res?.data;
-      if (saved?.id != null) items.value = [...items.value, mapItem(saved)];
-      else await loadItems();
+      res = await createEducacion(clean);
     } else {
       if (editingId.value == null) return;
+      res = await updateEducacion(editingId.value, clean);
+    }
 
-      const res = await updateEducacion(editingId.value, clean);
-      const saved = res?.data?.data ?? res?.data;
+    if (res?.data?.success === false) {
+      errorMessage.value = res?.data?.message || "No se pudo guardar el registro educativo.";
+      return;
+    }
 
-      if (saved?.id != null) {
-        items.value = items.value.map((i) =>
-          String(i.id) === String(editingId.value) ? mapItem(saved) : i
-        );
+    const saved = res?.data?.data ?? res?.data;
+    if (saved?.id != null) {
+      const mapped = mapItem(saved, adolescentesById.value);
+      if (modalMode.value === "create") {
+        items.value = [...items.value, mapped];
       } else {
         items.value = items.value.map((i) =>
-          String(i.id) === String(editingId.value) ? { ...i, ...clean } : i
+          String(i.id) === String(editingId.value) ? mapped : i
         );
       }
+    } else {
+      await loadItems();
     }
 
     closeModal();
@@ -294,7 +371,11 @@ const removeItem = async (row) => {
 
   errorMessage.value = "";
   try {
-    await deleteEducacion(row.id);
+    const res = await deleteEducacion(row.id);
+    if (res?.data?.success === false) {
+      errorMessage.value = res?.data?.message || "No se pudo eliminar el registro.";
+      return;
+    }
     items.value = items.value.filter((i) => String(i.id) !== String(row.id));
   } catch (e) {
     console.error("Error eliminando educación:", e);
@@ -302,7 +383,14 @@ const removeItem = async (row) => {
   }
 };
 
-onMounted(loadItems);
+const goToDetail = (row) => {
+  router.push(`/app/educacion/${row.id}`);
+};
+
+onMounted(async () => {
+  await loadAdolescentes();
+  await loadItems();
+});
 </script>
 
 <style scoped>
@@ -315,11 +403,16 @@ onMounted(loadItems);
 .hero {
   background: linear-gradient(125deg, #0f172a 0%, #1d4ed8 55%, #38bdf8 100%);
   color: white;
-  padding: 28px;
-  border-radius: 20px;
+  padding: 32px;
+  border-radius: 24px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .hero::before,
@@ -328,113 +421,127 @@ onMounted(loadItems);
   position: absolute;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
 }
 
-.hero::before {
-  width: 220px;
-  height: 220px;
-  top: -60px;
-  right: -40px;
-}
-
-.hero::after {
-  width: 140px;
-  height: 140px;
-  bottom: -50px;
-  left: 40px;
-}
+.hero::before { width: 300px; height: 300px; top: -100px; right: -50px; }
+.hero::after { width: 180px; height: 180px; bottom: -40px; left: 40px; }
 
 .hero-main {
   position: relative;
   z-index: 1;
-  max-width: 680px;
+  max-width: 520px;
 }
 
 .eyebrow {
   text-transform: uppercase;
   letter-spacing: 2px;
-  font-size: 0.7rem;
-  margin-bottom: 8px;
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.75rem;
+  margin: 0 0 10px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 600;
 }
 
 .hero-main h1 {
   margin: 0 0 8px;
   font-size: 2rem;
+  font-weight: 800;
 }
 
 .subtitle {
   margin: 0;
-  font-size: 0.98rem;
-  color: rgba(255, 255, 255, 0.85);
+  font-size: 1.05rem;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .hero-stats {
+  display: flex;
+  gap: 12px;
   position: relative;
   z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px;
-  margin-top: 20px;
 }
 
 .stat-card {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 16px 20px;
   border-radius: 16px;
-  padding: 14px 16px;
-  backdrop-filter: blur(6px);
+  min-width: 130px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+}
+
+.stat-card .label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.8;
+  margin-bottom: 4px;
 }
 
 .stat-card strong {
-  font-size: 1.4rem;
+  font-size: 1.5rem;
+  font-weight: 700;
 }
 
-.label {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.hint {
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.7);
+.stat-card .hint {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  margin-top: 2px;
 }
 
 .panel {
+  background: white;
+  padding: 24px;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  background: white;
-  padding: 22px;
-  border-radius: 18px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  gap: 20px;
 }
 
 .status {
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: #f1f5f9;
-  color: #475569;
-  font-size: 0.92rem;
+  padding: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  background: #f8fafc;
+  border-radius: 16px;
+  border: 1px dashed #cbd5e1;
 }
 
 .status.error {
-  background: rgba(239, 68, 68, 0.12);
-  color: #b91c1c;
+  background: #fef2f2;
+  color: #ef4444;
+  border-color: #fecaca;
 }
 
-@media (max-width: 720px) {
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 860px) {
   .hero {
-    padding: 22px;
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  .hero-main h1 {
-    font-size: 1.6rem;
+  .hero-stats {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   }
 }
 </style>

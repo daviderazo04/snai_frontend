@@ -7,11 +7,10 @@
           <th>ID</th>
           <th>Adolescente</th>
           <th>Fecha</th>
-          <th>Estudia</th>
-          <th>Nivel</th>
-          <th>Ciclo</th>
-          <th>Institución</th>
           <th>Modalidad</th>
+          <th>Nivel</th>
+          <th>Institución</th>
+          <th>Estudia</th>
           <th>Acciones</th>
         </tr>
       </thead>
@@ -19,25 +18,30 @@
       <tbody>
         <tr v-for="row in items" :key="row.id">
           <td>#{{ row.id }}</td>
-          <td>#{{ row.adolescenteId }}</td>
+          <td>
+            <div class="cell-main">{{ row.adolescenteNombre || "Adolescente" }}</div>
+            <div class="cell-sub" v-if="row.adolescenteCedula">
+              CI: {{ row.adolescenteCedula }}
+            </div>
+          </td>
           <td>{{ row.fecha || "—" }}</td>
+          <td class="truncate" :title="row.modalidad || ''">{{ row.modalidad || "—" }}</td>
+          <td class="truncate" :title="row.nivel || ''">{{ row.nivel || "—" }}</td>
+          <td class="truncate" :title="row.institucion || ''">{{ row.institucion || "—" }}</td>
           <td>
             <span class="pill" :class="row.estudia === '1' ? 'pill-yes' : 'pill-no'">
               {{ row.estudia === "1" ? "Sí" : "No" }}
             </span>
           </td>
-          <td class="truncate" :title="row.nivel || ''">{{ row.nivel || "—" }}</td>
-          <td class="truncate" :title="row.cicloAcademico || ''">{{ row.cicloAcademico || "—" }}</td>
-          <td class="truncate" :title="row.institucion || ''">{{ row.institucion || "—" }}</td>
-          <td class="truncate" :title="row.modalidad || ''">{{ row.modalidad || "—" }}</td>
           <td class="actions">
+            <button class="ghost" @click="$emit('view', row)">Ver</button>
             <button @click="$emit('edit', row)">Editar</button>
             <button class="danger" @click="$emit('remove', row)">Eliminar</button>
           </td>
         </tr>
 
         <tr v-if="!items || items.length === 0">
-          <td class="empty" colspan="9">No hay registros para mostrar.</td>
+          <td class="empty" colspan="8">No hay registros para mostrar.</td>
         </tr>
       </tbody>
     </table>
@@ -46,6 +50,7 @@
 
 <script setup>
 defineProps({ items: Array });
+defineEmits(["view", "edit", "remove"]);
 </script>
 
 <style scoped>
@@ -97,10 +102,42 @@ defineProps({ items: Array });
 }
 
 .truncate {
-  max-width: 240px;
+  max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.cell-main {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cell-sub {
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.78rem;
+  border: 1px solid #e2e8f0;
+}
+
+.pill-yes {
+  color: #065f46;
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.18);
+}
+
+.pill-no {
+  color: #334155;
+  background: #f1f5f9;
+  border-color: #e2e8f0;
 }
 
 .actions {
@@ -133,6 +170,11 @@ defineProps({ items: Array });
   color: white;
   background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
   box-shadow: 0 14px 28px rgba(239, 68, 68, 0.18);
+}
+
+.table button.ghost {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
 }
 
 .pill {

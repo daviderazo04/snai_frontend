@@ -1,13 +1,13 @@
-<!-- src/views/private/educacion/components/EducacionToolbar.vue -->
+<!-- src/views/private/traslados/components/TrasladosToolbar.vue -->
 <template>
   <div class="toolbar">
     <div class="title-block">
       <div>
-        <h2>Listado de Educación</h2>
+        <h2>Listado de Traslados</h2>
         <p class="subtitle">{{ total }} registros disponibles</p>
       </div>
       <button class="btn-primary" type="button" @click="$emit('create')">
-        + Nuevo registro
+        + Nuevo traslado
       </button>
     </div>
 
@@ -23,32 +23,51 @@
       </label>
 
       <label class="field">
-        <span class="label">Estudia</span>
-        <select :value="estudia" @change="$emit('update:estudia', $event.target.value)">
-          <option value="">Todos</option>
-          <option value="1">Sí estudia</option>
-          <option value="0">No estudia</option>
+        <span class="label">Orden por fecha</span>
+        <select :value="dateSort" @change="$emit('update:dateSort', $event.target.value)">
+          <option value="desc">Más recientes</option>
+          <option value="asc">Más antiguos</option>
         </select>
       </label>
 
       <label class="field">
-        <span class="label">Nivel</span>
-        <input
-          type="text"
-          placeholder="Ej: Bachillerato"
-          :value="nivel"
-          @input="$emit('update:nivel', $event.target.value)"
-        />
+        <span class="label">Desde</span>
+        <input type="date" :value="dateFrom" @input="$emit('update:dateFrom', $event.target.value)" />
       </label>
 
       <label class="field">
-        <span class="label">Institución</span>
-        <input
-          type="text"
-          placeholder="Ej: Colegio Nacional"
-          :value="institucion"
-          @input="$emit('update:institucion', $event.target.value)"
-        />
+        <span class="label">Hasta</span>
+        <input type="date" :value="dateTo" @input="$emit('update:dateTo', $event.target.value)" />
+      </label>
+
+      <label class="field">
+        <span class="label">Provincia</span>
+        <select :value="provinceId" @change="$emit('update:province', $event.target.value)">
+          <option value="">Todas</option>
+          <option v-for="provincia in provincias" :key="provincia.id" :value="provincia.id">
+            {{ provincia.nombre }}
+          </option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span class="label">Cantón</span>
+        <select :value="cantonId" @change="$emit('update:canton', $event.target.value)">
+          <option value="">Todos</option>
+          <option v-for="canton in cantones" :key="canton.id" :value="canton.id">
+            {{ canton.nombre }}
+          </option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span class="label">CAI</span>
+        <select :value="caiId" @change="$emit('update:cai', $event.target.value)">
+          <option value="">Todos</option>
+          <option v-for="cai in cais" :key="cai.id" :value="cai.id">
+            {{ cai.nombre }} — {{ cai.cantonNombre || "Sin cantón" }} / {{ cai.provinciaNombre || "Sin provincia" }}
+          </option>
+        </select>
       </label>
     </div>
   </div>
@@ -58,9 +77,24 @@
 defineProps({
   search: String,
   total: Number,
-  estudia: String,
-  nivel: String,
-  institucion: String,
+  dateFrom: String,
+  dateTo: String,
+  dateSort: String,
+  provinceId: [String, Number],
+  cantonId: [String, Number],
+  caiId: [String, Number],
+  provincias: {
+    type: Array,
+    default: () => [],
+  },
+  cantones: {
+    type: Array,
+    default: () => [],
+  },
+  cais: {
+    type: Array,
+    default: () => [],
+  },
 });
 </script>
 
