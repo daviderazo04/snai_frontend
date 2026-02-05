@@ -1,173 +1,203 @@
 <template>
-  <div class="home-container">
+  <div class="home-page">
     <div class="hero-card">
       
-      <div class="icon-wrapper">
-        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-          <path d="M12 8v4"></path>
-          <path d="M12 16h.01"></path>
-        </svg>
+      <div class="logo-wrapper">
+        <img :src="logo" alt="SNAI" class="brand-logo" />
       </div>
 
-      <h1>Sistema de Control <span class="highlight">SNAI</span></h1>
+      <div class="content">
+        <h1>Sistema de <span class="highlight">Jóvenes Delincuentes</span></h1>
+        
+        <p class="description">
+          Plataforma integral para la gestión, monitoreo y control de información de adolescentes infractores y personas privadas de libertad.
+        </p>
 
-      <p class="description">
-        Plataforma integral para el registro, gestión y consulta de información de personas privadas de libertad.
-      </p>
+        <div class="actions">
+          <button class="btn btn-primary" @click="goLogin">
+            Ingresar al Sistema
+          </button>
+        </div>
+      </div>
 
-      <div class="buttons-group">
-        <button class="btn btn-primary" @click="goLogin">
-          Iniciar sesión
-        </button>
-        <button class="btn btn-secondary" @click="goRegister">
-          Crear cuenta
-        </button>
+      <div class="footer-note">
+        <p>© 2026 Servicio Nacional de Atención Integral</p>
       </div>
     </div>
   </div>
 </template>
 
-<script>
+<script setup>
 import { useRouter } from "vue-router";
+import logoImg from "@/assets/snai.png"; 
 
-export default {
-  setup() {
-    const router = useRouter();
+const router = useRouter();
+const logo = logoImg;
 
-    const goLogin = () => router.push({ name: "login" }); // Asegúrate que tu ruta se llame 'login'
-    const goRegister = () => router.push({ name: "register" }); // Asegúrate que tu ruta se llame 'register'
-
-    return { goLogin, goRegister };
-  },
+const goLogin = () => {
+  router.push({ name: "login" });
 };
 </script>
 
 <style scoped>
-/* Reset básico para evitar problemas */
-* {
-  box-sizing: border-box;
+/* RESET GLOBAL */
+:global(body), :global(html) {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
 }
 
-.home-container {
+* { box-sizing: border-box; }
+
+/* CONTENEDOR PRINCIPAL */
+.home-page {
+  position: fixed; 
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  /* Mismo fondo que Login/Register para consistencia */
-  background: linear-gradient(135deg, #e0eafc, #cfdef3);
   padding: 20px;
+  overflow: hidden;
 }
 
+/* Decoración de fondo */
+.home-page::before {
+  content: "";
+  position: absolute;
+  bottom: -150px;
+  left: -100px;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.08) 0%, rgba(0,0,0,0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* TARJETA PRINCIPAL */
 .hero-card {
   background: white;
-  padding: 3rem 2rem;
-  max-width: 550px;
   width: 100%;
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  max-width: 540px; /* Tarjeta un poco más ancha para dar aire */
+  padding: 3.5rem 3rem;
+  border-radius: 24px;
+  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.4);
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
   
-  /* Animación de entrada */
-  animation: fadeUp 0.8s ease-out forwards;
+  /* Animación */
+  animation: slideUp 0.6s ease-out forwards;
   opacity: 0;
   transform: translateY(20px);
 }
 
-/* Icono decorativo */
-.icon-wrapper {
-  width: 80px;
-  height: 80px;
-  background: #f0f4ff;
-  color: #2575fc;
-  border-radius: 50%;
+/* LOGO */
+.logo-wrapper {
+  width: 100%;
   display: flex;
   justify-content: center;
-  align-items: center;
-  margin: 0 auto 20px auto;
-  box-shadow: 0 4px 10px rgba(37, 117, 252, 0.15);
+  margin-bottom: 8px;
 }
 
-/* Tipografía */
+/* --- LOGO AJUSTADO --- */
+.brand-logo {
+  width: 100%;
+  max-width: 450px; /* Aumentado considerablemente para legibilidad */
+  height: auto;
+  object-fit: contain;
+}
+
+/* TIPOGRAFÍA */
 h1 {
-  font-size: 2rem;
-  color: #1a202c;
-  margin-bottom: 15px;
-  font-weight: 700;
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 16px;
+  letter-spacing: -0.5px;
   line-height: 1.2;
 }
 
 .highlight {
-  color: #2575fc; /* Color acento */
+  background: linear-gradient(120deg, #2563eb, #1d4ed8);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: #2563eb;
 }
 
 .description {
-  color: #718096;
-  margin-bottom: 35px;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
+  color: #64748b;
   line-height: 1.6;
-  padding: 0 10px;
+  margin: 0 auto 24px;
 }
 
-/* Botones */
-.buttons-group {
+/* BOTONES */
+.actions {
   display: flex;
+  width: 100%;
   justify-content: center;
-  gap: 15px;
 }
 
 .btn {
-  padding: 14px 28px;
-  font-size: 1rem;
-  border-radius: 10px;
-  font-weight: 600;
+  width: 100%;
+  padding: 16px 24px;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.3s ease;
-  min-width: 160px;
+  transition: all 0.2s ease;
 }
 
-/* Botón Principal (Login) */
 .btn-primary {
-  background: linear-gradient(to right, #6a11cb, #2575fc);
+  background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%);
   color: white;
   border: none;
-  box-shadow: 0 4px 15px rgba(37, 117, 252, 0.3);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(37, 117, 252, 0.4);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.35);
 }
 
-/* Botón Secundario (Registro) */
-.btn-secondary {
-  background: transparent;
-  color: #4a5568;
-  border: 2px solid #e2e8f0;
+/* FOOTER */
+.footer-note {
+  margin-top: 10px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 20px;
+  width: 100%;
 }
 
-.btn-secondary:hover {
-  border-color: #cbd5e0;
-  background: #f7fafc;
-  color: #2d3748;
+.footer-note p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #94a3b8;
 }
 
-/* Animación */
-@keyframes fadeUp {
+/* ANIMACIÓN */
+@keyframes slideUp {
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-/* Responsive: En móviles los botones se apilan */
-@media (max-width: 480px) {
-  .buttons-group {
-    flex-direction: column;
+/* RESPONSIVE */
+@media (max-width: 500px) {
+  .hero-card {
+    padding: 2.5rem 1.5rem;
   }
   
-  .btn {
-    width: 100%;
+  h1 {
+    font-size: 1.8rem;
   }
 }
 </style>

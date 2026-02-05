@@ -73,13 +73,11 @@
 
 <script setup>
 import { ref, reactive, watch, onMounted } from "vue";
-import { useRouter } from "vue-router"; // Importante para la navegación "Ver"
-
+import { useRouter } from "vue-router";
 import AdolescenteToolbar from "./components/AdolescenteToolbar.vue";
 import AdolescenteTable from "./components/AdolescenteTable.vue";
 import AdolescentePagination from "./components/AdolescentePagination.vue";
 import AdolescenteFormModal from "./components/AdolescenteFormModal.vue";
-
 import {
   getAdolescentes,
   createAdolescente,
@@ -89,6 +87,7 @@ import {
 
 const router = useRouter();
 
+// --- ESTADO ---
 const items = ref([]);
 const totalPages = ref(1);
 const total = ref(0);
@@ -108,12 +107,17 @@ const modal = reactive({
   initialData: null,
 });
 
-// Función de navegación al detalle
+// --- CORRECCIÓN DE REDIRECCIÓN ---
 const goToDetail = (item) => {
-  // Asegúrate de tener esta ruta configurada en tu router: /adolescentes/:id
-  router.push(`/adolescentes/${item.id}`);
+  if (!item || !item.id) return;
+  // Usamos la ruta nombrada que definiremos en el router (ver abajo paso 3)
+  router.push({ 
+    name: 'adolescenteDetalle', 
+    params: { id: item.id } 
+  });
 };
 
+// --- CARGA DE DATOS ---
 const load = async () => {
   loading.value = true;
   try {
@@ -124,17 +128,18 @@ const load = async () => {
       size: size.value,
     });
     
-    // Lógica robusta de extracción de datos (NestJS)
+    // Extracción segura soportando respuestas paginadas y planas
     const payload = res.data || {};
-    const data = payload.data || payload.items || [];
+    const dataList = payload.data || payload.items || payload.rows || [];
     
-    // Extracción segura de meta
-    const t = payload.meta?.totalItems ?? payload.total ?? 0;
-    const tp = payload.meta?.totalPages ?? payload.totalPages ?? 1;
+    items.value = Array.isArray(dataList) ? dataList : [];
+    
+    // Extracción de meta
+    const totalItems = payload.meta?.totalItems ?? payload.total ?? items.value.length;
+    const totalPgs = payload.meta?.totalPages ?? payload.totalPages ?? 1;
 
-    items.value = Array.isArray(data) ? data : [];
-    total.value = Number(t);
-    totalPages.value = Number(tp);
+    total.value = Number(totalItems);
+    totalPages.value = Number(totalPgs);
 
   } catch (err) {
     console.error("Error cargando adolescentes:", err);
@@ -144,7 +149,7 @@ const load = async () => {
   }
 };
 
-// Debounce para búsqueda
+// --- WATCHERS ---
 let timeout;
 watch(
   () => [filters.nombre, filters.cedula],
@@ -163,27 +168,26 @@ onMounted(() => {
   load();
 });
 
-// --- Lógica Modal ---
+// --- MODAL & ACCIONES ---
 const openCreate = () => {
   modal.mode = "create";
   modal.initialData = null;
   modal.open = true;
 };
 
-// Mapeo seguro para evitar errores en el modal
 const mapItemToForm = (item) => ({
   id: item.id,
-  caiId: item.cai?.id ?? null,
-  nacionalidadId: item.nacionalidad?.id ?? null,
-  estadoCivilId: item.estadoCivil?.id ?? null,
-  gdosId: item.gdos?.id ?? null,
-  etniaId: item.etnia?.id ?? null,
-  cantonId: item.canton?.id ?? null,
+  caiId: item.cai?.id ?? item.caiId ?? null,
+  nacionalidadId: item.nacionalidad?.id ?? item.nacionalidadId ?? null,
+  estadoCivilId: item.estadoCivil?.id ?? item.estadoCivilId ?? null,
+  gdosId: item.gdos?.id ?? item.gdosId ?? null,
+  etniaId: item.etnia?.id ?? item.etniaId ?? null,
+  cantonId: item.canton?.id ?? item.cantonId ?? null,
   nombre: item.nombre ?? "",
   apellido: item.apellido ?? "",
-  fecha_nac: (item.fecha_nac ?? "").toString().slice(0, 10),
+  fecha_nac: item.fecha_nac ? String(item.fecha_nac).slice(0, 10) : "",
   hijos: item.hijos ?? 0,
-  fecha_ingr: (item.fecha_ingr ?? "").toString().slice(0, 10),
+  fecha_ingr: item.fecha_ingr ? String(item.fecha_ingr).slice(0, 10) : "",
   cedula: item.cedula ?? "",
   hijoPpl: String(item.hijoPpl ?? "0"),
   reincide: String(item.reincide ?? "0"),
@@ -210,8 +214,6 @@ const onSave = async (payload) => {
     } else {
       res = await createAdolescente(payload);
     }
-    
-    // Verificación simple de éxito
     if (res) {
       closeModal();
       await load();
@@ -242,14 +244,12 @@ const onDelete = async (item) => {
   display: flex; flex-direction: column; gap: 24px; max-width: 1200px; margin: 0 auto; width: 100%;
 }
 
-/* Hero Section con Degradado Azul */
 .hero {
   background: linear-gradient(125deg, #0f172a 0%, #1d4ed8 55%, #38bdf8 100%);
   border-radius: 24px; padding: 32px; color: white; position: relative; overflow: hidden;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15); display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between;
 }
 
-/* Decoración círculos */
 .hero::before, .hero::after {
   content: ""; position: absolute; border-radius: 999px; background: rgba(255, 255, 255, 0.08); pointer-events: none;
 }
@@ -261,10 +261,7 @@ const onDelete = async (item) => {
 .title { margin: 0 0 8px; font-size: 2rem; font-weight: 800; }
 .subtitle { margin: 0; font-size: 1.05rem; opacity: 0.9; }
 
-/* Stats Cards dentro del Hero */
-.hero-stats {
-  display: flex; gap: 12px; position: relative; z-index: 1;
-}
+.hero-stats { display: flex; gap: 12px; position: relative; z-index: 1; }
 .stat-card {
   background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 16px 20px; border-radius: 16px; min-width: 130px; display: flex; flex-direction: column;

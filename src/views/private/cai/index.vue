@@ -366,9 +366,19 @@ export default {
       }
     };
 
+    // --- CORRECCIÓN APLICADA AQUÍ ---
     const goToDetail = (item) => {
-      router.push(`/app/cai/${item.id}`);
+      if (!item || !item.id) {
+        console.error("Error: Intentando navegar a detalle sin ID", item);
+        return;
+      }
+      // Se usa 'name' para coincidir con la ruta: { path: "cai/:id", name: "caiDetalle", ... }
+      router.push({ 
+        name: 'caiDetalle', 
+        params: { id: item.id } 
+      });
     };
+    // --------------------------------
 
     onMounted(() => {
       loadCais();

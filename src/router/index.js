@@ -39,7 +39,7 @@ import NacionalidadDetalle from "../views/private/nacionalidad/[id]/index.vue";
 
 import ParentescoView from "../views/private/parentesco/index.vue";
 import ParentescoDetalle from "../views/private/parentesco/[id]/index.vue";
-
+import GestionUsuario from "../views/private/seguridad/index.vue";
 /* =======================
    OCUPACIÓN (CATÁLOGO)
 ======================= */
@@ -90,6 +90,7 @@ import TerapeuticaForm from "../views/formularios/TerapeuticaFormView.vue";
 import OcupacionalForm from "../views/formularios/OcupacionalFormView.vue";
 import JuridicaForm from "../views/formularios/JuridicaFormView.vue";
 import TrasladoForm from "../views/formularios/TrasladoFormView.vue";
+import adolescenteDetalle from "../views/private/adolentes/[id]/index.vue";
 
 /* =======================
    ROUTES
@@ -109,6 +110,7 @@ const routes = [
       { path: "", name: "app-home", component: HomeApp },
 
       { path: "adolescentes", name: "adolescentes", component: AdolecenteView },
+      { path: "adolescentes/:id", name: "adolescenteDetalle", component: adolescenteDetalle},
       { path: "delito", name: "delito", component: DelitoView },
       { path: "perfiles", name: "perfiles", component: Perfiles },
 
@@ -166,6 +168,7 @@ const routes = [
       { path: "ocupacional", name: "ocupacionalForm", component: OcupacionalForm },
       { path: "juridica", name: "juridicaForm", component: JuridicaForm },
       { path: "traslado", name: "trasladoForm", component: TrasladoForm },
+      { path: "usuario", name: "usuario", component: GestionUsuario },
     ],
   },
 ];

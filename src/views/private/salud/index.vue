@@ -45,6 +45,7 @@
       <SaludTable
         v-else
         :items="pagedItems"
+        @view="goToDetail"
         @edit="openEdit"
         @remove="removeItem"
       />
@@ -69,6 +70,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
+import { useRouter } from "vue-router"; // Importamos router
 import {
   getSalud,
   createSalud,
@@ -80,6 +82,8 @@ import SaludToolbar from "./components/SaludToolbar.vue";
 import SaludTable from "./components/SaludTable.vue";
 import SaludPagination from "./components/SaludPagination.vue";
 import SaludFormModal from "./components/SaludFormModal.vue";
+
+const router = useRouter(); // Instancia del router
 
 const resolveList = (response) => {
   const payload = response?.data?.data ?? response?.data;
@@ -94,23 +98,27 @@ const normalize01 = (v, fallback = "0") => {
   return s === "1" || s === "0" ? s : fallback;
 };
 
-// --- CORRECCIÓN CLAVE AQUÍ ---
+// --- MAPEO ACTUALIZADO ---
 const mapItem = (row) => {
   const rawId = row?.id ?? row?.saludId ?? row?.idSalud;
   
-  // Buscamos el ID del adolescente en todas las ubicaciones posibles
-  // row.adolescente?.id -> Cuando viene el objeto completo (NestJS relations)
-  // row.adolescenteId -> Cuando viene plano
+  // IDs de adolescente
   const adolescenteRaw = 
     row?.adolescente?.id ?? 
     row?.adolescenteId ?? 
     row?.adolescente_id ?? 
     row?.idAdolescente;
 
+  // Extracción del Nombre
+  const nombres = row?.adolescente?.nombres ?? row?.adolescente?.nombre ?? "";
+  const apellidos = row?.adolescente?.apellidos ?? row?.adolescente?.apellido ?? "";
+  const fullName = `${nombres} ${apellidos}`.trim();
+
   return {
     id: Number(rawId),
-    // Aseguramos que sea un número válido
-    adolescenteId: Number(adolescenteRaw) || 0, 
+    adolescenteId: Number(adolescenteRaw) || 0,
+    // Aquí definimos el nombre que usará la tabla
+    adolescenteNombre: fullName || "Adolescente #" + (adolescenteRaw || "?"),
     fecha: row?.fecha ?? row?.date ?? "",
     diagnostico: row?.diagnostico ?? "",
     tomaMedicacion: normalize01(row?.tomaMedicacion, "0"),
@@ -147,9 +155,10 @@ const filteredItems = computed(() => {
   if (!term) return items.value;
 
   return items.value.filter((i) => {
+    // Agregamos el nombre al buscador
     const haystack = [
       i.id,
-      i.adolescenteId,
+      i.adolescenteNombre, 
       i.fecha,
       i.diagnostico,
       i.tipoSustancia,
@@ -187,7 +196,6 @@ const loadItems = async () => {
   try {
     const res = await getSalud();
     const list = resolveList(res);
-    // Aplicamos el mapa corregido
     items.value = list.map(mapItem);
   } catch (e) {
     console.error("Error cargando salud:", e);
@@ -196,6 +204,12 @@ const loadItems = async () => {
   } finally {
     isLoading.value = false;
   }
+};
+
+// --- NAVEGACIÓN AL DETALLE ---
+const goToDetail = (item) => {
+  // Asegúrate de tener en router.js: { path: 'salud/:id', name: 'saludDetalle', ... }
+  router.push({ name: 'saludDetalle', params: { id: item.id } });
 };
 
 const openCreate = () => {
@@ -207,7 +221,6 @@ const openCreate = () => {
 
 const openEdit = (row) => {
   modalMode.value = "edit";
-  // Pasamos el objeto ya mapeado (que tiene el adolescenteId correcto)
   modalInitial.value = { ...row };
   editingId.value = row.id;
   modalOpen.value = true;

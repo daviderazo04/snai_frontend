@@ -160,9 +160,13 @@ export default {
       }
     };
 
+    // --- CORRECCIÓN AQUÍ ---
     const goBack = () => {
-      router.push("/app/cai");
+      // Usamos el 'name' de la ruta definido en tu router.js
+      // En tu router tienes: { path: "cai", name: "cai", component: CaisView }
+      router.push({ name: 'cai' });
     };
+    // ----------------------
 
     onMounted(loadData);
 

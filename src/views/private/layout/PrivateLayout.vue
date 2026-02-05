@@ -211,6 +211,8 @@ export default {
           { label: 'GDO', path: '/app/gdos', permission: '/gdos', iconSvg: icons.star },
           { label: 'Nacionalidad', path: '/app/nacionalidad', permission: '/nacionalidad', iconSvg: icons.flag },
           { label: 'Parentesco', path: '/app/parentesco', permission: '/parentesco', iconSvg: icons.link },
+          { label: 'usuario', path: '/app/usuario', iconSvg: icons.link },
+
         ]
       }
     ];
@@ -239,14 +241,14 @@ export default {
 
     const pathToPermisoEndpoint = (path) => {
       if (!path) return path;
-      if (path.startsWith("/app")) {
-        const ep = path.replace(/^\/app/, "");
-        return normalizar(ep || "/");
+      let cleanPath = path.startsWith("/app") ? path.replace(/^\/app/, "") : path;
+      cleanPath = normalizar(cleanPath);
+      const parts = cleanPath.split('/').filter(p => p);
+      if (parts.length > 0) {
+        return "/" + parts[0];
       }
-      return normalizar(path);
+      return cleanPath;
     };
-
-    // --- ACCIONES DE MENÚ ---
     const toggleMenu = (key) => {
       menusOpen[key] = !menusOpen[key];
     };

@@ -1,10 +1,8 @@
-<!-- src/views/private/salud/components/SaludTable.vue -->
 <template>
   <div class="table-wrap">
     <table class="table">
       <thead>
         <tr>
-          <th>ID</th>
           <th>Adolescente</th>
           <th>Fecha</th>
           <th>Diagnóstico</th>
@@ -12,40 +10,54 @@
           <th>Sustancias</th>
           <th>Atenciones</th>
           <th>Discapacidad</th>
-          <th>Acciones</th>
+          <th class="text-right">Acciones</th>
         </tr>
       </thead>
 
       <tbody>
         <tr v-for="row in items" :key="row.id">
-          <td>#{{ row.id }}</td>
-          <td>#{{ row.adolescenteId }}</td>
+          <td>
+            <div class="name-cell">
+              <span class="name">{{ row.adolescenteNombre }}</span>
+              <span class="muted-id">ID: {{ row.adolescenteId }}</span>
+            </div>
+          </td>
+
           <td>{{ row.fecha || "—" }}</td>
-          <td class="truncate" :title="row.diagnostico || ''">{{ row.diagnostico || "—" }}</td>
+          
+          <td class="truncate" :title="row.diagnostico || ''">
+            {{ row.diagnostico || "—" }}
+          </td>
+          
           <td>
             <span class="pill" :class="row.tomaMedicacion === '1' ? 'pill-yes' : 'pill-no'">
               {{ row.tomaMedicacion === "1" ? "Sí" : "No" }}
             </span>
           </td>
+          
           <td>
             <span class="pill" :class="row.consumeSustancia === '1' ? 'pill-warn' : 'pill-no'">
               {{ row.consumeSustancia === "1" ? (row.tipoSustancia || "Sí") : "No" }}
             </span>
           </td>
+          
           <td>{{ row.numAtenMedica ?? 0 }}</td>
+          
           <td>
             <span class="pill" :class="row.discapacidad === '1' ? 'pill-warn' : 'pill-no'">
               {{ row.discapacidad === "1" ? "Sí" : "No" }}
             </span>
           </td>
-          <td class="actions">
-            <button @click="$emit('edit', row)">Editar</button>
+          
+          <td class="actions text-right">
+            <button class="view" @click="$emit('view', row)">Ver</button>
+            <button class="ghost" @click="$emit('edit', row)">Editar</button>
             <button class="danger" @click="$emit('remove', row)">Eliminar</button>
           </td>
         </tr>
 
         <tr v-if="!items || items.length === 0">
-          <td class="empty" colspan="9">No hay registros para mostrar.</td>
+          <td class="empty" colspan="8">No hay registros para mostrar.</td>
         </tr>
       </tbody>
     </table>
@@ -54,6 +66,7 @@
 
 <script setup>
 defineProps({ items: Array });
+defineEmits(["view", "edit", "remove"]);
 </script>
 
 <style scoped>
@@ -104,54 +117,90 @@ defineProps({ items: Array });
   border-bottom: none;
 }
 
+.name-cell {
+  display: flex;
+  flex-direction: column;
+}
+.name {
+  font-weight: 600;
+  color: #0f172a;
+}
+.muted-id {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
 .truncate {
-  max-width: 260px;
+  max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.text-right {
+  text-align: right;
 }
 
 .actions {
   white-space: nowrap;
 }
 
+/* Botones */
 .table button {
   border: 1px solid #e2e8f0;
   background: white;
-  padding: 8px 10px;
-  border-radius: 12px;
+  padding: 6px 10px;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 600;
+  font-size: 0.85rem;
   color: #0f172a;
-  transition: transform 0.08s ease, box-shadow 0.15s ease, background 0.15s ease;
-  margin-right: 8px;
+  transition: all 0.2s ease;
+  margin-left: 6px;
 }
 
 .table button:hover {
-  background: #f8fafc;
-  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
 }
 
-.table button:active {
-  transform: translateY(1px);
+/* Estilo Botón Ver */
+.table button.view {
+  color: #2563eb;
+  background: #eff6ff;
+  border-color: #dbeafe;
+}
+.table button.view:hover {
+  background: #dbeafe;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
 }
 
+/* Estilo Botón Editar */
+.table button.ghost:hover {
+  background: #f1f5f9;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+/* Estilo Botón Eliminar */
 .table button.danger {
-  border: none;
-  color: white;
-  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
-  box-shadow: 0 14px 28px rgba(239, 68, 68, 0.18);
+  color: #b91c1c;
+  background: rgba(254, 242, 242, 0.5);
+  border-color: #fecaca;
+}
+.table button.danger:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
 }
 
+/* Pills (Etiquetas) */
 .pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
+  padding: 4px 10px;
   border-radius: 999px;
-  font-weight: 800;
-  font-size: 0.78rem;
-  border: 1px solid #e2e8f0;
+  font-weight: 700;
+  font-size: 0.75rem;
+  border: 1px solid transparent;
 }
 
 .pill-yes {
@@ -161,7 +210,7 @@ defineProps({ items: Array });
 }
 
 .pill-no {
-  color: #334155;
+  color: #64748b;
   background: #f1f5f9;
   border-color: #e2e8f0;
 }
@@ -174,8 +223,9 @@ defineProps({ items: Array });
 
 .empty {
   text-align: center;
-  padding: 16px !important;
+  padding: 24px !important;
   color: #64748b;
   background: #fff;
+  font-style: italic;
 }
 </style>
