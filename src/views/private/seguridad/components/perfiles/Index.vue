@@ -6,9 +6,9 @@
       @create="openModal('create')"
     />
 
-    <div v-if="loading" class="status">
+    <div v-if="loading" class="loading-container">
       <div class="spinner"></div>
-      <span>Cargando perfiles...</span>
+      <p>Consultando perfiles de acceso...</p>
     </div>
 
     <PerfilTable 
@@ -18,11 +18,12 @@
     />
 
     <PerfilFormModal 
+      v-if="showModal"
       :open="showModal" 
       :mode="mode" 
       :initial-data="selected" 
       :saving="saving"
-      @close="showModal = false" 
+      @close="closeModal" 
       @save="handleSave" 
     />
   </div>
@@ -46,35 +47,55 @@ const selected = ref(null);
 const load = async () => {
   loading.value = true;
   try {
-    const res = await getPerfiles({ nombre: search.value, size: 50 });
-    items.value = res.data.data || [];
-  } finally { loading.value = false; }
+    const res = await getPerfiles({ nombre: search.value, page: 1, size: 50 });
+    items.value = res.data?.data || [];
+  } catch (e) {
+    console.error("Error cargando perfiles:", e);
+    items.value = [];
+  } finally {
+    loading.value = false;
+  }
 };
 
 watch(search, load);
 onMounted(load);
 
-const openModal = (m, item) => {
+const openModal = (m, item = null) => {
   mode.value = m;
-  selected.value = item ? {...item} : null;
+  selected.value = m === 'edit' ? item : null;
   showModal.value = true;
+};
+
+const closeModal = () => {
+  showModal.value = false;
+  selected.value = null;
 };
 
 const handleSave = async (payload) => {
   saving.value = true;
   try {
-    const res = mode.value === 'create' 
-      ? await createPerfil(payload) 
+    const res = (mode.value === 'create')
+      ? await createPerfil(payload)
       : await updatePerfil(selected.value.id, payload);
-    if(res.data.success) { showModal.value = false; load(); }
-    else alert(res.data.message);
-  } catch(e) { console.error(e); } finally { saving.value = false; }
+
+    if (res.data?.success) {
+      closeModal();
+      await load();
+    } else {
+      alert(res.data?.message || 'Error procesando la solicitud');
+    }
+  } catch (e) {
+    console.error(e);
+    alert(e?.response?.data?.message || 'Error de conexión con el servidor');
+  } finally {
+    saving.value = false;
+  }
 };
 </script>
 
 <style scoped>
-.module-wrap { display: flex; flex-direction: column; gap: 20px; }
-.status { padding: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #64748b; background: #f8fafc; border-radius: 16px; border: 1px dashed #cbd5e1; }
-.spinner { width: 28px; height: 28px; border: 3px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 12px; }
+.module-wrap { display: flex; flex-direction: column; gap: 24px; }
+.loading-container { padding: 80px; text-align: center; background: #f8fafc; border-radius: 24px; border: 2px dashed #e2e8f0; color: #64748b; }
+.spinner { width: 32px; height: 32px; border: 3px solid #cbd5e1; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.8s infinite linear; margin: 0 auto 16px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>

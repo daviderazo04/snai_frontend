@@ -91,7 +91,7 @@ import OcupacionalForm from "../views/formularios/OcupacionalFormView.vue";
 import JuridicaForm from "../views/formularios/JuridicaFormView.vue";
 import TrasladoForm from "../views/formularios/TrasladoFormView.vue";
 import adolescenteDetalle from "../views/private/adolentes/[id]/index.vue";
-
+import ReporteriaFrom from "../views/private/reporteria/index.vue";
 /* =======================
    ROUTES
 ======================= */
@@ -160,6 +160,7 @@ const routes = [
 
       /* ===== VISITAS / DETALLE EVENTO ===== */
       { path: "visitas/:id", name: "visitas-detalle-evento", component: VisitasDetalleEvento },
+      { path: "reporteria", name: "reporteria", component: ReporteriaFrom },
 
       /* ===== FORMULARIOS ===== */
       { path: "dashboard", name: "dashboard", component: DashboardView },

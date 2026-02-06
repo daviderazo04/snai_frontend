@@ -1,37 +1,77 @@
 <template>
-  <div class="toolbar">
-    <div class="title-block">
-      <h2>Listado de Usuarios</h2>
-      <button class="btn-primary" @click="$emit('create')">+ Nuevo Usuario</button>
+  <div class="toolbar-container">
+    <div class="header-row">
+      <div class="title-section">
+        <h2 class="main-title">Personal del Sistema</h2>
+        <p class="subtitle">Gestión de cuentas de usuario y perfiles asignados</p>
+      </div>
+      <button class="btn-create" @click="$emit('create')">
+        <span class="icon">+</span>
+        <span>Añadir Usuario</span>
+      </button>
     </div>
-    <div class="filters">
-      <label class="field">
-        <span class="label">Buscar</span>
-        <input 
-          type="search" 
-          placeholder="Nombre o Cédula..." 
+
+    <div class="filter-row">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          placeholder="Buscar por nombre, apellido o número de cédula..."
           :value="search"
           @input="$emit('update:search', $event.target.value)"
         />
-      </label>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 defineProps(['search']);
+defineEmits(['update:search', 'create']);
 </script>
 
 <style scoped>
-/* Estilos exactos de EducacionToolbar.vue */
-.toolbar { display: flex; flex-direction: column; gap: 18px; }
-.title-block { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.title-block h2 { margin: 0; font-size: 1.2rem; color: #0f172a; }
-.btn-primary { border: none; color: white; padding: 10px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; background: linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow: 0 6px 16px rgba(37, 99, 235, 0.25); transition: transform 0.2s ease; }
-.btn-primary:hover { transform: translateY(-1px); }
-.filters { display: flex; gap: 14px; }
-.field { display: flex; flex-direction: column; gap: 6px; flex: 1; max-width: 400px; }
-.label { text-transform: uppercase; font-size: 0.72rem; letter-spacing: 1px; font-weight: 700; color: #64748b; }
-.field input { padding: 10px 12px; border-radius: 10px; border: 1px solid #e2e8f0; background: white; font-size: 0.95rem; color: #0f172a; width: 100%; }
-.field input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+.toolbar-container { display: flex; flex-direction: column; gap: 24px; margin-bottom: 12px; }
+
+.header-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+
+.main-title { margin: 0; font-size: 1.5rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; }
+.subtitle { margin: 4px 0 0; font-size: 0.95rem; color: #64748b; }
+
+.btn-create {
+  border: none; color: white; padding: 12px 24px; border-radius: 14px;
+  cursor: pointer; font-weight: 700; font-size: 0.95rem;
+  background: linear-gradient(135deg, #2563eb, #1e40af);
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
+  display: flex; align-items: center; gap: 10px;
+  transition: all 0.3s ease;
+}
+
+.btn-create:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(37, 99, 235, 0.3); }
+.btn-create .icon { font-size: 1.4rem; line-height: 1; }
+
+.filter-row { display: flex; width: 100%; }
+
+.search-box { position: relative; flex: 1; max-width: 500px; }
+
+.search-icon {
+  position: absolute; left: 16px; top: 50%;
+  transform: translateY(-50%); font-size: 1rem; color: #94a3b8;
+}
+
+.search-box input {
+  width: 100%; padding: 14px 14px 14px 48px;
+  border-radius: 16px; border: 1px solid #e2e8f0;
+  background: white; font-size: 1rem; color: #0f172a;
+  transition: all 0.3s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.search-box input:focus {
+  outline: none; border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+  background: #fff;
+}
+
+.search-box input::placeholder { color: #cbd5e1; }
 </style>

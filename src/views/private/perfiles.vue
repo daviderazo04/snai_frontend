@@ -23,8 +23,8 @@
       <div class="top-row">
         <h2 class="section-title">¿Con qué perfil deseas operar hoy?</h2>
 
-        <button class="switch-btn" @click="reloadPerfiles">
-          Cambiar perfil
+        <button class="switch-btn" :disabled="isRefreshing" @click="reloadPerfiles">
+          {{ isRefreshing ? 'Actualizando...' : 'Cambiar perfil' }}
         </button>
       </div>
 
@@ -56,7 +56,7 @@
 
       <div v-else class="empty-state">
         <p>No se encontraron perfiles asignados a tu cuenta.</p>
-        <button class="switch-btn" @click="reloadPerfiles">Reintentar</button>
+        <button class="switch-btn" :disabled="isRefreshing" @click="reloadPerfiles">Reintentar</button>
       </div>
 
       <div class="action-footer">
@@ -97,8 +97,9 @@
 </template>
 
 <script>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, onActivated, computed } from "vue";
 import { gainAccess } from "../../service/auth.service.js";
+import { getDetalleUsuario } from "../../service/users-roles.service.js";
 import { useRouter } from "vue-router";
 
 export default {
@@ -109,6 +110,7 @@ export default {
     const posiblesPerfiles = ref([]);
     const selectedPerfil = ref(null);
     const isLoading = ref(false);
+    const isRefreshing = ref(false);
 
     const toast = ref({
       open: false,
@@ -160,40 +162,109 @@ export default {
       toastTimer = null;
     };
 
-    const loadUserData = () => {
+    const dedupeById = (arr) => {
+      const map = new Map();
+      (arr || []).forEach((p) => {
+        if (p && p.id != null) map.set(Number(p.id), p);
+      });
+      return Array.from(map.values());
+    };
+
+    const ensureAuthOrRedirect = () => {
+      const token = localStorage.getItem("snai_token");
+      const u = safeParse(localStorage.getItem("snai_user"));
+      if (!token || !u) {
+        router.replace("/login");
+        return false;
+      }
+      user.value = u;
+      return true;
+    };
+
+    // Carga rápida desde storage (para pintar algo)
+    const loadFromStorage = () => {
       user.value = safeParse(localStorage.getItem("snai_user"));
 
       const perfilesSession = safeParse(sessionStorage.getItem("snai_posibles_perfiles")) || null;
       const perfilesLocal = safeParse(localStorage.getItem("snai_posibles_perfiles")) || null;
 
       const perfiles = perfilesSession || perfilesLocal || [];
-      posiblesPerfiles.value = Array.isArray(perfiles) ? perfiles : [];
+      posiblesPerfiles.value = Array.isArray(perfiles) ? dedupeById(perfiles) : [];
 
-      if (posiblesPerfiles.value.length > 0) {
-        localStorage.setItem("snai_posibles_perfiles", JSON.stringify(posiblesPerfiles.value));
-      }
-
+      // Mantener perfil activo si existe en lista
       const perfilActivo = safeParse(localStorage.getItem("snai_perfil_activo"));
       if (perfilActivo?.id) {
-        const found = posiblesPerfiles.value.find((p) => p.id === perfilActivo.id);
+        const found = posiblesPerfiles.value.find((p) => Number(p.id) === Number(perfilActivo.id));
         if (found) selectedPerfil.value = found;
       }
 
       if (!selectedPerfil.value && posiblesPerfiles.value.length === 1) {
         selectedPerfil.value = posiblesPerfiles.value[0];
       }
-
-      const token = localStorage.getItem("snai_token");
-      if (!token || !user.value) router.replace("/login");
     };
 
-    const reloadPerfiles = () => {
+    // ✅ REFRESCO REAL desde backend (lo que te faltaba)
+    const refreshPerfilesFromServer = async (silent = false) => {
+      if (!ensureAuthOrRedirect()) return;
+
+      if (isRefreshing.value) return;
+      isRefreshing.value = true;
+
+      try {
+        const res = await getDetalleUsuario(user.value.id);
+        if (!res?.data?.success) {
+          if (!silent) openToast("error", res?.data?.message || "No se pudo actualizar perfiles", 2600);
+          return;
+        }
+
+        const detalle = res.data.data;
+        // actualiza user por si cambió algo (opcional)
+        if (detalle) {
+          localStorage.setItem("snai_user", JSON.stringify(detalle));
+          user.value = detalle;
+        }
+
+        const nuevosPerfiles = dedupeById(detalle?.perfiles || []);
+        posiblesPerfiles.value = nuevosPerfiles;
+
+        // Persistimos SIEMPRE el listado actualizado
+        localStorage.setItem("snai_posibles_perfiles", JSON.stringify(nuevosPerfiles));
+        sessionStorage.setItem("snai_posibles_perfiles", JSON.stringify(nuevosPerfiles));
+
+        // Mantener selección si sigue existiendo
+        if (selectedPerfil.value?.id) {
+          const still = nuevosPerfiles.find((p) => Number(p.id) === Number(selectedPerfil.value.id));
+          selectedPerfil.value = still || null;
+        }
+
+        // Si no hay selección, auto-selecciona si hay 1
+        if (!selectedPerfil.value && nuevosPerfiles.length === 1) {
+          selectedPerfil.value = nuevosPerfiles[0];
+        }
+
+        if (!silent) {
+          openToast("success", "Perfiles actualizados correctamente.", 1400);
+        }
+      } catch (err) {
+        console.error("Error actualizando perfiles:", err);
+        const msg = err?.response?.data?.message || "Error de conexión con el servidor";
+        if (!silent) openToast("error", msg, 2800);
+
+        // si falla, al menos deja lo que haya en storage
+        loadFromStorage();
+      } finally {
+        isRefreshing.value = false;
+      }
+    };
+
+    const reloadPerfiles = async () => {
       closeToast();
-      loadUserData();
+      // refresca desde backend (no storage)
+      await refreshPerfilesFromServer(false);
 
       if (!posiblesPerfiles.value.length) {
-        openToast("info", "No hay perfiles guardados. Inicia sesión nuevamente.", 2600);
-      } else {
+        openToast("info", "No hay perfiles asignados aún. Contacta al administrador.", 2600);
+      } else if (!selectedPerfil.value) {
         openToast("info", "Selecciona un perfil para continuar.", 1600);
       }
     };
@@ -203,7 +274,6 @@ export default {
       closeToast();
     };
 
-    // --- FUNCIÓN MODIFICADA PARA RECARGA COMPLETA ---
     const asignarPerfil = async () => {
       if (!selectedPerfil.value) return;
 
@@ -216,7 +286,7 @@ export default {
 
         if (!res.data?.success) {
           openToast("error", res.data?.message || "No se pudo asignar el perfil", 2800);
-          isLoading.value = false; // Solo detenemos el loading si falló
+          isLoading.value = false;
           return;
         }
 
@@ -237,11 +307,9 @@ export default {
         localStorage.setItem("snai_perfil_activo", JSON.stringify(selectedPerfil.value));
         sessionStorage.removeItem("snai_posibles_perfiles");
 
-        // FORZAMOS RECARGA COMPLETA para actualizar el menú lateral
         setTimeout(() => {
           window.location.href = "/app";
         }, 800);
-
       } catch (err) {
         console.error("Error asignando perfil:", err);
         openToast("error", "Error de conexión con el servidor", 3000);
@@ -249,7 +317,16 @@ export default {
       }
     };
 
-    onMounted(loadUserData);
+    // ✅ Al entrar a la vista: pinta rápido + refresca real desde backend
+    const boot = async () => {
+      if (!ensureAuthOrRedirect()) return;
+      loadFromStorage();
+      await refreshPerfilesFromServer(true); // silent para no spamear toast al entrar
+    };
+
+    onMounted(boot);
+    // ✅ si esta vista está dentro de KeepAlive y cambias de pestaña, esto la refresca al volver
+    onActivated(boot);
 
     return {
       user,
@@ -258,6 +335,7 @@ export default {
       selectPerfil,
       asignarPerfil,
       isLoading,
+      isRefreshing,
       getInitials,
       toast,
       toastTitle,
@@ -269,7 +347,7 @@ export default {
 </script>
 
 <style scoped>
-/* ✅ Paleta SNAI (formal/institucional) */
+/* (tu CSS queda igual, lo dejo intacto para no tocar estilos) */
 :global(:root) {
   --snai-navy: #0b1220;
   --snai-blue: #1e3a8a;
@@ -284,7 +362,6 @@ export default {
   --card: #ffffff;
 }
 
-/* Layout general */
 .launchpad-container {
   width: 100%;
   max-width: 1100px;
@@ -293,7 +370,6 @@ export default {
   font-family: "Segoe UI", sans-serif;
 }
 
-/* Header */
 .welcome-header {
   display: flex;
   justify-content: space-between;
@@ -311,9 +387,7 @@ export default {
   letter-spacing: -0.2px;
 }
 
-.highlight {
-  color: var(--snai-blue);
-}
+.highlight { color: var(--snai-blue); }
 
 .subtitle {
   color: var(--muted);
@@ -321,7 +395,6 @@ export default {
   font-size: 1.02rem;
 }
 
-/* Badge usuario */
 .user-badge {
   display: flex;
   align-items: center;
@@ -338,7 +411,7 @@ export default {
   height: 42px;
   background: linear-gradient(135deg, var(--snai-blue) 0%, var(--snai-blue-2) 100%);
   color: white;
-  border-radius: 12px; /* más formal que círculo */
+  border-radius: 12px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -347,17 +420,8 @@ export default {
   letter-spacing: 0.3px;
 }
 
-.badge-text {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.email {
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: #111827;
-}
+.badge-text { display: flex; flex-direction: column; gap: 4px; }
+.email { font-size: 0.92rem; font-weight: 700; color: #111827; }
 
 .verified {
   display: inline-flex;
@@ -375,7 +439,6 @@ export default {
   font-weight: 800;
 }
 
-/* Divider */
 .divider {
   border: none;
   height: 1px;
@@ -383,7 +446,6 @@ export default {
   margin: 18px 0 26px;
 }
 
-/* Top row */
 .top-row {
   display: flex;
   justify-content: space-between;
@@ -399,7 +461,6 @@ export default {
   font-weight: 800;
 }
 
-/* Botón secundario */
 .switch-btn {
   border: 1px solid var(--border);
   background: var(--card);
@@ -415,8 +476,12 @@ export default {
   border-color: rgba(30, 58, 138, 0.25);
   background: #f8fafc;
 }
+.switch-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
 
-/* Grid tarjetas */
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -435,19 +500,16 @@ export default {
   display: flex;
   flex-direction: column;
 }
-
 .role-card:hover {
   transform: translateY(-2px);
   border-color: rgba(30, 58, 138, 0.25);
   box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
 }
 
-/* Activo: borde azul + línea amarilla (más institucional) */
 .role-card.active {
   border-color: rgba(29, 78, 216, 0.55);
   box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
 }
-
 .role-card.active::before {
   content: "";
   position: absolute;
@@ -459,12 +521,7 @@ export default {
   background: var(--snai-yellow);
 }
 
-/* Check */
-.selection-indicator {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-}
+.selection-indicator { position: absolute; top: 18px; right: 18px; }
 
 .check-circle {
   width: 22px;
@@ -474,14 +531,12 @@ export default {
   transition: all 0.18s ease;
   background: transparent;
 }
-
 .role-card.active .check-circle {
   border-color: var(--snai-blue-2);
   background: var(--snai-blue-2);
   box-shadow: inset 0 0 0 4px white;
 }
 
-/* Icon */
 .icon-box {
   width: 52px;
   height: 52px;
@@ -494,21 +549,18 @@ export default {
   border: 1px solid #e5e7eb;
   transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
 }
-
 .role-card.active .icon-box {
   background: rgba(29, 78, 216, 0.10);
   border-color: rgba(29, 78, 216, 0.22);
   color: var(--snai-blue);
 }
 
-/* Textos */
 .role-name {
   margin: 0 0 6px 0;
   font-size: 1.12rem;
   color: #0f172a;
   font-weight: 900;
 }
-
 .role-desc {
   margin: 0;
   font-size: 0.95rem;
@@ -516,7 +568,6 @@ export default {
   line-height: 1.5;
 }
 
-/* Empty */
 .empty-state {
   background: var(--card);
   border: 1px dashed #cbd5e1;
@@ -525,7 +576,6 @@ export default {
   color: var(--muted);
 }
 
-/* Footer acciones */
 .action-footer {
   display: flex;
   justify-content: flex-end;
@@ -533,7 +583,6 @@ export default {
   border-top: 1px solid #f1f5f9;
 }
 
-/* Botón primario: azul institucional + acento amarillo sutil */
 .start-btn {
   background: linear-gradient(90deg, var(--snai-blue-2) 0%, var(--snai-blue) 100%);
   color: white;
@@ -549,12 +598,10 @@ export default {
   transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
   box-shadow: 0 10px 24px rgba(29, 78, 216, 0.22);
 }
-
 .start-btn:not(:disabled):hover {
   transform: translateY(-2px);
   box-shadow: 0 14px 32px rgba(29, 78, 216, 0.30);
 }
-
 .start-btn:disabled {
   background: #cbd5e1;
   cursor: not-allowed;
@@ -562,7 +609,6 @@ export default {
   transform: none;
 }
 
-/* Loader */
 .loader {
   border: 3px solid rgba(255, 255, 255, 0.35);
   width: 20px;
@@ -571,11 +617,8 @@ export default {
   border-top-color: white;
   animation: spin 0.8s linear infinite;
 }
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* Toast (más sobrio) */
 .toast-overlay {
   position: fixed;
   inset: 0;
@@ -586,7 +629,6 @@ export default {
   background: rgba(2, 6, 23, 0.18);
   z-index: 9999;
 }
-
 .toast-card {
   width: min(720px, calc(100vw - 28px));
   background: var(--card);
@@ -599,7 +641,6 @@ export default {
   gap: 14px;
   align-items: center;
 }
-
 .toast-left { display: flex; gap: 12px; align-items: flex-start; }
 
 .toast-icon {
@@ -612,30 +653,16 @@ export default {
   font-weight: 900;
   color: #0f172a;
 }
+.toast-title { font-weight: 900; color: #0f172a; margin-bottom: 2px; }
+.toast-message { color: #475569; font-size: 0.95rem; line-height: 1.35; }
 
-.toast-title {
-  font-weight: 900;
-  color: #0f172a;
-  margin-bottom: 2px;
-}
-
-.toast-message {
-  color: #475569;
-  font-size: 0.95rem;
-  line-height: 1.35;
-}
-
-/* Variantes toast */
 .toast-card.success { border-color: rgba(16, 185, 129, 0.28); }
 .toast-card.success .toast-icon { background: rgba(16, 185, 129, 0.12); color: #0f766e; }
-
 .toast-card.error { border-color: rgba(239, 68, 68, 0.28); }
 .toast-card.error .toast-icon { background: rgba(239, 68, 68, 0.12); color: #b91c1c; }
-
 .toast-card.info { border-color: rgba(29, 78, 216, 0.22); }
 .toast-card.info .toast-icon { background: rgba(29, 78, 216, 0.12); color: var(--snai-blue); }
 
-/* Close */
 .toast-close {
   border: 1px solid var(--border);
   background: #f8fafc;
@@ -646,10 +673,7 @@ export default {
   cursor: pointer;
   transition: transform 0.15s ease, background 0.15s ease;
 }
-.toast-close:hover {
-  transform: translateY(-1px);
-  background: #f1f5f9;
-}
+.toast-close:hover { transform: translateY(-1px); background: #f1f5f9; }
 
 .toast-fade-enter-active,
 .toast-fade-leave-active {
@@ -661,7 +685,6 @@ export default {
   transform: translateY(-8px);
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .launchpad-container { padding: 22px 16px; }
   .welcome-header { flex-direction: column; align-items: flex-start; }
