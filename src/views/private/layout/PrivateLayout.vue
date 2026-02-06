@@ -178,6 +178,8 @@ export default {
           { label: "Educación", path: "/app/educacion", permission: "/educacion", iconSvg: icons.book },
           { label: "Ocupacion", path: "/app/ocupacion", permission: "/ocupacion", iconSvg: icons.job },
           { label: "Traslados", path: "/app/traslados", permission: "/traslados", iconSvg: icons.transfer },
+          { label: 'Jurídico', path: '/app/juridico', permission: '/juridico', iconSvg: icons.gavel},
+
         ],
       },
       {

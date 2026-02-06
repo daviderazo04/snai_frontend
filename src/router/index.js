@@ -81,6 +81,14 @@ import VisitasDetalleEvento from "../views/private/evento/[id]/index.vue";
 import AdolecenteView from "../views/private/adolentes/index.vue";
 import DelitoView from "../views/private/delito/index.vue"; // <-- FIX (.vue)
 
+
+/* =======================
+   JURÍDICO
+======================= */
+import JuridicoView from "../views/private/juridico/index.vue";
+import JuridicoDetalle from "../views/private/juridico/[id]/index.vue";
+
+
 /* =======================
    FORMULARIOS (VISTAS)
 ======================= */
@@ -161,6 +169,10 @@ const routes = [
       /* ===== VISITAS / DETALLE EVENTO ===== */
       { path: "visitas/:id", name: "visitas-detalle-evento", component: VisitasDetalleEvento },
       { path: "reporteria", name: "reporteria", component: ReporteriaFrom },
+
+      /* ===== JURÍDICO ===== */
+      { path: "juridico", name: "juridico", component: JuridicoView },
+      { path: "juridico/:id", name: "juridicoDetalle", component: JuridicoDetalle },
 
       /* ===== FORMULARIOS ===== */
       { path: "dashboard", name: "dashboard", component: DashboardView },
