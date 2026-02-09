@@ -1,7 +1,5 @@
 <template>
   <div class="page-container">
-
-    <!-- Header -->
     <div class="header">
       <p class="eyebrow">Gestión</p>
       <h2 class="title">Jurídico</h2>
@@ -10,9 +8,7 @@
       </p>
     </div>
 
-    <!-- Content -->
     <div class="content-area">
-
       <JuridicoToolbar
         v-model:termino="termino"
         v-model:adolescenteId="adolescenteId"
@@ -23,7 +19,7 @@
       <div class="table-wrapper">
         <div v-if="loading" class="loading-state">
           <div class="spinner"></div>
-          <p>Cargando registros jurídicos...</p>
+          <p>Sincronizando con la base de datos...</p>
         </div>
 
         <JuridicoTable
@@ -42,7 +38,6 @@
       />
     </div>
 
-    <!-- Modal -->
     <JuridicoFormModal
       :open="modalOpen"
       :mode="modalMode"
@@ -54,11 +49,11 @@
   </div>
 </template>
 
-
 <script setup>
 import { ref, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
 
+// Importación de servicios
 import {
   getJuridicos,
   createJuridico,
@@ -66,6 +61,7 @@ import {
   deleteJuridico,
 } from "@/service/juridico.service";
 
+// Importación de componentes
 import JuridicoToolbar from "./components/JuridicoToolbar.vue";
 import JuridicoTable from "./components/JuridicoTable.vue";
 import JuridicoPagination from "./components/JuridicoPagination.vue";
@@ -73,7 +69,7 @@ import JuridicoFormModal from "./components/JuridicoFormModal.vue";
 
 const router = useRouter();
 
-/* estado */
+/* --- ESTADO --- */
 const items = ref([]);
 const page = ref(1);
 const size = ref(10);
@@ -86,12 +82,12 @@ const delitoId = ref(null);
 const loading = ref(false);
 const saving = ref(false);
 
-/* modal */
+/* --- CONTROL MODAL --- */
 const modalOpen = ref(false);
-const modalMode = ref("create"); // create | edit
+const modalMode = ref("create"); // 'create' | 'edit'
 const selected = ref(null);
 
-/* cargar data */
+/* --- CARGAR DATOS (Sincronizado con tu API) --- */
 const loadData = async () => {
   loading.value = true;
   try {
@@ -103,28 +99,29 @@ const loadData = async () => {
       delitoId: delitoId.value || undefined,
     });
 
-    items.value = res.data.data;
-    totalPages.value = res.data.totalPages;
+    // Tu API devuelve un objeto con { data: [], totalPages: n }
+    items.value = res.data.data || [];
+    totalPages.value = res.data.totalPages || 1;
   } catch (e) {
-    console.error(e);
+    console.error("Error al cargar la data:", e);
+    items.value = [];
   } finally {
     loading.value = false;
   }
 };
 
-/* paginación */
+/* --- PAGINACIÓN Y FILTROS --- */
 const changePage = (p) => {
   page.value = p;
   loadData();
 };
 
-/* toolbar watch */
 watch([termino, adolescenteId, delitoId], () => {
   page.value = 1;
   loadData();
 });
 
-/* modal */
+/* --- ACCIONES DEL MODAL --- */
 const openCreate = () => {
   modalMode.value = "create";
   selected.value = null;
@@ -141,7 +138,7 @@ const closeModal = () => {
   modalOpen.value = false;
 };
 
-/* guardar */
+/* --- GUARDAR (El punto crítico) --- */
 const save = async (payload) => {
   saving.value = true;
   try {
@@ -150,19 +147,24 @@ const save = async (payload) => {
     } else {
       await updateJuridico(selected.value.id, payload);
     }
-    closeModal();
-    loadData();
+    
+    // Recargamos la tabla para que aparezca el nuevo registro
+    await loadData();
+    
+    // NOTA: No llamamos a closeModal() aquí.
+    // El componente JuridicoFormModal.vue detectará que saving pasó a false
+    // y mostrará su propia alerta de éxito antes de cerrarse solo.
   } catch (e) {
-    console.error(e);
+    console.error("Error al guardar:", e);
+    alert("No se pudo guardar el registro jurídico.");
   } finally {
     saving.value = false;
   }
 };
 
-/* eliminar */
+/* --- ELIMINAR --- */
 const confirmDelete = async (row) => {
   if (!confirm(`¿Eliminar la causa ${row.numeroCausa}?`)) return;
-
   try {
     await deleteJuridico(row.id);
     loadData();
@@ -171,7 +173,7 @@ const confirmDelete = async (row) => {
   }
 };
 
-/* ver detalle */
+/* --- NAVEGACIÓN --- */
 const goToDetail = (row) => {
   router.push(`/juridico/${row.id}`);
 };
@@ -180,6 +182,7 @@ onMounted(loadData);
 </script>
 
 <style scoped>
+/* SE MANTIENE EL ESTILO ORIGINAL EXACTO */
 .page-container {
   display: flex;
   flex-direction: column;

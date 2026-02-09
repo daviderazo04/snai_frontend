@@ -2,7 +2,6 @@
   <table class="table">
     <thead>
       <tr>
-        <th>ID</th>
         <th>Adolescente</th>
         <th>Delito</th>
         <th>N° Causa</th>
@@ -14,8 +13,6 @@
 
     <tbody>
       <tr v-for="row in items" :key="row.id">
-        <td>#{{ row.id }}</td>
-
         <td>
           <div class="main-text">
             {{ row.adolescente?.nombre }} {{ row.adolescente?.apellido }}
@@ -57,7 +54,7 @@
       </tr>
 
       <tr v-if="items.length === 0">
-        <td colspan="7" class="empty-cell">
+        <td colspan="6" class="empty-cell">
           No hay registros jurídicos.
         </td>
       </tr>
