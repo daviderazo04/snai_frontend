@@ -1,242 +1,99 @@
 <template>
-  <div class="table-card">
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Adolescente</th>
-            <th>Delito</th>
-            <th>N° Causa</th>
-            <th>Juez</th>
-            <th>Fecha Inicio</th>
-            <th class="text-right">Acciones</th>
-          </tr>
-        </thead>
+  <div class="page-container">
+    <div v-if="loading" class="loading-state">
+      <div class="spinner"></div>
+      <p>Cargando expediente jurídico...</p>
+    </div>
 
-        <tbody>
-          <tr v-for="row in items" :key="row.id">
-            <td>
-              <div class="name-cell">
-                <span class="name">
-                  {{ row.adolescente?.nombre }} {{ row.adolescente?.apellido }}
-                </span>
-                <span class="muted" v-if="row.adolescente">
-                  CI: {{ row.adolescente.cedula }}
-                </span>
-              </div>
-            </td>
+    <div v-else-if="!data" class="error-state">
+      <p>No se pudo cargar la información del registro #{{ $route.params.id }}</p>
+      <button @click="goBack" class="btn-back">Volver al listado</button>
+    </div>
 
-            <td>
-              <div class="cell-content">
-                <strong>{{ row.delito?.nombre || '—' }}</strong>
-              </div>
-            </td>
+    <div v-else class="detail-content">
+      <header class="detail-header">
+        <button @click="goBack" class="btn-back">← Volver</button>
+        <div class="title-group">
+          <h1>Causa: {{ data.numeroCausa }}</h1>
+          <span class="badge">ID: #{{ data.id }}</span>
+        </div>
+      </header>
 
-            <td>
-              <span class="badge mono">
-                {{ row.numeroCausa }}
-              </span>
-            </td>
+      <div class="info-grid">
+        <section class="info-card">
+          <h3>Datos del Adolescente</h3>
+          <div class="row">
+            <span class="label">Nombres:</span>
+            <span class="value">{{ data.adolescente?.nombre }} {{ data.adolescente?.apellido }}</span>
+          </div>
+          <div class="row">
+            <span class="label">Cédula:</span>
+            <span class="value">{{ data.adolescente?.cedula }}</span>
+          </div>
+        </section>
 
-            <td>
-              <span>{{ row.juez || '—' }}</span>
-            </td>
-
-            <td>
-              <span class="muted">
-                {{ formatDate(row.fechaInicio) }}
-              </span>
-            </td>
-
-            <td class="text-right">
-              <div class="actions">
-                <button class="view" @click="$emit('view', row)">Ver</button>
-                <button class="ghost" @click="$emit('edit', row)">Editar</button>
-                <button class="danger" @click="$emit('delete', row)">Eliminar</button>
-              </div>
-            </td>
-          </tr>
-
-          <tr v-if="items.length === 0">
-            <td colspan="6">
-              <div class="empty">
-                <div class="empty-icon">📂</div>
-                <strong>No hay registros jurídicos</strong>
-                <span>Intenta cambiar los filtros o crear uno nuevo.</span>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+        <section class="info-card">
+          <h3>Detalle del Proceso</h3>
+          <div class="row">
+            <span class="label">Delito:</span>
+            <span class="value">{{ data.delito?.nombre }}</span>
+          </div>
+          <div class="row">
+            <span class="label">Juez:</span>
+            <span class="value">{{ data.juez || '—' }}</span>
+          </div>
+        </section>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-defineProps({
-  items: {
-    type: Array,
-    default: () => [],
-  },
-});
+import { ref, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { getJuridico } from '@/service/juridico.service';
 
-const formatDate = (dateStr) => {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("es-ES", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+const route = useRoute();
+const router = useRouter();
+const data = ref(null);
+const loading = ref(true);
+
+const loadData = async () => {
+  loading.value = true;
+  try {
+    const id = route.params.id;
+    const res = await getJuridico(id);
+    // IMPORTANTE: res.data.data según tu Swagger
+    if (res.data && res.data.success) {
+      data.value = res.data.data;
+    }
+  } catch (e) {
+    console.error("Error cargando detalle:", e);
+  } finally {
+    loading.value = false;
+  }
 };
+
+const goBack = () => router.push('/app/juridico');
+
+onMounted(loadData);
 </script>
 
 <style scoped>
-.table-card {
-  background: white;
-  border-radius: 16px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.04);
-  overflow: hidden;
-}
+.page-container { padding: 24px; max-width: 1200px; margin: 0 auto; }
+.loading-state, .error-state { text-align: center; padding: 100px; color: #64748b; }
+.spinner { width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-.table-wrap {
-  overflow-x: auto;
-}
+.detail-header { display: flex; align-items: center; gap: 20px; margin-bottom: 32px; }
+.btn-back { background: #f1f5f9; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+.title-group h1 { margin: 0; font-size: 1.8rem; color: #0f172a; }
+.badge { background: #eff6ff; color: #2563eb; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 700; }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 900px;
-}
-
-th,
-td {
-  padding: 16px 20px;
-  text-align: left;
-  font-size: 0.95rem;
-  color: #0f172a;
-  vertical-align: middle;
-}
-
-th {
-  background: #f8fafc;
-  color: #475569;
-  font-weight: 600;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 1px;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-tbody tr {
-  border-bottom: 1px solid #f1f5f9;
-  transition: background 0.15s;
-}
-
-tbody tr:hover {
-  background: #f8fafc;
-}
-
-tbody tr:last-child {
-  border-bottom: none;
-}
-
-/* Cells */
-.name-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.name {
-  font-weight: 700;
-}
-
-.muted {
-  color: #64748b;
-  font-size: 0.8rem;
-}
-
-.badge {
-  background: #f1f5f9;
-  padding: 4px 8px;
-  border-radius: 6px;
-  color: #334155;
-}
-
-.mono {
-  font-family: monospace;
-}
-
-.cell-content {
-  display: flex;
-  flex-direction: column;
-}
-
-.text-right {
-  text-align: right;
-}
-
-.actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-/* Botones */
-button {
-  border: 1px solid #e2e8f0;
-  background: white;
-  padding: 8px 12px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: 600;
-  color: #0f172a;
-  font-size: 0.85rem;
-  transition: all 0.2s ease;
-}
-
-.view {
-  color: #2563eb;
-  background: #eff6ff;
-  border-color: #dbeafe;
-}
-
-.view:hover {
-  background: #dbeafe;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
-}
-
-.ghost:hover {
-  background: #f1f5f9;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
-}
-
-.danger {
-  color: #b91c1c;
-  background: rgba(254, 242, 242, 0.5);
-  border-color: #fecaca;
-}
-
-.danger:hover {
-  background: #fee2e2;
-  border-color: #fca5a5;
-}
-
-/* Empty */
-.empty {
-  padding: 40px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  color: #64748b;
-}
-
-.empty-icon {
-  font-size: 2rem;
-  margin-bottom: 8px;
-  opacity: 0.5;
-}
+.info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+.info-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+.info-card h3 { margin-top: 0; font-size: 1rem; color: #3b82f6; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; }
+.row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 0.95rem; }
+.label { color: #64748b; }
+.value { font-weight: 600; color: #1e293b; }
 </style>

@@ -1,74 +1,65 @@
 <template>
-  <div class="table-card">
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Adolescente</th>
-            <th>Delito</th>
-            <th>N° Causa</th>
-            <th>Juez</th>
-            <th>Fecha Inicio</th>
-            <th class="text-right">Acciones</th>
-          </tr>
-        </thead>
+  <table class="table">
+    <thead>
+      <tr>
+        <th class="col-id">ID</th>
+        <th class="col-adolescente">Adolescente</th>
+        <th class="col-delito">Delito</th>
+        <th class="col-causa">N° Causa</th>
+        <th class="col-juez">Juez</th>
+        <th class="col-fecha">Fecha Inicio</th>
+        <th class="col-actions">Acciones</th>
+      </tr>
+    </thead>
 
-        <tbody>
-          <tr v-for="row in items" :key="row.id">
-            <td>
-              <div class="name-cell">
-                <span class="name">
-                  {{ row.adolescente?.nombre }} {{ row.adolescente?.apellido }}
-                </span>
-                <span class="muted" v-if="row.adolescente">
-                  CI: {{ row.adolescente.cedula }}
-                </span>
-              </div>
-            </td>
+    <tbody>
+      <tr v-for="row in items" :key="row.id">
+        <td>#{{ row.id }}</td>
 
-            <td>
-              <div class="cell-content">
-                <strong>{{ row.delito?.nombre || '—' }}</strong>
-              </div>
-            </td>
+        <td>
+          <div class="main-text">
+            {{ row.adolescente?.nombre }} {{ row.adolescente?.apellido }}
+          </div>
+          <div class="sub-text" v-if="row.adolescente">
+            CI: {{ row.adolescente.cedula }}
+          </div>
+        </td>
 
-            <td>
-              <span class="badge mono">
-                {{ row.numeroCausa }}
-              </span>
-            </td>
+        <td class="main-text">
+          {{ row.delito?.nombre || '—' }}
+        </td>
 
-            <td>
-              <span>{{ row.juez || '—' }}</span>
-            </td>
+        <td class="mono">
+          {{ row.numeroCausa }}
+        </td>
 
-            <td>
-              <span class="muted">
-                {{ formatDate(row.fechaInicio) }}
-              </span>
-            </td>
+        <td>
+          {{ row.juez || '—' }}
+        </td>
 
-            <td class="text-right">
-              <div class="actions">
-                <button class="view" @click="$emit('view', row)">Ver</button>
-                <button class="ghost" @click="$emit('edit', row)">Editar</button>
-              </div>
-            </td>
-          </tr>
+        <td>
+          {{ formatDate(row.fechaInicio) }}
+        </td>
 
-          <tr v-if="items.length === 0">
-            <td colspan="6">
-              <div class="empty">
-                <div class="empty-icon">📂</div>
-                <strong>No hay registros jurídicos</strong>
-                <span>Intenta cambiar los filtros o crear uno nuevo.</span>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
+        <td class="text-right">
+          <div class="actions">
+            <button class="view" @click="$emit('view', row)">
+              Ver
+            </button>
+            <button @click="$emit('edit', row)">
+              Editar
+            </button>
+          </div>
+        </td>
+      </tr>
+
+      <tr v-if="items.length === 0">
+        <td colspan="7" class="empty-cell">
+          No hay registros jurídicos.
+        </td>
+      </tr>
+    </tbody>
+  </table>
 </template>
 
 <script setup>
@@ -82,6 +73,7 @@ defineProps({
 const formatDate = (dateStr) => {
   if (!dateStr) return "-";
   const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
   return d.toLocaleDateString("es-ES", {
     year: "numeric",
     month: "short",
@@ -91,151 +83,117 @@ const formatDate = (dateStr) => {
 </script>
 
 <style scoped>
-.table-card {
+/* ================= TABLE ================= */
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
   background: white;
-  border-radius: 16px;
+  border-radius: 18px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
   overflow: hidden;
 }
 
-.table-wrap {
-  overflow-x: auto;
-}
+/* ================= COLUMN WIDTHS ================= */
+.col-id { width: 70px; }
+.col-adolescente { width: 240px; }
+.col-delito { width: 160px; }
+.col-causa { width: 150px; }
+.col-juez { width: 200px; }
+.col-fecha { width: 130px; }
+.col-actions { width: 170px; }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 900px;
-}
-
-th,
-td {
-  padding: 16px 20px;
+/* HEADER */
+.table thead th {
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 14px;
+  border-bottom: 1px solid #e2e8f0;
   text-align: left;
+}
+
+/* ACCIONES HEADER AJUSTADO */
+.table thead th.col-actions {
+  text-align: center;   /* alinear el texto a la derecha */
+  padding-right: 24px; /* opcional: espacio visual con botones */
+}
+
+/* ================= ROWS ================= */
+.table tbody tr:hover td {
+  background: #f1f5f9;
+}
+
+.table tbody td {
+  padding: 14px;
   font-size: 0.95rem;
   color: #0f172a;
+  border-bottom: 1px solid #edf2f7;
   vertical-align: middle;
 }
 
-th {
-  background: #f8fafc;
-  color: #475569;
-  font-weight: 600;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 1px;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-tbody tr {
-  border-bottom: 1px solid #f1f5f9;
-  transition: background 0.15s;
-}
-
-tbody tr:hover {
-  background: #f8fafc;
-}
-
-tbody tr:last-child {
+.table tbody tr:last-child td {
   border-bottom: none;
 }
 
-/* Cells */
-.name-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+/* ================= TEXT ================= */
+.main-text {
+  font-weight: 600;
 }
 
-.name {
-  font-weight: 700;
-}
-
-.muted {
-  color: #64748b;
+.sub-text {
   font-size: 0.8rem;
-}
-
-.badge {
-  background: #f1f5f9;
-  padding: 4px 8px;
-  border-radius: 6px;
-  color: #334155;
+  color: #64748b;
 }
 
 .mono {
   font-family: monospace;
-}
-
-.cell-content {
-  display: flex;
-  flex-direction: column;
+  color: #334155;
 }
 
 .text-right {
   text-align: right;
 }
 
+/* ================= ACTIONS ================= */
 .actions {
-  display: flex;
-  gap: 8px;
+  display: inline-flex;
   justify-content: flex-end;
+  gap: 8px;
 }
 
-/* Botones */
-button {
-  border: 1px solid #e2e8f0;
+.table button {
   background: white;
-  padding: 8px 12px;
-  border-radius: 10px;
-  cursor: pointer;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 7px 16px;
   font-weight: 600;
-  color: #0f172a;
-  font-size: 0.85rem;
-  transition: all 0.2s ease;
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
 }
 
-.view {
-  color: #2563eb;
-  background: #eff6ff;
-  border-color: #dbeafe;
-}
-
-.view:hover {
-  background: #dbeafe;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
-}
-
-.ghost:hover {
+.table button:hover {
   background: #f1f5f9;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
 }
 
-.danger {
-  color: #b91c1c;
-  background: rgba(254, 242, 242, 0.5);
-  border-color: #fecaca;
+/* VER */
+.table button.view {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #dbeafe;
 }
 
-.danger:hover {
-  background: #fee2e2;
-  border-color: #fca5a5;
-}
-
-/* Empty */
-.empty {
-  padding: 40px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  color: #64748b;
-}
-
-.empty-icon {
-  font-size: 2rem;
-  margin-bottom: 8px;
-  opacity: 0.5;
+/* ================= EMPTY ================= */
+.empty-cell {
+  padding: 26px;
+  text-align: center;
+  font-style: italic;
+  color: #94a3b8;
 }
 </style>

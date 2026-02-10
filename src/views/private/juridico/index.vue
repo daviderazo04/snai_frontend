@@ -162,20 +162,12 @@ const save = async (payload) => {
   }
 };
 
-/* --- ELIMINAR --- */
-const confirmDelete = async (row) => {
-  if (!confirm(`¿Eliminar la causa ${row.numeroCausa}?`)) return;
-  try {
-    await deleteJuridico(row.id);
-    loadData();
-  } catch (e) {
-    console.error(e);
-  }
-};
-
 /* --- NAVEGACIÓN --- */
 const goToDetail = (row) => {
-  router.push(`/juridico/${row.id}`);
+  const id = row?.id || row;
+  if (!id) return;
+  // Agregamos /app antes de /juridico
+  router.push(`/app/juridico/${id}`);
 };
 
 onMounted(loadData);
