@@ -58,7 +58,6 @@ import {
   getJuridicos,
   createJuridico,
   updateJuridico,
-  deleteJuridico,
 } from "@/service/juridico.service";
 
 // Importación de componentes
@@ -162,12 +161,20 @@ const save = async (payload) => {
   }
 };
 
-/* --- NAVEGACIÓN --- */
 const goToDetail = (row) => {
-  const id = row?.id || row;
-  if (!id) return;
-  // Agregamos /app antes de /juridico
-  router.push(`/app/juridico/${id}`);
+  const targetId = row?.id;
+  console.log("Intentando navegar a Jurídico con ID:", targetId);
+  
+  if (targetId) {
+    router.push({ 
+      name: 'juridicoDetalle', 
+      params: { id: targetId.toString() } // Forzamos a que sea string por si acaso
+    }).catch(err => {
+      console.error("Fallo la navegación:", err);
+    });
+  } else {
+    console.error("No se pudo obtener el ID del row:", row);
+  }
 };
 
 onMounted(loadData);

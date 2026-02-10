@@ -58,6 +58,16 @@ const router = useRouter();
 const data = ref(null);
 const loading = ref(true);
 
+onMounted(async () => {
+  const idFromUrl = route.params.id;
+  console.log("Comprobación rápida - ID en URL:", idFromUrl);
+  if (!idFromUrl) {
+    console.warn("No hay ID en la URL");
+    return;
+  }
+  await loadData();
+});
+
 const loadData = async () => {
   loading.value = true;
   try {
