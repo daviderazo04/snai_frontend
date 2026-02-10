@@ -1,65 +1,74 @@
 <template>
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Adolescente</th>
-        <th>Delito</th>
-        <th>N° Causa</th>
-        <th>Juez</th>
-        <th>Fecha Inicio</th>
-        <th class="text-right">Acciones</th>
-      </tr>
-    </thead>
+  <div class="table-card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Adolescente</th>
+            <th>Delito</th>
+            <th>N° Causa</th>
+            <th>Juez</th>
+            <th>Fecha Inicio</th>
+            <th class="text-right">Acciones</th>
+          </tr>
+        </thead>
 
-    <tbody>
-      <tr v-for="row in items" :key="row.id">
-        <td>
-          <div class="main-text">
-            {{ row.adolescente?.nombre }} {{ row.adolescente?.apellido }}
-          </div>
-          <div class="sub-text" v-if="row.adolescente">
-            CI: {{ row.adolescente.cedula }}
-          </div>
-        </td>
+        <tbody>
+          <tr v-for="row in items" :key="row.id">
+            <td>
+              <div class="name-cell">
+                <span class="name">
+                  {{ row.adolescente?.nombre }} {{ row.adolescente?.apellido }}
+                </span>
+                <span class="muted" v-if="row.adolescente">
+                  CI: {{ row.adolescente.cedula }}
+                </span>
+              </div>
+            </td>
 
-        <td>
-          <span class="main-text">
-            {{ row.delito?.nombre || '—' }}
-          </span>
-        </td>
+            <td>
+              <div class="cell-content">
+                <strong>{{ row.delito?.nombre || '—' }}</strong>
+              </div>
+            </td>
 
-        <td class="mono">
-          {{ row.numeroCausa }}
-        </td>
+            <td>
+              <span class="badge mono">
+                {{ row.numeroCausa }}
+              </span>
+            </td>
 
-        <td>
-          {{ row.juez || '—' }}
-        </td>
+            <td>
+              <span>{{ row.juez || '—' }}</span>
+            </td>
 
-        <td>
-          {{ formatDate(row.fechaInicio) }}
-        </td>
+            <td>
+              <span class="muted">
+                {{ formatDate(row.fechaInicio) }}
+              </span>
+            </td>
 
-        <td class="text-right">
-          <button class="view" @click="$emit('view', row)">
-            Ver
-          </button>
-          <button @click="$emit('edit', row)">
-            Editar
-          </button>
-          <button class="danger" @click="$emit('delete', row)">
-            Eliminar
-          </button>
-        </td>
-      </tr>
+            <td class="text-right">
+              <div class="actions">
+                <button class="view" @click="$emit('view', row)">Ver</button>
+                <button class="ghost" @click="$emit('edit', row)">Editar</button>
+              </div>
+            </td>
+          </tr>
 
-      <tr v-if="items.length === 0">
-        <td colspan="6" class="empty-cell">
-          No hay registros jurídicos.
-        </td>
-      </tr>
-    </tbody>
-  </table>
+          <tr v-if="items.length === 0">
+            <td colspan="6">
+              <div class="empty">
+                <div class="empty-icon">📂</div>
+                <strong>No hay registros jurídicos</strong>
+                <span>Intenta cambiar los filtros o crear uno nuevo.</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -71,7 +80,7 @@ defineProps({
 });
 
 const formatDate = (dateStr) => {
-  if (!dateStr) return "";
+  if (!dateStr) return "-";
   const d = new Date(dateStr);
   return d.toLocaleDateString("es-ES", {
     year: "numeric",
@@ -82,71 +91,100 @@ const formatDate = (dateStr) => {
 </script>
 
 <style scoped>
-.table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  overflow: hidden;
+.table-card {
+  background: white;
   border-radius: 16px;
   border: 1px solid #e2e8f0;
-  background: white;
-  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
-  table-layout: fixed;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
 }
 
-.table thead th {
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+th,
+td {
+  padding: 16px 20px;
   text-align: left;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #475569;
-  background: #f8fafc;
-  padding: 12px 14px;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.table tbody td {
-  padding: 12px 14px;
-  border-bottom: 1px solid #edf2f7;
-  color: #0f172a;
   font-size: 0.95rem;
+  color: #0f172a;
   vertical-align: middle;
 }
 
-.table tbody tr:hover td {
+th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s;
+}
+
+tbody tr:hover {
   background: #f8fafc;
 }
 
-.table tbody tr:last-child td {
+tbody tr:last-child {
   border-bottom: none;
 }
 
-.text-right {
-  text-align: right;
+/* Cells */
+.name-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.main-text {
-  font-weight: 600;
+.name {
+  font-weight: 700;
 }
 
-.sub-text {
-  font-size: 0.8rem;
+.muted {
   color: #64748b;
+  font-size: 0.8rem;
+}
+
+.badge {
+  background: #f1f5f9;
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: #334155;
 }
 
 .mono {
   font-family: monospace;
 }
 
-.empty-cell {
-  text-align: center;
-  padding: 24px;
-  color: #94a3b8;
-  font-style: italic;
+.cell-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 /* Botones */
-.table button {
+button {
   border: 1px solid #e2e8f0;
   background: white;
   padding: 8px 12px;
@@ -154,31 +192,50 @@ const formatDate = (dateStr) => {
   cursor: pointer;
   font-weight: 600;
   color: #0f172a;
-  transition: all 0.15s ease;
-  margin-left: 6px;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
 }
 
-.table button:hover {
-  background: #f1f5f9;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
-}
-
-/* Botón Ver */
-.table button.view {
+.view {
   color: #2563eb;
   background: #eff6ff;
   border-color: #dbeafe;
 }
 
-.table button.view:hover {
+.view:hover {
   background: #dbeafe;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
 }
 
-/* Botón Eliminar */
-.table button.danger {
-  border: none;
-  color: white;
-  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+.ghost:hover {
+  background: #f1f5f9;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.danger {
+  color: #b91c1c;
+  background: rgba(254, 242, 242, 0.5);
+  border-color: #fecaca;
+}
+
+.danger:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+/* Empty */
+.empty {
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+}
+
+.empty-icon {
+  font-size: 2rem;
+  margin-bottom: 8px;
+  opacity: 0.5;
 }
 </style>
