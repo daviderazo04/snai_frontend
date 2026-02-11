@@ -1,106 +1,194 @@
-<!-- src/views/private/salud/components/SaludToolbar.vue -->
 <template>
   <div class="toolbar">
-    <input
-      type="text"
-      placeholder="Buscar por id, adolescente, fecha, diagnóstico, observación..."
-      :value="search"
-      @input="$emit('update:search', $event.target.value)"
-    />
+    <div class="filters">
+      <label class="field">
+        <span class="label-text">Adolescente</span>
+        <input
+          type="text"
+          placeholder="Ej: Juan Pérez..."
+          :value="searchNombre"
+          @input="$emit('update:searchNombre', $event.target.value)"
+        />
+      </label>
 
-    <!-- Botón Limpiar (solo visible si hay búsqueda) -->
-    <button
-      v-if="search"
-      class="btn-clear"
-      @click="clearFilters"
-    >
-      <span class="icon">🧹</span>
-      Limpiar
-    </button>
+      <label class="field">
+        <span class="label-text">Diagnóstico</span>
+        <input
+          type="text"
+          placeholder="Ej: Gripe..."
+          :value="diagnostico"
+          @input="$emit('update:diagnostico', $event.target.value)"
+        />
+      </label>
 
-    <button class="btn-primary" @click="$emit('create')">
+      <label class="field">
+        <span class="label-text">¿Discapacidad?</span>
+        <select
+          :value="discapacidad"
+          @change="$emit('update:discapacidad', $event.target.value)"
+        >
+          <option value="">Todos</option>
+          <option value="1">Sí</option>
+          <option value="0">No</option>
+        </select>
+      </label>
+
+      <!-- Acciones de filtros -->
+      <div class="filter-actions">
+        <button
+          v-if="hasFilters"
+          class="btn-clear"
+          @click="clearFilters"
+          type="button"
+        >
+          <span class="icon">🧹</span>
+          Limpiar
+        </button>
+      </div>
+    </div>
+
+    <button class="btn-primary" @click="$emit('create')" type="button">
       + Nuevo registro
     </button>
   </div>
 </template>
 
 <script setup>
+import { computed } from "vue";
+
 const props = defineProps({
-  search: {
+  searchNombre: {
     type: String,
     default: "",
   },
-  total: Number,
+  diagnostico: {
+    type: String,
+    default: "",
+  },
+  discapacidad: {
+    type: String,
+    default: "",
+  },
 });
 
-const emit = defineEmits(["update:search", "create"]);
+const emit = defineEmits([
+  "update:searchNombre",
+  "update:diagnostico",
+  "update:discapacidad",
+  "create",
+]);
+
+const hasFilters = computed(() => {
+  return (
+    props.searchNombre.length > 0 ||
+    props.diagnostico.length > 0 ||
+    props.discapacidad !== ""
+  );
+});
 
 const clearFilters = () => {
-  emit("update:search", "");
+  emit("update:searchNombre", "");
+  emit("update:diagnostico", "");
+  emit("update:discapacidad", "");
 };
 </script>
 
 <style scoped>
 .toolbar {
   display: flex;
-  gap: 12px;
-  align-items: center;
+  gap: 16px;
+  align-items: flex-end;
   justify-content: space-between;
   flex-wrap: wrap;
+  background: white;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
 }
 
-.toolbar input {
+.filters {
+  display: flex;
+  gap: 16px;
   flex: 1;
-  min-width: 260px;
-  padding: 12px 12px;
-  border-radius: 14px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 180px;
+}
+
+.label-text {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.toolbar input,
+.toolbar select {
+  padding: 10px 14px;
+  border-radius: 10px;
   border: 1px solid #e2e8f0;
   outline: none;
-  font-size: 0.95rem;
-  background: #fff;
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  font-size: 0.9rem;
+  background-color: #f8fafc;
+  transition: all 0.15s ease;
 }
 
-.toolbar input:focus {
-  border-color: rgba(59, 130, 246, 0.55);
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
+.toolbar input:focus,
+.toolbar select:focus {
+  border-color: #3b82f6;
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Contenedor botón limpiar */
+.filter-actions {
+  display: flex;
+  align-items: flex-end;
 }
 
 /* Botón principal */
 .btn-primary {
   border: none;
   color: white;
-  padding: 12px 14px;
-  border-radius: 14px;
-  cursor: pointer;
+  padding: 12px 20px;
+  border-radius: 12px;
   font-weight: 800;
-  background: linear-gradient(135deg, #1d4ed8 0%, #38bdf8 100%);
-  box-shadow: 0 14px 28px rgba(29, 78, 216, 0.22);
-  transition: transform 0.08s ease, box-shadow 0.15s ease;
+  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .btn-primary:hover {
-  box-shadow: 0 18px 34px rgba(29, 78, 216, 0.24);
-}
-
-.btn-primary:active {
-  transform: translateY(1px);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(59, 130, 246, 0.25);
 }
 
 /* Botón limpiar */
 .btn-clear {
-  padding: 12px 14px;
-  border-radius: 14px;
+  padding: 10px 16px;
+  border-radius: 12px;
   border: 1px solid #e2e8f0;
   background: #fff;
   cursor: pointer;
   font-weight: 600;
   color: #475569;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  height: 42px;
+  transition: all 0.15s ease;
 }
 
 .btn-clear:hover {
   background: #f1f5f9;
   border-color: #cbd5e1;
+}
+
+.icon {
+  margin-right: 6px;
 }
 </style>
