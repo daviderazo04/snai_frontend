@@ -8,7 +8,7 @@
         </div>
         
         <h1>Iniciar sesión</h1>
-        <p class="subtitle">Bienvenido al sistema de jóvenes adolescentes privados de la libertad</p>
+        <p class="subtitle">Bienvenido al Sistema de Informaticó de Adolescentes Infractores</p>
       </div>
 
       <form @submit.prevent="handleLogin" class="auth-form">

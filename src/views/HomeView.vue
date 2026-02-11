@@ -7,7 +7,7 @@
       </div>
 
       <div class="content">
-        <h1>Sistema de <span class="highlight">Jóvenes Privados de la libertad</span></h1>
+        <h1>Sistema de Informaticó de <span class="highlight">Adolescentes Infractores</span></h1>
         
         <p class="description">
           Plataforma integral para la gestión, monitoreo y control de información de adolescentes infractores y personas privadas de libertad.
