@@ -16,8 +16,8 @@
           <span class="hint">Parentescos registrados</span>
         </div>
         <div class="stat-card">
-          <span class="label">Visibles</span>
-          <strong>{{ filteredCount }}</strong>
+          <span class="label">En esta página</span>
+          <strong>{{ visibleCount }}</strong>
           <span class="hint">Resultado del filtro actual</span>
         </div>
         <div class="stat-card">
@@ -31,7 +31,7 @@
     <section class="panel">
       <ParentescoToolbar
         :search="search"
-        :total="filteredCount"
+        :total="totalParentescos"
         @update:search="search = $event"
         @create="openCreate"
       />
@@ -39,13 +39,13 @@
       <div v-if="isLoading" class="status">Cargando parentescos...</div>
       <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
 
-      <ParentescoTable :items="pagedParentescos" @edit="openEdit" />
+      <ParentescoTable :items="parentescos" @edit="openEdit" />
 
       <ParentescoPagination
         :current-page="currentPage"
         :total-pages="totalPages"
         :page-size="pageSize"
-        :total="filteredCount"
+        :total="totalParentescos"
         @update:page="currentPage = $event"
       />
     </section>
@@ -72,23 +72,47 @@ import ParentescoTable from "./components/ParentescoTable.vue";
 import ParentescoPagination from "./components/ParentescoPagination.vue";
 import ParentescoFormModal from "./components/ParentescoFormModal.vue";
 
-const resolveList = (response) => {
-  const payload = response?.data?.data ?? response?.data;
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.items)) return payload.items;
-  if (Array.isArray(payload?.rows)) return payload.rows;
-  if (Array.isArray(payload?.parentescos)) return payload.parentescos;
-  if (Array.isArray(payload?.parentesco)) return payload.parentesco;
-  return [];
-};
-
 const mapParentesco = (item) => {
   const rawId = item?.id ?? item?.parentescoId ?? item?.idParentesco;
   return {
     id: Number.isNaN(Number(rawId)) ? rawId : Number(rawId),
     nombre: item?.nombre ?? item?.name ?? item?.parentesco ?? "",
   };
+};
+
+const unwrap = (maybeAxiosResponse) => {
+  if (maybeAxiosResponse && typeof maybeAxiosResponse === "object" && "data" in maybeAxiosResponse) {
+    return maybeAxiosResponse.data;
+  }
+  return maybeAxiosResponse;
+};
+
+const parsePaginated = (payload) => {
+  const top = payload || {};
+  const inner = top.data && typeof top.data === "object" && !Array.isArray(top.data) ? top.data : null;
+
+  const list =
+    (Array.isArray(top.data) ? top.data : null) ??
+    (Array.isArray(inner?.data) ? inner.data : null) ??
+    (Array.isArray(inner?.items) ? inner.items : null) ??
+    (Array.isArray(inner?.rows) ? inner.rows : null) ??
+    (Array.isArray(top.items) ? top.items : null) ??
+    (Array.isArray(top.rows) ? top.rows : null) ??
+    (Array.isArray(inner?.parentescos) ? inner.parentescos : null) ??
+    (Array.isArray(top.parentescos) ? top.parentescos : null) ??
+    (Array.isArray(inner?.parentesco) ? inner.parentesco : null) ??
+    (Array.isArray(top.parentesco) ? top.parentesco : null) ??
+    [];
+
+  const rawTotalPages =
+    top.totalPages ?? inner?.totalPages ?? inner?.last_page ?? inner?.lastPage ?? inner?.total_pages;
+  const totalPages = Math.max(1, Number(rawTotalPages) || 1);
+
+  const rawTotal =
+    top.total ?? inner?.total ?? inner?.totalRecords ?? inner?.totalElements ?? inner?.total_items;
+  const total = Number(rawTotal) || list.length;
+
+  return { list, totalPages, total };
 };
 
 export default {
@@ -100,6 +124,7 @@ export default {
   },
   setup() {
     const parentescos = ref([]);
+    const totalParentescos = ref(0);
     const isLoading = ref(false);
     const isSaving = ref(false);
     const errorMessage = ref("");
@@ -107,32 +132,19 @@ export default {
     const search = ref("");
     const currentPage = ref(1);
     const pageSize = ref(6);
+    const totalPages = ref(1);
 
     const modalOpen = ref(false);
     const modalMode = ref("create");
     const modalInitial = ref(null);
 
-    const filteredParentescos = computed(() => {
-      const term = search.value.trim().toLowerCase();
-      return parentescos.value.filter((item) =>
-        term ? (item.nombre || "").toLowerCase().includes(term) : true
-      );
+    const visibleCount = computed(() => parentescos.value.length);
+
+    watch(search, () => {
+      currentPage.value = 1;
+      loadParentescos();
     });
-
-    const filteredCount = computed(() => filteredParentescos.value.length);
-
-    const totalPages = computed(() =>
-      Math.max(1, Math.ceil(filteredParentescos.value.length / pageSize.value))
-    );
-
-    const pagedParentescos = computed(() => {
-      const start = (currentPage.value - 1) * pageSize.value;
-      return filteredParentescos.value.slice(start, start + pageSize.value);
-    });
-
-    const totalParentescos = computed(() => parentescos.value.length);
-
-    watch(search, () => (currentPage.value = 1));
+    watch(currentPage, loadParentescos);
     watch(totalPages, (value) => {
       if (currentPage.value > value) currentPage.value = value;
     });
@@ -141,20 +153,32 @@ export default {
       isLoading.value = true;
       errorMessage.value = "";
       try {
-        const res = await getParentescos();
-        if (res.data?.success === false) {
-          errorMessage.value = res.data?.message || "No se pudo cargar parentescos.";
-          parentescos.value = [];
-          return;
-        }
-        const list = resolveList(res);
+        const res = await getParentescos({
+          nombre: search.value,
+          page: currentPage.value,
+          size: pageSize.value,
+        });
+
+        const payload = unwrap(res);
+        const { list, totalPages: tp, total } = parsePaginated(payload);
+
         parentescos.value = list
           .map(mapParentesco)
           .filter((item) => item.nombre);
+        totalPages.value = tp || 1;
+        totalParentescos.value = total ?? parentescos.value.length;
+
+        if (currentPage.value > totalPages.value) currentPage.value = totalPages.value;
+        if (currentPage.value < 1) currentPage.value = 1;
       } catch (err) {
         console.error("Error cargando parentescos:", err);
-        errorMessage.value = "Error de conexion con el servidor.";
+        errorMessage.value =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Error de conexion con el servidor.";
         parentescos.value = [];
+        totalPages.value = 1;
+        totalParentescos.value = 0;
       } finally {
         isLoading.value = false;
       }
@@ -186,15 +210,16 @@ export default {
       try {
         const res = await createParentesco({ nombre });
         if (res.data?.success === false) {
-          errorMessage.value =
-            res.data?.message || "No se pudo guardar el parentesco.";
-          return;
+          throw new Error(res.data?.message || "No se pudo guardar el parentesco.");
         }
         await loadParentescos();
         closeModal();
       } catch (err) {
         console.error("Error guardando parentesco:", err);
-        errorMessage.value = "Error de conexion con el servidor.";
+        errorMessage.value =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Error de conexion con el servidor.";
       } finally {
         isSaving.value = false;
       }
@@ -207,9 +232,9 @@ export default {
       currentPage,
       pageSize,
       totalPages,
-      pagedParentescos,
-      filteredCount,
       totalParentescos,
+      visibleCount,
+      parentescos,
       modalOpen,
       modalMode,
       modalInitial,
