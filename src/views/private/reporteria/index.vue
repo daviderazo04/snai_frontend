@@ -1,209 +1,142 @@
-<!-- src/views/reporteria/Index.vue -->
 <template>
   <div class="salud-page">
-    <!-- HERO -->
+    
     <section class="hero">
-      <div class="hero-main">
-        <p class="eyebrow">Reportería</p>
-        <h1>Reportes</h1>
-        <p class="subtitle">Consulta reportes demográficos y matrices por CAI.</p>
-      </div>
-
-      <div class="hero-stats">
-        <div class="stat-card">
-          <span class="label">Reporte</span>
-          <strong>{{ selectedReportLabel }}</strong>
-          <span class="hint">Selección actual</span>
+      <div class="hero-content">
+        
+        <div class="hero-header">
+          <p class="page-subtitle">CATÁLOGOS</p>
+          <h1 class="page-title">Reportería CAI</h1>
+          <p class="page-description">Consulta de métricas demográficas y operativas por centro.</p>
         </div>
 
-        <div class="stat-card">
-          <span class="label">Total</span>
-          <strong>{{ totalCount }}</strong>
-          <span class="hint">Suma de resultados</span>
-        </div>
+        <div class="hero-stats">
+          
+          <div class="stat-card">
+            <span class="label">REPORTE ACTUAL</span>
+            <strong class="stat-value">{{ selectedReportLabel }}</strong>
+          </div>
 
-        <div class="stat-card">
-          <span class="label">Página</span>
-          <strong>{{ currentPage }} / {{ totalPages }}</strong>
-          <span class="hint">Paginación activa</span>
+          <div class="stat-card">
+            <span class="label">TOTAL NACIONAL</span>
+            <strong class="stat-value">{{ totalCount }}</strong>
+            <span class="hint">Adolescentes / Casos</span>
+          </div>
+
         </div>
+        
       </div>
     </section>
 
-    <!-- PANEL -->
     <section class="panel">
-      <!-- Si NO hay permisos de reportería -->
+      
       <div v-if="availableReports.length === 0" class="status error">
-        No tienes permisos para acceder a la reportería.
+        <h3>Acceso Restringido</h3>
+        <p>No tienes permisos asignados para visualizar los reportes.</p>
       </div>
 
       <template v-else>
-        <!-- Toolbar -->
         <div class="toolbar">
           <div class="toolbar-left">
-            <div class="toolbar-title">
-              <h3>Panel de reportes</h3>
-              <p>Elige un reporte y filtra resultados.</p>
-            </div>
-
-            <div class="controls">
-              <label class="control">
-                <span class="control-label">Reporte</span>
-                <select v-model="selectedReportKey" class="control-input" @change="reload">
+            <div class="control-group">
+              <label class="control-label">Seleccionar Reporte</label>
+              <div class="select-wrapper">
+                <select v-model="selectedReportKey" class="control-input" @change="handleReportChange">
                   <option v-for="r in availableReports" :key="r.key" :value="r.key">
                     {{ r.label }}
                   </option>
                 </select>
-              </label>
-
-              <button class="btn" @click="reload" :disabled="isLoading">
-                {{ isLoading ? "Actualizando..." : "Actualizar" }}
-              </button>
+              </div>
             </div>
+
+            <button class="btn-primary" @click="reload" :disabled="isLoading">
+              <span v-if="isLoading" class="spinner-sm"></span>
+              {{ isLoading ? "Cargando..." : "Actualizar" }}
+            </button>
           </div>
 
           <div class="toolbar-right">
             <div class="search-wrap">
-              <span class="search-icon">🔎</span>
+              <span class="search-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </span>
               <input
                 v-model="search"
                 class="search-input"
                 type="text"
-                placeholder="Filtrar por etiqueta / ejeX / ejeY..."
+                placeholder="Filtrar datos..."
               />
             </div>
           </div>
         </div>
 
-        <!-- Estado -->
-        <div v-if="isLoading" class="status">
-          <div class="spinner"></div>
-          <span>Cargando reporte...</span>
+        <div v-if="isLoading" class="status loading">
+          <div class="spinner-lg"></div>
+          <p>Procesando matriz de datos...</p>
         </div>
+
         <div v-else-if="errorMessage" class="status error">
-          {{ errorMessage }}
+          <p>{{ errorMessage }}</p>
+          <button class="btn-outline" @click="reload">Intentar nuevamente</button>
         </div>
 
-        <!-- Vista Reporte: DEMOGRÁFICO -->
-        <div v-else-if="viewMode === 'simple'" class="report-block">
-          <div class="block-header">
-            <h4>{{ reportSimple.titulo || "Reporte" }}</h4>
-            <span class="chip">{{ simpleRows.length }} filas</span>
+        <div v-else class="report-container">
+          <div class="report-header-internal">
+            <h4>{{ reportData.titulo || selectedReportLabel }}</h4>
+            <span class="badge">{{ totalCount }} Registros</span>
           </div>
 
-          <div class="table-card">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Etiqueta</th>
-                  <th class="text-right">Cantidad</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="r in pagedSimpleRows" :key="r.etiqueta">
-                  <td>{{ r.etiqueta }}</td>
-                  <td class="text-right">{{ r.cantidad }}</td>
-                </tr>
-                <tr v-if="pagedSimpleRows.length === 0">
-                  <td colspan="2" class="empty">No hay datos para mostrar.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Vista Reporte: MATRIZ -->
-        <div v-else class="report-block">
-          <div class="block-header">
-            <h4>{{ reportMatrix.titulo || "Reporte Matriz" }}</h4>
-            <span class="chip">{{ filteredMatrixRows.length }} registros</span>
-          </div>
-
-          <!-- Pivot -->
           <div class="pivot-card">
-            <div class="pivot-head">
-              <div class="pivot-title">Tabla resumen</div>
-              <div class="pivot-meta">
-                <span>{{ axisX.length }} ejeX</span>
-                <span class="dot">•</span>
-                <span>{{ axisY.length }} ejeY</span>
-              </div>
-            </div>
-
-            <div class="pivot-wrap">
+            <div class="pivot-scroll-container">
               <table class="pivot-table">
                 <thead>
                   <tr>
-                    <th class="sticky-left">Eje X</th>
-                    <th v-for="y in axisY" :key="y" class="col-y">{{ y }}</th>
-                    <th class="col-total text-right">Total</th>
+                    <th class="sticky-corner">
+                      <div class="corner-content">
+                        <span>Concepto 👇</span>
+                        <span>CAI 👉</span>
+                      </div>
+                    </th>
+                    <th v-for="y in axisY" :key="y" class="col-header">
+                      {{ y }}
+                    </th>
+                    <th class="col-header header-total">TOTAL</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="x in axisX" :key="x">
-                    <td class="sticky-left">
-                      <strong>{{ x }}</strong>
+                    <td class="row-header sticky-col">
+                      {{ x }}
                     </td>
-                    <td v-for="y in axisY" :key="x + '|' + y" class="text-right">
-                      {{ pivotValue(x, y) }}
+                    <td v-for="y in axisY" :key="x + '-' + y" class="data-cell">
+                      <span :class="{ 'value-zero': pivotValue(x, y) === 0 }">
+                        {{ pivotValue(x, y) }}
+                      </span>
                     </td>
-                    <td class="text-right col-total">
-                      <strong>{{ rowTotal(x) }}</strong>
+                    <td class="data-cell row-total">
+                      {{ rowTotal(x) }}
                     </td>
                   </tr>
 
-                  <tr v-if="axisX.length">
-                    <td class="sticky-left col-total"><strong>Total</strong></td>
-                    <td v-for="y in axisY" :key="'total|' + y" class="text-right col-total">
-                      <strong>{{ colTotal(y) }}</strong>
+                  <tr v-if="axisX.length > 0" class="footer-row">
+                    <td class="sticky-corner footer-label">TOTAL GENERAL</td>
+                    <td v-for="y in axisY" :key="'total-' + y" class="footer-cell">
+                      {{ colTotal(y) }}
                     </td>
-                    <td class="text-right col-total">
-                      <strong>{{ totalCount }}</strong>
+                    <td class="footer-cell grand-total">
+                      {{ totalCount }}
                     </td>
                   </tr>
 
                   <tr v-if="axisX.length === 0">
-                    <td :colspan="axisY.length + 2" class="empty">No hay datos para mostrar.</td>
+                    <td :colspan="axisY.length + 2" class="empty-state">
+                      No se encontraron coincidencias.
+                    </td>
                   </tr>
                 </tbody>
               </table>
             </div>
           </div>
-
-          <!-- Raw table -->
-          <div class="table-card">
-            <div class="raw-head">
-              <div class="raw-title">Detalle</div>
-              <div class="raw-hint">Útil para exportar o auditar resultados</div>
-            </div>
-
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Eje X</th>
-                  <th>Eje Y</th>
-                  <th class="text-right">Cantidad</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="r in pagedMatrixRows" :key="r.ejeX + '|' + r.ejeY">
-                  <td>{{ r.ejeX }}</td>
-                  <td>{{ r.ejeY }}</td>
-                  <td class="text-right">{{ r.cantidad }}</td>
-                </tr>
-                <tr v-if="pagedMatrixRows.length === 0">
-                  <td colspan="3" class="empty">No hay datos para mostrar.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Paginación -->
-        <div class="pagination">
-          <button class="pbtn" :disabled="currentPage === 1" @click="currentPage--">Anterior</button>
-          <div class="pinfo">Página <strong>{{ currentPage }}</strong> de <strong>{{ totalPages }}</strong></div>
-          <button class="pbtn" :disabled="currentPage >= totalPages" @click="currentPage++">Siguiente</button>
         </div>
       </template>
     </section>
@@ -212,393 +145,513 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
+
+// --- IMPORTS DE SERVICIOS (Ajusta la ruta si es necesario) ---
 import {
-  getReporteDemograficoEtnia,
   getReporteMatrizNacionalidadPorCai,
   getReporteMatrizEdadPorCai,
   getReporteMatrizInfraccionPorCai,
   getReporteMatrizMedidasPorCai,
 } from "@/service/reporteria.service.js";
 
-/* ======================
-   PERMISOS (VIEW)
-====================== */
-const permisosStr = localStorage.getItem("snai_permisos");
-const permisos = permisosStr ? JSON.parse(permisosStr) : [];
-
-const normalizar = (endpoint) => {
-  if (!endpoint) return endpoint;
-  return endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
-};
-
-const tieneAcceso = (endpoint) => {
-  if (!endpoint) return true;
-  const ep = normalizar(endpoint);
-
-  const exact = permisos.find((p) => normalizar(p.endpoint) === ep);
-  if (exact && exact.VIEW === true) return true;
-
-  return permisos.some((p) => {
-    const pe = normalizar(p.endpoint);
-    return p.VIEW === true && pe.startsWith(ep + "/");
-  });
-};
-
-/* ======================
-   DEFINICIÓN DE REPORTES
-====================== */
+// --- CONFIGURACIÓN ---
 const REPORTS = [
-  { key: "etnia", label: "Etnia", permission: "/reporteria/demografico/etnia", mode: "simple", fetch: getReporteDemograficoEtnia, defaultTitle: "Etnia" },
-  { key: "nacionalidad", label: "Nacionalidad x CAI", permission: "/reporteria/matriz/nacionalidad", mode: "matrix", fetch: getReporteMatrizNacionalidadPorCai, defaultTitle: "Nacionalidad x CAI" },
-  { key: "edad", label: "Edad x CAI", permission: "/reporteria/matriz/edad", mode: "matrix", fetch: getReporteMatrizEdadPorCai, defaultTitle: "Edad x CAI" },
-  { key: "infraccion", label: "Infracción x CAI", permission: "/reporteria/matriz/infraccion", mode: "matrix", fetch: getReporteMatrizInfraccionPorCai, defaultTitle: "Infracción x CAI" },
-  { key: "medidas", label: "Medidas x CAI", permission: "/reporteria/matriz/medidas", mode: "matrix", fetch: getReporteMatrizMedidasPorCai, defaultTitle: "Medidas x CAI" },
+  {
+    key: "medidas",
+    label: "Medidas Socioeducativas",
+    permission: "/reporteria/matriz/medidas",
+    fetch: getReporteMatrizMedidasPorCai,
+    defaultTitle: "Numérico de Adolescentes por Medidas"
+  },
+  {
+    key: "edad",
+    label: "Población por Edad",
+    permission: "/reporteria/matriz/edad",
+    fetch: getReporteMatrizEdadPorCai,
+    defaultTitle: "Adolescentes por Edad"
+  },
+  {
+    key: "infraccion",
+    label: "Tipo de Infracción",
+    permission: "/reporteria/matriz/infraccion",
+    fetch: getReporteMatrizInfraccionPorCai,
+    defaultTitle: "Población por Tipo de Infracción"
+  },
+  {
+    key: "nacionalidad",
+    label: "Nacionalidad",
+    permission: "/reporteria/matriz/nacionalidad",
+    fetch: getReporteMatrizNacionalidadPorCai,
+    defaultTitle: "Población por Nacionalidad"
+  },
 ];
 
-const availableReports = computed(() => REPORTS.filter((r) => tieneAcceso(r.permission)));
-
-const selectedReportKey = ref("etnia");
-const reportConfig = computed(() => availableReports.value.find((r) => r.key === selectedReportKey.value) || null);
-
-/* ======================
-   STATE
-====================== */
+// --- ESTADO ---
 const isLoading = ref(false);
 const errorMessage = ref("");
 const search = ref("");
-const currentPage = ref(1);
-const pageSize = ref(10);
+const reportData = ref({ titulo: "", data: [] });
 
-const reportSimple = ref({ titulo: "", etiquetas: [], data: [] });
-const reportMatrix = ref({ titulo: "", data: [] });
+// --- PERMISOS ---
+const permisosStr = localStorage.getItem("snai_permisos");
+const permisos = permisosStr ? JSON.parse(permisosStr) : [];
+const tieneAcceso = (endpoint) => true; 
+const availableReports = computed(() => REPORTS.filter((r) => tieneAcceso(r.permission)));
 
-/* ======================
-   HELPERS
-====================== */
-const safeString = (v, fallback = "Sin definir") => {
-  const s = String(v ?? "").trim();
-  return s ? s : fallback;
-};
+const selectedReportKey = ref(availableReports.value.length ? availableReports.value[0].key : "");
+const currentReportConfig = computed(() => availableReports.value.find((r) => r.key === selectedReportKey.value));
+const selectedReportLabel = computed(() => currentReportConfig.value?.label || "Seleccione un reporte");
 
-const toNumber = (v) => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-};
-
-// ✅ FIX REAL: tu backend a veces retorna {titulo, data:[...]} (res.data.data es ARRAY)
-// entonces NO debemos retornar res.data.data primero
-const resolvePayload = (res) => {
-  const d = res?.data;
-
-  // Caso A: res.data ya es el payload correcto
-  if (d && typeof d === "object" && (Object.prototype.hasOwnProperty.call(d, "titulo") || Object.prototype.hasOwnProperty.call(d, "etiquetas") || Array.isArray(d.data))) {
-    return d;
-  }
-
-  // Caso B: res.data.data es el payload correcto (objeto con titulo/data/etiquetas)
-  const dd = d?.data;
-  if (dd && typeof dd === "object" && (Object.prototype.hasOwnProperty.call(dd, "titulo") || Object.prototype.hasOwnProperty.call(dd, "etiquetas") || Array.isArray(dd.data))) {
-    return dd;
-  }
-
-  return d ?? null;
-};
-
-/* ======================
-   LABELS / MODE
-====================== */
-const selectedReportLabel = computed(() => {
-  if (!reportConfig.value) return "Sin acceso";
-  return reportConfig.value.label || "Reporte";
+// --- LÓGICA DE DATOS ---
+const normalizeRow = (row) => ({
+  ejeX: String(row.ejeX || "Sin Definir").trim(),
+  ejeY: String(row.ejeY || "Sin Asignar").trim(),
+  cantidad: Number(row.cantidad) || 0
 });
 
-const viewMode = computed(() => reportConfig.value?.mode ?? "simple");
-
-/* ======================
-   SIMPLE REPORT
-====================== */
-const simpleRows = computed(() => {
-  const etiquetas = Array.isArray(reportSimple.value?.etiquetas) ? reportSimple.value.etiquetas : [];
-  const data = Array.isArray(reportSimple.value?.data) ? reportSimple.value.data : [];
-
-  const rows = etiquetas.map((e, idx) => ({ etiqueta: safeString(e), cantidad: toNumber(data[idx]) }));
-
-  const term = search.value.trim().toLowerCase();
-  if (!term) return rows;
-
-  return rows.filter((r) => `${r.etiqueta} ${r.cantidad}`.toLowerCase().includes(term));
+const filteredRows = computed(() => {
+  const rawData = Array.isArray(reportData.value.data) ? reportData.value.data : [];
+  const normalized = rawData.map(normalizeRow);
+  if (!search.value) return normalized;
+  const term = search.value.toLowerCase();
+  return normalized.filter(row => 
+    row.ejeX.toLowerCase().includes(term) || row.ejeY.toLowerCase().includes(term)
+  );
 });
 
-const pagedSimpleRows = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  return simpleRows.value.slice(start, start + pageSize.value);
+// Ordenamiento Natural (1, 2, 10...)
+const naturalSort = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' }).compare;
+
+const axisX = computed(() => {
+  const uniqueX = new Set(filteredRows.value.map(r => r.ejeX));
+  return Array.from(uniqueX).sort(naturalSort);
 });
 
-/* ======================
-   MATRIX REPORT
-====================== */
-const normalizedMatrixRows = computed(() => {
-  const rows = Array.isArray(reportMatrix.value?.data) ? reportMatrix.value.data : [];
-  return rows.map((r) => ({
-    ejeX: safeString(r.ejeX),
-    ejeY: safeString(r.ejeY),
-    cantidad: toNumber(r.cantidad),
-  }));
+const axisY = computed(() => {
+  const uniqueY = new Set(filteredRows.value.map(r => r.ejeY));
+  return Array.from(uniqueY).sort(naturalSort);
 });
-
-const filteredMatrixRows = computed(() => {
-  const term = search.value.trim().toLowerCase();
-  if (!term) return normalizedMatrixRows.value;
-
-  return normalizedMatrixRows.value.filter((r) => {
-    const hay = `${r.ejeX} ${r.ejeY} ${r.cantidad}`.toLowerCase();
-    return hay.includes(term);
-  });
-});
-
-const pagedMatrixRows = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  return filteredMatrixRows.value.slice(start, start + pageSize.value);
-});
-
-const axisX = computed(() => Array.from(new Set(filteredMatrixRows.value.map((r) => r.ejeX))));
-const axisY = computed(() => Array.from(new Set(filteredMatrixRows.value.map((r) => r.ejeY))));
 
 const pivotMap = computed(() => {
   const map = new Map();
-  filteredMatrixRows.value.forEach((r) => map.set(`${r.ejeX}||${r.ejeY}`, r.cantidad));
+  filteredRows.value.forEach(row => map.set(`${row.ejeX}|${row.ejeY}`, row.cantidad));
   return map;
 });
 
-const pivotValue = (x, y) => pivotMap.value.get(`${x}||${y}`) ?? 0;
-const rowTotal = (x) => axisY.value.reduce((acc, y) => acc + pivotValue(x, y), 0);
-const colTotal = (y) => axisX.value.reduce((acc, x) => acc + pivotValue(x, y), 0);
+const pivotValue = (x, y) => pivotMap.value.get(`${x}|${y}`) ?? 0;
+const rowTotal = (x) => axisY.value.reduce((sum, y) => sum + pivotValue(x, y), 0);
+const colTotal = (y) => axisX.value.reduce((sum, x) => sum + pivotValue(x, y), 0);
+const totalCount = computed(() => filteredRows.value.reduce((sum, row) => sum + row.cantidad, 0));
 
-/* ======================
-   TOTALS / PAGES
-====================== */
-const totalCount = computed(() => {
-  if (viewMode.value === "simple") return simpleRows.value.reduce((acc, r) => acc + r.cantidad, 0);
-  return filteredMatrixRows.value.reduce((acc, r) => acc + r.cantidad, 0);
-});
-
-const totalPages = computed(() => {
-  const count = viewMode.value === "simple" ? simpleRows.value.length : filteredMatrixRows.value.length;
-  return Math.max(1, Math.ceil(count / pageSize.value));
-});
-
-/* ======================
-   LOAD
-====================== */
-const loadReport = async () => {
-  if (availableReports.value.length === 0) {
-    errorMessage.value = "";
-    reportSimple.value = { titulo: "", etiquetas: [], data: [] };
-    reportMatrix.value = { titulo: "", data: [] };
-    return;
-  }
-
-  if (!reportConfig.value) {
-    selectedReportKey.value = availableReports.value[0].key;
-  }
-
-  if (!reportConfig.value) {
-    errorMessage.value = "No tienes permisos para este reporte.";
-    return;
-  }
-
+// --- API ---
+const reload = async () => {
+  if (!currentReportConfig.value) return;
   isLoading.value = true;
   errorMessage.value = "";
+  reportData.value = { titulo: "", data: [] };
 
   try {
-    const res = await reportConfig.value.fetch();
-    const payload = resolvePayload(res);
-
-    if (reportConfig.value.mode === "simple") {
-      reportSimple.value = {
-        titulo: payload?.titulo ?? reportConfig.value.defaultTitle,
-        etiquetas: payload?.etiquetas ?? [],
-        data: payload?.data ?? [],
-      };
-      reportMatrix.value = { titulo: "", data: [] };
+    const res = await currentReportConfig.value.fetch();
+    const payload = res.data?.data || res.data || {};
+    
+    if (Array.isArray(payload)) {
+      reportData.value = { titulo: currentReportConfig.value.defaultTitle, data: payload };
     } else {
-      reportMatrix.value = {
-        titulo: payload?.titulo ?? reportConfig.value.defaultTitle,
-        data: payload?.data ?? [],
+      reportData.value = {
+        titulo: payload.titulo || currentReportConfig.value.defaultTitle,
+        data: Array.isArray(payload.data) ? payload.data : []
       };
-      reportSimple.value = { titulo: "", etiquetas: [], data: [] };
     }
-  } catch (e) {
-    console.error("Error cargando reportería:", e);
-    errorMessage.value = e?.response?.data?.message || "No se pudo cargar el reporte.";
-    reportSimple.value = { titulo: "", etiquetas: [], data: [] };
-    reportMatrix.value = { titulo: "", data: [] };
+  } catch (error) {
+    console.error(error);
+    errorMessage.value = "Error al obtener los datos. Verifique su conexión.";
   } finally {
     isLoading.value = false;
   }
 };
 
-const reload = async () => {
-  currentPage.value = 1;
-  await loadReport();
+const handleReportChange = () => {
+  search.value = "";
+  reload();
 };
 
-/* ======================
-   WATCHERS / INIT
-====================== */
-watch(search, () => (currentPage.value = 1));
-watch(totalPages, (val) => { if (currentPage.value > val) currentPage.value = val; });
-
-watch(selectedReportKey, () => {
-  search.value = "";
-  currentPage.value = 1;
-  if (availableReports.value.length) loadReport();
-});
-
 onMounted(() => {
-  if (availableReports.value.length) {
-    if (!availableReports.value.some((r) => r.key === selectedReportKey.value)) {
-      selectedReportKey.value = availableReports.value[0].key;
-    }
-  }
-  loadReport();
+  if (availableReports.value.length > 0) reload();
 });
 </script>
 
 <style scoped>
-/* (Tu mismo CSS — lo dejo igual) */
-.salud-page { display: flex; flex-direction: column; gap: 24px; }
+/* =========================================
+   ESTILOS GENERALES
+========================================= */
+.salud-page {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #334155;
+  background-color: #f1f5f9; 
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0; /* Quitamos gap para que el Hero se una al header si es necesario */
+}
 
+/* =========================================
+   HERO SECTION (AZUL DEGRADADO - NUEVO DISEÑO)
+========================================= */
 .hero {
-  background: linear-gradient(125deg, #0f172a 0%, #1d4ed8 55%, #38bdf8 100%);
-  color: white; padding: 28px; border-radius: 20px; position: relative; overflow: hidden;
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+  /* Fondo Azul Intenso Degradado de izquierda a derecha */
+  background: linear-gradient(90deg, #152b65 0%, #1e40af 50%, #3b82f6 100%); 
+  color: white;
+  padding: 30px 40px;
+  /* Quitamos bordes redondeados y margen inferior para que parezca una barra completa */
+  margin-bottom: 24px; 
 }
-.hero::before, .hero::after {
-  content: ""; position: absolute; border-radius: 999px; background: rgba(255, 255, 255, 0.08);
+
+.hero-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 24px;
+  max-width: 1400px; /* Limitar ancho para pantallas muy grandes */
+  margin: 0 auto;
+  width: 100%;
 }
-.hero::before { width: 220px; height: 220px; top: -60px; right: -40px; }
-.hero::after { width: 140px; height: 140px; bottom: -50px; left: 40px; }
 
-.hero-main { position: relative; z-index: 1; max-width: 640px; }
-.eyebrow { text-transform: uppercase; letter-spacing: 2px; font-size: 0.7rem; margin-bottom: 8px; opacity: 0.7; }
-.hero-main h1 { margin: 0 0 8px; font-size: 2rem; }
-.subtitle { margin: 0; font-size: 0.98rem; opacity: 0.85; }
+.hero-header {
+  flex: 1;
+  min-width: 300px;
+}
 
-.hero-stats { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-top: 20px; }
+.page-subtitle {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin: 0 0 4px 0;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.page-title {
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0 0 8px 0;
+  color: white;
+  line-height: 1.1;
+}
+
+.page-description {
+  margin: 0;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.hero-stats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Tarjetas (Estilo Flat Azul) */
 .stat-card {
-  background: rgba(255, 255, 255, 0.12); border-radius: 16px; padding: 14px 16px;
-  backdrop-filter: blur(6px); display: flex; flex-direction: column; gap: 6px;
+  /* Fondo azul sólido con cierta transparencia para dejar ver el degradado */
+  background: rgba(43, 85, 185, 0.4); 
+  border: 1px solid rgba(255, 255, 255, 0.15); /* Borde sutil */
+  border-radius: 8px;
+  padding: 16px 20px;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  transition: background 0.2s;
 }
-.stat-card strong { font-size: 1.2rem; }
-.label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; }
-.hint { font-size: 0.78rem; opacity: 0.7; }
 
+.stat-card:hover {
+    background: rgba(43, 85, 185, 0.6);
+}
+
+.label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+  line-height: 1.2;
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 4px;
+}
+
+/* =========================================
+   PANEL Y TOOLBAR
+========================================= */
 .panel {
-  display: flex; flex-direction: column; gap: 18px; background: white; padding: 22px;
-  border-radius: 18px; border: 1px solid #e2e8f0; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 500px;
+  margin: 0 24px 24px 24px; /* Margen para separarlo de los bordes de la página */
 }
 
 .toolbar {
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 18px;
-  padding: 10px 6px;
-}
-.toolbar-title h3 { margin: 0; font-size: 1.2rem; color: #0f172a; }
-.toolbar-title p { margin: 6px 0 0; color: #64748b; font-size: 0.92rem; }
-
-.controls { display: flex; align-items: flex-end; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
-.control { display: flex; flex-direction: column; gap: 6px; }
-.control-label { font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #64748b; }
-.control-input {
-  border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; background: #f8fafc;
-  min-width: 260px; font-weight: 700; color: #0f172a;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  background-color: #fff;
+  flex-wrap: wrap;
+  gap: 20px;
 }
 
-.btn {
-  border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 14px; background: #0f172a;
-  color: white; font-weight: 800; cursor: pointer;
+.toolbar-left {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
 }
-.btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-.search-wrap { position: relative; min-width: 320px; }
-.search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); opacity: 0.6; }
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.control-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.select-wrapper select {
+  padding: 8px 36px 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #1e293b;
+  min-width: 250px;
+  background-color: white;
+  height: 38px;
+}
+
+.btn-primary {
+  height: 38px;
+  padding: 0 20px;
+  background-color: #0f172a;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-primary:hover { background-color: #1e293b; }
+
+.search-wrap {
+  position: relative;
+}
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  display: flex;
+}
 .search-input {
-  width: 100%; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px 10px 36px;
-  background: #f8fafc;
+  padding: 8px 12px 8px 32px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  width: 240px;
+  height: 38px;
+  box-sizing: border-box;
 }
 
-.status {
-  padding: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  color: #64748b; background: #f8fafc; border-radius: 12px; border: 1px dashed #cbd5e1;
+/* =========================================
+   TABLA (PIVOT TABLE) - ESTILO EXCEL AZUL
+========================================= */
+.report-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
-.status.error { background: #fef2f2; color: #ef4444; border-color: #fecaca; }
-.spinner {
-  width: 28px; height: 28px; border: 3px solid #e2e8f0; border-top-color: #3b82f6;
-  border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 12px;
+
+.report-header-internal {
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+}
+.report-header-internal h4 {
+  margin: 0;
+  color: #334155;
+  font-size: 1.1rem;
+}
+.badge {
+  background: #f1f5f9;
+  color: #475569;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.pivot-card {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  border-top: 1px solid #e2e8f0;
+}
+.pivot-scroll-container {
+  overflow: auto;
+  max-height: 650px;
+}
+
+.pivot-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.85rem;
+}
+
+/* Headers Sticky */
+.pivot-table th {
+  padding: 10px 8px;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid #94a3b8;
+  border-right: 1px solid #cbd5e1;
+}
+
+/* Columna Azul */
+.col-header {
+  background: #4472c4; /* Azul Excel */
+  color: white;
+  text-align: center;
+  min-width: 100px;
+}
+.header-total {
+  background: #2f5597; /* Azul Oscuro */
+  color: white;
+  min-width: 80px;
+}
+
+/* Esquina Sticky */
+.sticky-corner {
+  position: sticky;
+  left: 0;
+  top: 0;
+  z-index: 30;
+  background: #4472c4;
+  color: white;
+  min-width: 180px;
+  border-right: 1px solid white;
+}
+.corner-content {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
+/* Body */
+.data-cell {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  text-align: right;
+  color: #334155;
+  background: white;
+}
+.value-zero { color: #cbd5e1; }
+
+.sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 20;
+  background: #f8fafc;
+  border-right: 2px solid #cbd5e1;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 8px 12px;
+  font-weight: 600;
+  color: #1e293b;
+  text-align: left;
+}
+
+.row-total {
+  background: #eef2ff;
+  font-weight: 700;
+  color: #1e3a8a;
+  border-left: 1px solid #cbd5e1;
+}
+
+/* Footer */
+.footer-row td {
+  position: sticky;
+  bottom: 0;
+  z-index: 25;
+  border-top: 2px solid #94a3b8;
+  font-weight: 700;
+  padding: 10px 12px;
+  text-align: right;
+}
+.footer-label {
+  z-index: 35;
+  background: #2f5597;
+  color: white;
+  text-align: left;
+}
+.footer-cell {
+  background: #d9e1f2; /* Azul claro Excel */
+  color: #1e293b;
+  border-right: 1px solid #cbd5e1;
+}
+.grand-total {
+  background: #b4c6e7;
+  color: #0f172a;
+}
+
+/* Utils */
+.empty-state { text-align: center; padding: 40px; color: #64748b; font-style: italic; }
+.status { padding: 60px; text-align: center; color: #64748b; }
+.error { color: #dc2626; background: #fef2f2; }
+.loading { color: #3b82f6; }
+
+.spinner-lg {
+  width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: #3b82f6;
+  border-radius: 50%; margin: 0 auto 16px; animation: spin 1s linear infinite;
+}
+.spinner-sm {
+  width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white;
+  border-radius: 50%; animation: spin 1s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.report-block { display: flex; flex-direction: column; gap: 14px; }
-
-.block-header {
-  display: flex; justify-content: space-between; align-items: center; gap: 10px;
-}
-.block-header h4 { margin: 0; color: #0f172a; font-size: 1.05rem; }
-.chip {
-  border: 1px solid #e2e8f0; background: #f8fafc; color: #0f172a;
-  border-radius: 999px; padding: 6px 10px; font-size: 0.85rem; font-weight: 800;
-}
-
-.table-card {
-  border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; background: white;
-}
-.data-table { width: 100%; border-collapse: collapse; }
-.data-table th {
-  text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;
-  color: #64748b; background: #f8fafc; padding: 14px 16px; border-bottom: 1px solid #e2e8f0;
-}
-.data-table td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; color: #0f172a; }
-.text-right { text-align: right; }
-.empty { text-align: center; padding: 28px; color: #94a3b8; }
-
-.pivot-card {
-  border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; background: white;
-}
-.pivot-head {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 14px 16px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;
-}
-.pivot-title { font-weight: 900; color: #0f172a; }
-.pivot-meta { color: #64748b; font-weight: 700; font-size: 0.9rem; display: inline-flex; gap: 10px; align-items: center; }
-.dot { opacity: 0.6; }
-
-.pivot-wrap { overflow: auto; max-height: 420px; }
-.pivot-table { width: 100%; border-collapse: collapse; min-width: 840px; }
-.pivot-table th, .pivot-table td { border-bottom: 1px solid #f1f5f9; padding: 10px 12px; }
-.pivot-table th { background: #ffffff; position: sticky; top: 0; z-index: 2; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #64748b; }
-.sticky-left { position: sticky; left: 0; background: white; z-index: 3; border-right: 1px solid #f1f5f9; }
-.col-total { background: #f8fafc; border-left: 1px solid #f1f5f9; }
-
-.raw-head { padding: 14px 16px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
-.raw-title { font-weight: 900; color: #0f172a; }
-.raw-hint { color: #64748b; font-size: 0.9rem; margin-top: 4px; }
-
-.pagination {
-  display: flex; justify-content: space-between; align-items: center; gap: 12px;
-  padding: 10px 2px;
-}
-.pbtn {
-  padding: 10px 14px; border-radius: 12px; border: 1px solid #e2e8f0;
-  background: white; font-weight: 800; color: #0f172a; cursor: pointer;
-}
-.pbtn:disabled { opacity: 0.55; cursor: not-allowed; }
-.pinfo { color: #475569; font-weight: 700; }
-
-@media (max-width: 720px) {
-  .hero { padding: 22px; }
-  .hero-main h1 { font-size: 1.6rem; }
+@media (max-width: 768px) {
+  .hero-content { flex-direction: column; align-items: flex-start; }
+  .hero-stats { overflow-x: auto; padding-bottom: 8px; width: 100%; }
+  .stat-card { min-width: 160px; }
   .toolbar { flex-direction: column; align-items: stretch; }
-  .search-wrap { min-width: 100%; }
-  .control-input { min-width: 100%; }
+  .search-input { width: 100%; }
+  .panel { margin: 0 16px 16px 16px; }
 }
 </style>
