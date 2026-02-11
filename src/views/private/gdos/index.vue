@@ -252,16 +252,25 @@ export default {
       if (!confirm(`¿Eliminar el GDO "${item.nombre}"?`)) return;
 
       try {
-        await deleteGdo(item.id);
+        const res = await deleteGdo(item.id);
+        if (res?.data?.success === false) {
+          throw new Error(res?.data?.message || "No se pudo eliminar el registro.");
+        }
+        const message = res?.data?.message || "Éxito";
         const isLastItemOnPage = gdos.value.length === 1 && currentPage.value > 1;
         if (isLastItemOnPage) {
           currentPage.value -= 1;
         } else {
           await loadGdos();
         }
+        alert(message);
       } catch (err) {
         console.error("Error eliminando G2:", err);
-        alert("No se pudo eliminar el registro.");
+        const msg =
+          err?.response?.data?.message ||
+          err?.message ||
+          "No se pudo eliminar el registro.";
+        alert(msg);
       }
     };
 

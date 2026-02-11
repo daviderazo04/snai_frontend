@@ -39,7 +39,7 @@
       <div v-if="isLoading" class="status">Cargando parentescos...</div>
       <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
 
-      <ParentescoTable :items="parentescos" @edit="openEdit" />
+      <ParentescoTable :items="parentescos" @edit="openEdit" @remove="removeParentesco" />
 
       <ParentescoPagination
         :current-page="currentPage"
@@ -66,6 +66,8 @@ import { ref, computed, watch, onMounted } from "vue";
 import {
   createParentesco,
   getParentescos,
+  updateParentesco,
+  deleteParentesco,
 } from "../../../service/parentesco.service.js";
 import ParentescoToolbar from "./components/ParentescoToolbar.vue";
 import ParentescoTable from "./components/ParentescoTable.vue";
@@ -137,17 +139,9 @@ export default {
     const modalOpen = ref(false);
     const modalMode = ref("create");
     const modalInitial = ref(null);
+    const editingId = ref(null);
 
     const visibleCount = computed(() => parentescos.value.length);
-
-    watch(search, () => {
-      currentPage.value = 1;
-      loadParentescos();
-    });
-    watch(currentPage, loadParentescos);
-    watch(totalPages, (value) => {
-      if (currentPage.value > value) currentPage.value = value;
-    });
 
     const loadParentescos = async () => {
       isLoading.value = true;
@@ -184,31 +178,48 @@ export default {
       }
     };
 
+    watch(search, () => {
+      currentPage.value = 1;
+      loadParentescos();
+    });
+    watch(currentPage, loadParentescos);
+    watch(totalPages, (value) => {
+      if (currentPage.value > value) currentPage.value = value;
+    });
+
     const openCreate = () => {
       modalMode.value = "create";
       modalInitial.value = null;
+      editingId.value = null;
       modalOpen.value = true;
     };
 
     const openEdit = (item) => {
       modalMode.value = "edit";
       modalInitial.value = { ...item };
+      editingId.value = item.id;
       modalOpen.value = true;
     };
 
     const closeModal = () => {
       modalOpen.value = false;
       modalInitial.value = null;
+      editingId.value = null;
     };
 
     const saveParentesco = async (payload) => {
       const nombre = payload?.nombre ? String(payload.nombre).trim() : "";
       if (!nombre) return;
+      if (modalMode.value === "edit" && editingId.value === null) return;
 
       isSaving.value = true;
       errorMessage.value = "";
       try {
-        const res = await createParentesco({ nombre });
+        const res =
+          modalMode.value === "create"
+            ? await createParentesco({ nombre })
+            : await updateParentesco(editingId.value, { nombre });
+
         if (res.data?.success === false) {
           throw new Error(res.data?.message || "No se pudo guardar el parentesco.");
         }
@@ -222,6 +233,32 @@ export default {
           "Error de conexion con el servidor.";
       } finally {
         isSaving.value = false;
+      }
+    };
+
+    const removeParentesco = async (item) => {
+      if (!confirm(`¿Eliminar el parentesco "${item.nombre}"?`)) return;
+
+      try {
+        const res = await deleteParentesco(item.id);
+        if (res?.data?.success === false) {
+          throw new Error(res?.data?.message || "No se pudo eliminar el parentesco.");
+        }
+        const message = res?.data?.message || "Éxito";
+        const isLastItemOnPage = parentescos.value.length === 1 && currentPage.value > 1;
+        if (isLastItemOnPage) {
+          currentPage.value -= 1;
+        } else {
+          await loadParentescos();
+        }
+        alert(message);
+      } catch (err) {
+        console.error("Error eliminando parentesco:", err);
+        const msg =
+          err?.response?.data?.message ||
+          err?.message ||
+          "No se pudo eliminar el parentesco.";
+        alert(msg);
       }
     };
 
@@ -245,6 +282,7 @@ export default {
       openEdit,
       closeModal,
       saveParentesco,
+      removeParentesco,
     };
   },
 };

@@ -244,16 +244,25 @@ export default {
       if (!confirm(`¿Estás seguro de eliminar la nacionalidad "${item.nombre}"?`)) return;
       
       try {
-        await deleteNacionalidad(item.id);
+        const res = await deleteNacionalidad(item.id);
+        if (res?.data?.success === false) {
+          throw new Error(res?.data?.message || "No se pudo eliminar la nacionalidad.");
+        }
+        const message = res?.data?.message || "Éxito";
         const isLastItemOnPage = nacionalidades.value.length === 1 && currentPage.value > 1;
         if (isLastItemOnPage) {
           currentPage.value -= 1;
         } else {
           await loadNacionalidades();
         }
+        alert(message);
       } catch (err) {
         console.error("Error eliminando:", err);
-        alert("No se pudo eliminar el registro.");
+        const msg =
+          err?.response?.data?.message ||
+          err?.message ||
+          "No se pudo eliminar el registro.";
+        alert(msg);
       }
     };
 

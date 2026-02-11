@@ -22,6 +22,9 @@
                 <button class="ghost" type="button" @click="$emit('edit', item)">
                   Editar
                 </button>
+                <button class="danger" type="button" @click="$emit('remove', item)">
+                  Eliminar
+                </button>
               </div>
             </td>
           </tr>
@@ -47,7 +50,7 @@ export default {
       default: () => [],
     },
   },
-  emits: ["edit"],
+  emits: ["edit", "remove"],
 };
 </script>
 
@@ -120,6 +123,22 @@ tbody tr {
 
 .ghost:hover {
   background: #e2e8f0;
+  transform: translateY(-1px);
+}
+
+.danger {
+  border: 1px solid #fecaca;
+  background: rgba(254, 242, 242, 0.7);
+  color: #b91c1c;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.danger:hover {
+  background: #fee2e2;
   transform: translateY(-1px);
 }
 

@@ -143,15 +143,6 @@ export default {
 
     const visibleCount = computed(() => etnias.value.length);
 
-    watch(search, () => {
-      currentPage.value = 1;
-      loadEtnias();
-    });
-    watch(currentPage, loadEtnias);
-    watch(totalPages, (value) => {
-      if (currentPage.value > value) currentPage.value = value;
-    });
-
     const loadEtnias = async () => {
       isLoading.value = true;
       errorMessage.value = "";
@@ -184,6 +175,15 @@ export default {
         isLoading.value = false;
       }
     };
+
+    watch(search, () => {
+      currentPage.value = 1;
+      loadEtnias();
+    });
+    watch(currentPage, loadEtnias);
+    watch(totalPages, (value) => {
+      if (currentPage.value > value) currentPage.value = value;
+    });
 
     const openCreate = () => {
       modalMode.value = "create";
@@ -245,21 +245,24 @@ export default {
       try {
         const res = await deleteEtnia(item.id);
         if (res.data?.success === false) {
-          errorMessage.value = res.data?.message || "No se pudo eliminar la etnia.";
-          return;
+          throw new Error(res.data?.message || "No se pudo eliminar la etnia.");
         }
+        const message = res?.data?.message || "Éxito";
         const isLastItemOnPage = etnias.value.length === 1 && currentPage.value > 1;
         if (isLastItemOnPage) {
           currentPage.value -= 1;
         } else {
           await loadEtnias();
         }
+        alert(message);
       } catch (err) {
         console.error("Error eliminando etnia:", err);
-        errorMessage.value =
+        const msg =
           err?.response?.data?.message ||
           err?.message ||
           "Error de conexion con el servidor.";
+        errorMessage.value = msg;
+        alert(msg);
       }
     };
 
