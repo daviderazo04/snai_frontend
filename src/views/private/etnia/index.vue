@@ -16,8 +16,8 @@
           <span class="hint">Etnias registradas</span>
         </div>
         <div class="stat-card">
-          <span class="label">Visibles</span>
-          <strong>{{ filteredCount }}</strong>
+          <span class="label">En esta página</span>
+          <strong>{{ visibleCount }}</strong>
           <span class="hint">Resultado del filtro actual</span>
         </div>
         <div class="stat-card">
@@ -31,7 +31,7 @@
     <section class="panel">
       <EtniaToolbar
         :search="search"
-        :total="filteredCount"
+        :total="totalEtnias"
         @update:search="search = $event"
         @create="openCreate"
       />
@@ -39,13 +39,13 @@
       <div v-if="isLoading" class="status">Cargando etnias...</div>
       <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
 
-      <EtniaTable :items="pagedEtnias" @edit="openEdit" @remove="removeEtnia" />
+      <EtniaTable :items="etnias" @edit="openEdit" @remove="removeEtnia" />
 
       <EtniaPagination
         :current-page="currentPage"
         :total-pages="totalPages"
         :page-size="pageSize"
-        :total="filteredCount"
+        :total="totalEtnias"
         @update:page="currentPage = $event"
       />
     </section>
@@ -74,23 +74,47 @@ import EtniaTable from "./components/EtniaTable.vue";
 import EtniaPagination from "./components/EtniaPagination.vue";
 import EtniaFormModal from "./components/EtniaFormModal.vue";
 
-const resolveList = (response) => {
-  const payload = response?.data?.data ?? response?.data;
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.items)) return payload.items;
-  if (Array.isArray(payload?.rows)) return payload.rows;
-  if (Array.isArray(payload?.etnias)) return payload.etnias;
-  if (Array.isArray(payload?.etnia)) return payload.etnia;
-  return [];
-};
-
 const mapEtnia = (item) => {
   const rawId = item?.id ?? item?.etniaId ?? item?.idEtnia;
   return {
     id: Number.isNaN(Number(rawId)) ? rawId : Number(rawId),
     nombre: item?.nombre ?? item?.name ?? item?.etnia ?? "",
   };
+};
+
+const unwrap = (maybeAxiosResponse) => {
+  if (maybeAxiosResponse && typeof maybeAxiosResponse === "object" && "data" in maybeAxiosResponse) {
+    return maybeAxiosResponse.data;
+  }
+  return maybeAxiosResponse;
+};
+
+const parsePaginated = (payload) => {
+  const top = payload || {};
+  const inner = top.data && typeof top.data === "object" && !Array.isArray(top.data) ? top.data : null;
+
+  const list =
+    (Array.isArray(top.data) ? top.data : null) ??
+    (Array.isArray(inner?.data) ? inner.data : null) ??
+    (Array.isArray(inner?.items) ? inner.items : null) ??
+    (Array.isArray(inner?.rows) ? inner.rows : null) ??
+    (Array.isArray(top.items) ? top.items : null) ??
+    (Array.isArray(top.rows) ? top.rows : null) ??
+    (Array.isArray(inner?.etnias) ? inner.etnias : null) ??
+    (Array.isArray(top.etnias) ? top.etnias : null) ??
+    (Array.isArray(inner?.etnia) ? inner.etnia : null) ??
+    (Array.isArray(top.etnia) ? top.etnia : null) ??
+    [];
+
+  const rawTotalPages =
+    top.totalPages ?? inner?.totalPages ?? inner?.last_page ?? inner?.lastPage ?? inner?.total_pages;
+  const totalPages = Math.max(1, Number(rawTotalPages) || 1);
+
+  const rawTotal =
+    top.total ?? inner?.total ?? inner?.totalRecords ?? inner?.totalElements ?? inner?.total_items;
+  const total = Number(rawTotal) || list.length;
+
+  return { list, totalPages, total };
 };
 
 export default {
@@ -102,6 +126,7 @@ export default {
   },
   setup() {
     const etnias = ref([]);
+    const totalEtnias = ref(0);
     const isLoading = ref(false);
     const isSaving = ref(false);
     const errorMessage = ref("");
@@ -109,33 +134,20 @@ export default {
     const search = ref("");
     const currentPage = ref(1);
     const pageSize = ref(6);
+    const totalPages = ref(1);
 
     const modalOpen = ref(false);
     const modalMode = ref("create");
     const modalInitial = ref(null);
     const editingId = ref(null);
 
-    const filteredEtnias = computed(() => {
-      const term = search.value.trim().toLowerCase();
-      return etnias.value.filter((item) =>
-        term ? (item.nombre || "").toLowerCase().includes(term) : true
-      );
+    const visibleCount = computed(() => etnias.value.length);
+
+    watch(search, () => {
+      currentPage.value = 1;
+      loadEtnias();
     });
-
-    const filteredCount = computed(() => filteredEtnias.value.length);
-
-    const totalPages = computed(() =>
-      Math.max(1, Math.ceil(filteredEtnias.value.length / pageSize.value))
-    );
-
-    const pagedEtnias = computed(() => {
-      const start = (currentPage.value - 1) * pageSize.value;
-      return filteredEtnias.value.slice(start, start + pageSize.value);
-    });
-
-    const totalEtnias = computed(() => etnias.value.length);
-
-    watch(search, () => (currentPage.value = 1));
+    watch(currentPage, loadEtnias);
     watch(totalPages, (value) => {
       if (currentPage.value > value) currentPage.value = value;
     });
@@ -144,18 +156,30 @@ export default {
       isLoading.value = true;
       errorMessage.value = "";
       try {
-        const res = await getEtnias();
-        if (res.data?.success === false) {
-          errorMessage.value = res.data?.message || "No se pudo cargar etnias.";
-          etnias.value = [];
-          return;
-        }
-        const list = resolveList(res);
+        const res = await getEtnias({
+          nombre: search.value,
+          page: currentPage.value,
+          size: pageSize.value,
+        });
+
+        const payload = unwrap(res);
+        const { list, totalPages: tp, total } = parsePaginated(payload);
+
         etnias.value = list.map(mapEtnia).filter((item) => item.nombre);
+        totalPages.value = tp || 1;
+        totalEtnias.value = total ?? etnias.value.length;
+
+        if (currentPage.value > totalPages.value) currentPage.value = totalPages.value;
+        if (currentPage.value < 1) currentPage.value = 1;
       } catch (err) {
         console.error("Error cargando etnias:", err);
-        errorMessage.value = "Error de conexion con el servidor.";
+        errorMessage.value =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Error de conexion con el servidor.";
         etnias.value = [];
+        totalPages.value = 1;
+        totalEtnias.value = 0;
       } finally {
         isLoading.value = false;
       }
@@ -195,30 +219,17 @@ export default {
             : await updateEtnia(editingId.value, { nombre });
 
         if (res.data?.success === false) {
-          errorMessage.value = res.data?.message || "No se pudo guardar la etnia.";
-          return;
+          throw new Error(res.data?.message || "No se pudo guardar la etnia.");
         }
 
-        const saved = res.data?.data;
-        if (modalMode.value === "create") {
-          if (saved?.id) etnias.value = [...etnias.value, mapEtnia(saved)];
-          else await loadEtnias();
-        } else if (editingId.value !== null) {
-          if (saved?.id) {
-            etnias.value = etnias.value.map((item) =>
-              item.id === editingId.value ? mapEtnia(saved) : item
-            );
-          } else {
-            etnias.value = etnias.value.map((item) =>
-              item.id === editingId.value ? { ...item, nombre } : item
-            );
-          }
-        }
-
+        await loadEtnias();
         closeModal();
       } catch (err) {
         console.error("Error guardando etnia:", err);
-        errorMessage.value = "Error de conexion con el servidor.";
+        errorMessage.value =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Error de conexion con el servidor.";
       } finally {
         isSaving.value = false;
       }
@@ -237,10 +248,18 @@ export default {
           errorMessage.value = res.data?.message || "No se pudo eliminar la etnia.";
           return;
         }
-        etnias.value = etnias.value.filter((etnia) => etnia.id !== item.id);
+        const isLastItemOnPage = etnias.value.length === 1 && currentPage.value > 1;
+        if (isLastItemOnPage) {
+          currentPage.value -= 1;
+        } else {
+          await loadEtnias();
+        }
       } catch (err) {
         console.error("Error eliminando etnia:", err);
-        errorMessage.value = "Error de conexion con el servidor.";
+        errorMessage.value =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Error de conexion con el servidor.";
       }
     };
 
@@ -251,9 +270,9 @@ export default {
       currentPage,
       pageSize,
       totalPages,
-      pagedEtnias,
-      filteredCount,
       totalEtnias,
+      visibleCount,
+      etnias,
       modalOpen,
       modalMode,
       modalInitial,
