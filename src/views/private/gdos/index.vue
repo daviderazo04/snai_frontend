@@ -4,7 +4,7 @@
     <section class="hero">
       <div class="hero-main">
         <p class="eyebrow">Catálogos</p>
-        <h1>G2 (Grupos Organizados)</h1>
+        <h1>GDO (Grupos Organizados)</h1>
         <p class="subtitle">
           Administración del catálogo de grupos G2 para el sistema penitenciario.
         </p>
@@ -17,8 +17,8 @@
           <span class="hint">Grupos registrados</span>
         </div>
         <div class="stat-card">
-          <span class="label">Visibles</span>
-          <strong>{{ filteredCount }}</strong>
+          <span class="label">En esta página</span>
+          <strong>{{ visibleCount }}</strong>
           <span class="hint">Filtrados</span>
         </div>
         <div class="stat-card">
@@ -32,7 +32,7 @@
     <section class="panel">
       <GdosToolbar
         :search="search"
-        :total="filteredCount"
+        :total="totalGdos"
         @update:search="search = $event"
         @create="openCreate"
       />
@@ -45,7 +45,7 @@
 
       <GdosTable 
         v-else
-        :items="pagedGdos" 
+        :items="gdos" 
         @edit="openEdit" 
         @remove="removeItem" 
       />
@@ -54,7 +54,7 @@
         :current-page="currentPage"
         :total-pages="totalPages"
         :page-size="pageSize"
-        :total="filteredCount"
+        :total="totalGdos"
         @update:page="currentPage = $event"
       />
     </section>
@@ -85,15 +85,6 @@ import GdosTable from "./components/GdosTable.vue";
 import GdosPagination from "./components/GdosPagination.vue";
 import GdosFormModal from "./components/GdosFormModal.vue";
 
-// Helper para extraer datos de la respuesta
-const resolveList = (response) => {
-  const payload = response?.data?.data ?? response?.data;
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.items)) return payload.items;
-  return [];
-};
-
 // Mapeo seguro de datos
 const mapGdo = (item) => {
   const rawId = item?.id ?? item?.gdoId;
@@ -101,6 +92,35 @@ const mapGdo = (item) => {
     id: Number(rawId),
     nombre: item?.nombre ?? item?.name ?? "",
   };
+};
+
+const unwrap = (maybeAxiosResponse) => {
+  if (maybeAxiosResponse && typeof maybeAxiosResponse === "object" && "data" in maybeAxiosResponse) {
+    return maybeAxiosResponse.data;
+  }
+  return maybeAxiosResponse;
+};
+
+const parsePaginated = (payload) => {
+  const top = payload || {};
+  const inner = top.data && typeof top.data === "object" && !Array.isArray(top.data) ? top.data : null;
+
+  const list =
+    (Array.isArray(top.data) ? top.data : null) ??
+    (Array.isArray(inner?.data) ? inner.data : null) ??
+    (Array.isArray(inner?.items) ? inner.items : null) ??
+    (Array.isArray(top.items) ? top.items : null) ??
+    [];
+
+  const rawTotalPages =
+    top.totalPages ?? inner?.totalPages ?? inner?.last_page ?? inner?.lastPage ?? inner?.total_pages;
+  const totalPages = Math.max(1, Number(rawTotalPages) || 1);
+
+  const rawTotal =
+    top.total ?? inner?.total ?? inner?.totalRecords ?? inner?.totalElements ?? inner?.total_items;
+  const total = Number(rawTotal) || list.length;
+
+  return { list, totalPages, total };
 };
 
 export default {
@@ -111,7 +131,8 @@ export default {
     GdosFormModal,
   },
   setup() {
-    const items = ref([]);
+    const gdos = ref([]);
+    const totalGdos = ref(0);
     const isLoading = ref(false);
     const isSaving = ref(false);
     const errorMessage = ref("");
@@ -119,6 +140,7 @@ export default {
     const search = ref("");
     const currentPage = ref(1);
     const pageSize = ref(10); // 10 items por página
+    const totalPages = ref(1);
 
     // Estado del Modal
     const modalOpen = ref(false);
@@ -126,48 +148,50 @@ export default {
     const modalInitial = ref(null);
     const editingId = ref(null);
 
-    // Filtros Frontend
-    const filteredGdos = computed(() => {
-      const term = search.value.trim().toLowerCase();
-      if (!term) return items.value;
-      return items.value.filter((item) =>
-        (item.nombre || "").toLowerCase().includes(term)
-      );
-    });
-
-    const filteredCount = computed(() => filteredGdos.value.length);
-    const totalGdos = computed(() => items.value.length);
-    const totalPages = computed(() =>
-      Math.max(1, Math.ceil(filteredCount.value / pageSize.value))
-    );
-
-    const pagedGdos = computed(() => {
-      const start = (currentPage.value - 1) * pageSize.value;
-      return filteredGdos.value.slice(start, start + pageSize.value);
-    });
-
-    watch(search, () => (currentPage.value = 1));
+    const visibleCount = computed(() => gdos.value.length);
 
     // --- CARGAR DATOS ---
     const loadGdos = async () => {
       isLoading.value = true;
       errorMessage.value = "";
       try {
-        const res = await getGdos();
-        // Verificamos si el backend devuelve success false explícitamente
-        if (res.data?.success === false) {
-          throw new Error(res.data?.message || "Error al cargar");
-        }
-        const list = resolveList(res);
-        items.value = list.map(mapGdo).filter((i) => i.nombre);
+        const res = await getGdos({
+          nombre: search.value,
+          page: currentPage.value,
+          size: pageSize.value,
+        });
+
+        const payload = unwrap(res);
+        const { list, totalPages: tp, total } = parsePaginated(payload);
+
+        gdos.value = list.map(mapGdo).filter((i) => i.nombre);
+        totalPages.value = tp || 1;
+        totalGdos.value = total ?? gdos.value.length;
+
+        if (currentPage.value > totalPages.value) currentPage.value = totalPages.value;
+        if (currentPage.value < 1) currentPage.value = 1;
       } catch (err) {
         console.error("Error cargando G2:", err);
-        errorMessage.value = "No se pudo cargar la lista de G2.";
-        items.value = [];
+        errorMessage.value =
+          err?.response?.data?.message ||
+          err?.message ||
+          "No se pudo cargar la lista de G2.";
+        gdos.value = [];
+        totalPages.value = 1;
+        totalGdos.value = 0;
       } finally {
         isLoading.value = false;
       }
     };
+
+    watch(currentPage, loadGdos);
+    watch(search, () => {
+      currentPage.value = 1;
+      loadGdos();
+    });
+    watch(totalPages, (value) => {
+      if (currentPage.value > value) currentPage.value = value;
+    });
 
     // --- ACCIONES MODAL ---
     const openCreate = () => {
@@ -202,25 +226,17 @@ export default {
         if (modalMode.value === "create") {
           // CREAR
           const res = await createGdo({ nombre });
-          if (res.data?.success === false) throw new Error(res.data?.message);
+          if (res.data?.success === false) throw new Error(res.data?.message || "Error al cargar");
           
-          const saved = res?.data?.data ?? res?.data;
-          if (saved?.id) items.value.push(mapGdo(saved));
-          else await loadGdos();
+          await loadGdos();
 
         } else {
           // EDITAR
           if (!editingId.value) return;
           const res = await updateGdo(editingId.value, { nombre });
-          if (res.data?.success === false) throw new Error(res.data?.message);
+          if (res.data?.success === false) throw new Error(res.data?.message || "Error al cargar");
           
-          const saved = res?.data?.data ?? res?.data;
-          if (saved?.id) {
-            const idx = items.value.findIndex(i => i.id === editingId.value);
-            if (idx !== -1) items.value[idx] = mapGdo(saved);
-          } else {
-            await loadGdos();
-          }
+          await loadGdos();
         }
         closeModal();
       } catch (err) {
@@ -237,7 +253,12 @@ export default {
 
       try {
         await deleteGdo(item.id);
-        items.value = items.value.filter(i => i.id !== item.id);
+        const isLastItemOnPage = gdos.value.length === 1 && currentPage.value > 1;
+        if (isLastItemOnPage) {
+          currentPage.value -= 1;
+        } else {
+          await loadGdos();
+        }
       } catch (err) {
         console.error("Error eliminando G2:", err);
         alert("No se pudo eliminar el registro.");
@@ -251,9 +272,9 @@ export default {
       currentPage,
       pageSize,
       totalPages,
-      pagedGdos,
-      filteredCount,
       totalGdos,
+      visibleCount,
+      gdos,
       modalOpen,
       modalMode,
       modalInitial,
