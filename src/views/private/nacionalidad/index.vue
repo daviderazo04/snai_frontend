@@ -16,8 +16,8 @@
           <span class="hint">Nacionalidades registradas</span>
         </div>
         <div class="stat-card">
-          <span class="label">Visibles</span>
-          <strong>{{ filteredCount }}</strong>
+          <span class="label">En esta página</span>
+          <strong>{{ visibleCount }}</strong>
           <span class="hint">Resultado del filtro actual</span>
         </div>
         <div class="stat-card">
@@ -31,7 +31,7 @@
     <section class="panel">
       <NacionalidadToolbar
         :search="search"
-        :total="filteredCount"
+        :total="totalNacionalidades"
         @update:search="search = $event"
         @create="openCreate"
       />
@@ -41,7 +41,7 @@
 
       <NacionalidadTable 
         v-else
-        :items="pagedNacionalidades" 
+        :items="nacionalidades" 
         @edit="openEdit" 
         @remove="removeItem"
       />
@@ -50,7 +50,7 @@
         :current-page="currentPage"
         :total-pages="totalPages"
         :page-size="pageSize"
-        :total="filteredCount"
+        :total="totalNacionalidades"
         @update:page="currentPage = $event"
       />
     </section>
@@ -80,20 +80,41 @@ import NacionalidadTable from "./components/NacionalidadTable.vue";
 import NacionalidadPagination from "./components/NacionalidadPagination.vue";
 import NacionalidadFormModal from "./components/NacionalidadFormModal.vue";
 
-const resolveList = (response) => {
-  const payload = response?.data?.data ?? response?.data;
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.items)) return payload.items;
-  return [];
-};
-
 const mapNacionalidad = (item) => {
   const rawId = item?.id ?? item?.nacionalidadId ?? item?.idNacionalidad;
   return {
     id: Number(rawId),
     nombre: item?.nombre ?? item?.name ?? item?.nacionalidad ?? "",
   };
+};
+
+const unwrap = (maybeAxiosResponse) => {
+  if (maybeAxiosResponse && typeof maybeAxiosResponse === "object" && "data" in maybeAxiosResponse) {
+    return maybeAxiosResponse.data;
+  }
+  return maybeAxiosResponse;
+};
+
+const parsePaginated = (payload) => {
+  const top = payload || {};
+  const inner = top.data && typeof top.data === "object" && !Array.isArray(top.data) ? top.data : null;
+
+  const list =
+    (Array.isArray(top.data) ? top.data : null) ??
+    (Array.isArray(inner?.data) ? inner.data : null) ??
+    (Array.isArray(inner?.items) ? inner.items : null) ??
+    (Array.isArray(top.items) ? top.items : null) ??
+    [];
+
+  const rawTotalPages =
+    top.totalPages ?? inner?.totalPages ?? inner?.last_page ?? inner?.lastPage ?? inner?.total_pages;
+  const totalPages = Math.max(1, Number(rawTotalPages) || 1);
+
+  const rawTotal =
+    top.total ?? inner?.total ?? inner?.totalRecords ?? inner?.totalElements ?? inner?.total_items;
+  const total = Number(rawTotal) || list.length;
+
+  return { list, totalPages, total };
 };
 
 export default {
@@ -105,6 +126,7 @@ export default {
   },
   setup() {
     const nacionalidades = ref([]);
+    const totalNacionalidades = ref(0);
     const isLoading = ref(false);
     const isSaving = ref(false);
     const errorMessage = ref("");
@@ -112,59 +134,58 @@ export default {
     const search = ref("");
     const currentPage = ref(1);
     const pageSize = ref(6);
+    const totalPages = ref(1);
 
     const modalOpen = ref(false);
     const modalMode = ref("create");
     const modalInitial = ref(null);
     const editingId = ref(null); // Variable para almacenar el ID en edición
 
-    const filteredNacionalidades = computed(() => {
-      const term = search.value.trim().toLowerCase();
-      return nacionalidades.value.filter((item) =>
-        term ? (item.nombre || "").toLowerCase().includes(term) : true
-      );
-    });
-
-    const filteredCount = computed(() => filteredNacionalidades.value.length);
-
-    const totalPages = computed(() =>
-      Math.max(1, Math.ceil(filteredNacionalidades.value.length / pageSize.value))
-    );
-
-    const pagedNacionalidades = computed(() => {
-      const start = (currentPage.value - 1) * pageSize.value;
-      return filteredNacionalidades.value.slice(start, start + pageSize.value);
-    });
-
-    const totalNacionalidades = computed(() => nacionalidades.value.length);
-
-    watch(search, () => (currentPage.value = 1));
-    watch(totalPages, (value) => {
-      if (currentPage.value > value) currentPage.value = value;
-    });
+    const visibleCount = computed(() => nacionalidades.value.length);
 
     const loadNacionalidades = async () => {
       isLoading.value = true;
       errorMessage.value = "";
       try {
-        const res = await getNacionalidades();
-        if (res.data?.success === false) {
-          errorMessage.value = res.data?.message || "No se pudo cargar nacionalidades.";
-          nacionalidades.value = [];
-          return;
-        }
-        const list = resolveList(res);
+        const res = await getNacionalidades({
+          nombre: search.value,
+          page: currentPage.value,
+          size: pageSize.value,
+        });
+
+        const payload = unwrap(res);
+        const { list, totalPages: tp, total } = parsePaginated(payload);
+
         nacionalidades.value = list
           .map(mapNacionalidad)
           .filter((item) => item.nombre);
+        totalPages.value = tp || 1;
+        totalNacionalidades.value = total ?? nacionalidades.value.length;
+
+        if (currentPage.value > totalPages.value) currentPage.value = totalPages.value;
+        if (currentPage.value < 1) currentPage.value = 1;
       } catch (err) {
         console.error("Error cargando nacionalidades:", err);
-        errorMessage.value = "Error de conexion con el servidor.";
+        errorMessage.value =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Error de conexion con el servidor.";
         nacionalidades.value = [];
+        totalPages.value = 1;
+        totalNacionalidades.value = 0;
       } finally {
         isLoading.value = false;
       }
     };
+
+    watch(currentPage, loadNacionalidades);
+    watch(search, () => {
+      currentPage.value = 1;
+      loadNacionalidades();
+    });
+    watch(totalPages, (value) => {
+      if (currentPage.value > value) currentPage.value = value;
+    });
 
     const openCreate = () => {
       modalMode.value = "create";
@@ -224,7 +245,12 @@ export default {
       
       try {
         await deleteNacionalidad(item.id);
-        nacionalidades.value = nacionalidades.value.filter(i => i.id !== item.id);
+        const isLastItemOnPage = nacionalidades.value.length === 1 && currentPage.value > 1;
+        if (isLastItemOnPage) {
+          currentPage.value -= 1;
+        } else {
+          await loadNacionalidades();
+        }
       } catch (err) {
         console.error("Error eliminando:", err);
         alert("No se pudo eliminar el registro.");
@@ -238,9 +264,9 @@ export default {
       currentPage,
       pageSize,
       totalPages,
-      pagedNacionalidades,
-      filteredCount,
       totalNacionalidades,
+      visibleCount,
+      nacionalidades,
       modalOpen,
       modalMode,
       modalInitial,
