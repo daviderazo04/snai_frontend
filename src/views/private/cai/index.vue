@@ -15,8 +15,8 @@
           <span class="hint">CAI registrados</span>
         </div>
         <div class="stat-card">
-          <span class="label">Visibles</span>
-          <strong>{{ filteredCount }}</strong>
+          <span class="label">En esta página</span>
+          <strong>{{ visibleCount }}</strong>
           <span class="hint">Resultado del filtro actual</span>
         </div>
         <div class="stat-card">
@@ -34,7 +34,7 @@
         :canton-id="selectedCantonId"
         :provincias="provincias"
         :cantones="cantonOptions"
-        :total="filteredCount"
+        :total="totalCais"
         @update:search="search = $event"
         @update:province="selectedProvinceId = $event"
         @update:canton="selectedCantonId = $event"
@@ -45,7 +45,7 @@
       <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
 
       <CaiTable
-        :items="pagedCais"
+        :items="caisWithNames"
         @view="goToDetail"
         @edit="openEdit"
         @remove="removeCai"
@@ -55,7 +55,7 @@
         :current-page="currentPage"
         :total-pages="totalPages"
         :page-size="pageSize"
-        :total="filteredCount"
+        :total="totalCais"
         @update:page="currentPage = $event"
       />
     </section>
@@ -128,6 +128,39 @@ const mapCai = (item) => {
   };
 };
 
+const unwrap = (maybeAxiosResponse) => {
+  if (maybeAxiosResponse && typeof maybeAxiosResponse === "object" && "data" in maybeAxiosResponse) {
+    return maybeAxiosResponse.data;
+  }
+  return maybeAxiosResponse;
+};
+
+const parsePaginated = (payload) => {
+  const top = payload || {};
+  const inner = top.data && typeof top.data === "object" && !Array.isArray(top.data) ? top.data : null;
+
+  const list =
+    (Array.isArray(top.data) ? top.data : null) ??
+    (Array.isArray(inner?.data) ? inner.data : null) ??
+    (Array.isArray(inner?.items) ? inner.items : null) ??
+    (Array.isArray(inner?.rows) ? inner.rows : null) ??
+    (Array.isArray(top.items) ? top.items : null) ??
+    (Array.isArray(top.rows) ? top.rows : null) ??
+    (Array.isArray(inner?.cais) ? inner.cais : null) ??
+    (Array.isArray(top.cais) ? top.cais : null) ??
+    [];
+
+  const rawTotalPages =
+    top.totalPages ?? inner?.totalPages ?? inner?.last_page ?? inner?.lastPage ?? inner?.total_pages;
+  const totalPages = Math.max(1, Number(rawTotalPages) || 1);
+
+  const rawTotal =
+    top.total ?? inner?.total ?? inner?.totalRecords ?? inner?.totalElements ?? inner?.total_items;
+  const total = Number(rawTotal) || list.length;
+
+  return { list, totalPages, total };
+};
+
 export default {
   components: {
     CaiToolbar,
@@ -138,6 +171,7 @@ export default {
   setup() {
     const router = useRouter();
     const cais = ref([]);
+    const totalCais = ref(0);
     const cantones = ref([]);
     const provincias = ref([]);
     const isLoading = ref(false);
@@ -149,6 +183,7 @@ export default {
     const selectedCantonId = ref("");
     const currentPage = ref(1);
     const pageSize = ref(6);
+    const totalPages = ref(1);
 
     const modalOpen = ref(false);
     const modalMode = ref("create");
@@ -183,44 +218,7 @@ export default {
       );
     });
 
-    const filteredCais = computed(() => {
-      const term = search.value.trim().toLowerCase();
-      return caisWithNames.value.filter((item) => {
-        const matchesTerm = term
-          ? (item.nombre || "").toLowerCase().includes(term)
-          : true;
-        const matchesProvince = selectedProvinceId.value
-          ? String(item.provinciaId) === String(selectedProvinceId.value)
-          : true;
-        const matchesCanton = selectedCantonId.value
-          ? String(item.cantonId) === String(selectedCantonId.value)
-          : true;
-        return matchesTerm && matchesProvince && matchesCanton;
-      });
-    });
-
-    const filteredCount = computed(() => filteredCais.value.length);
-
-    const totalPages = computed(() => {
-      return Math.max(1, Math.ceil(filteredCais.value.length / pageSize.value));
-    });
-
-    const pagedCais = computed(() => {
-      const start = (currentPage.value - 1) * pageSize.value;
-      return filteredCais.value.slice(start, start + pageSize.value);
-    });
-
-    const totalCais = computed(() => cais.value.length);
-
-    watch([search, selectedProvinceId, selectedCantonId], () => {
-      currentPage.value = 1;
-    });
-
-    watch(totalPages, (value) => {
-      if (currentPage.value > value) {
-        currentPage.value = value;
-      }
-    });
+    const visibleCount = computed(() => caisWithNames.value.length);
 
     watch([selectedProvinceId, cantones], () => {
       if (!selectedCantonId.value) return;
@@ -236,22 +234,48 @@ export default {
       isLoading.value = true;
       errorMessage.value = "";
       try {
-        const res = await getCais();
-        if (res.data?.success === false) {
-          errorMessage.value = res.data?.message || "No se pudo cargar CAI.";
-          cais.value = [];
-          return;
-        }
-        const list = resolveList(res);
+        const res = await getCais({
+          nombre: search.value,
+          provinciaId: selectedProvinceId.value || undefined,
+          cantonId: selectedCantonId.value || undefined,
+          page: currentPage.value,
+          size: pageSize.value,
+        });
+        const payload = unwrap(res);
+        const { list, totalPages: tp, total } = parsePaginated(payload);
+
         cais.value = list.map(mapCai).filter((item) => item.nombre);
+        totalPages.value = tp || 1;
+        totalCais.value = total ?? cais.value.length;
+
+        if (currentPage.value > totalPages.value) currentPage.value = totalPages.value;
+        if (currentPage.value < 1) currentPage.value = 1;
       } catch (err) {
         console.error("Error cargando CAI:", err);
-        errorMessage.value = "Error de conexion con el servidor.";
+        errorMessage.value =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Error de conexion con el servidor.";
         cais.value = [];
+        totalPages.value = 1;
+        totalCais.value = 0;
       } finally {
         isLoading.value = false;
       }
     };
+
+    watch([search, selectedProvinceId, selectedCantonId], () => {
+      currentPage.value = 1;
+      loadCais();
+    });
+
+    watch(currentPage, loadCais);
+
+    watch(totalPages, (value) => {
+      if (currentPage.value > value) {
+        currentPage.value = value;
+      }
+    });
 
     const loadCantones = async () => {
       try {
@@ -320,24 +344,7 @@ export default {
           errorMessage.value = res.data?.message || "No se pudo guardar el CAI.";
           return;
         }
-        const saved = res.data?.data;
-        if (modalMode.value === "create") {
-          if (saved?.id) {
-            cais.value = [...cais.value, mapCai(saved)];
-          } else {
-            await loadCais();
-          }
-        } else if (editingId.value !== null) {
-          if (saved?.id) {
-            cais.value = cais.value.map((item) =>
-              item.id === editingId.value ? mapCai(saved) : item
-            );
-          } else {
-            cais.value = cais.value.map((item) =>
-              item.id === editingId.value ? { ...item, nombre, cantonId } : item
-            );
-          }
-        }
+        await loadCais();
         closeModal();
       } catch (err) {
         console.error("Error guardando CAI:", err);
@@ -356,13 +363,24 @@ export default {
       try {
         const res = await deleteCai(item.id);
         if (res.data?.success === false) {
-          errorMessage.value = res.data?.message || "No se pudo eliminar el CAI.";
-          return;
+          throw new Error(res.data?.message || "No se pudo eliminar el CAI.");
         }
-        cais.value = cais.value.filter((cai) => cai.id !== item.id);
+        const message = res?.data?.message || "Éxito";
+        const isLastItemOnPage = cais.value.length === 1 && currentPage.value > 1;
+        if (isLastItemOnPage) {
+          currentPage.value -= 1;
+        } else {
+          await loadCais();
+        }
+        alert(message);
       } catch (err) {
         console.error("Error eliminando CAI:", err);
-        errorMessage.value = "Error de conexion con el servidor.";
+        const msg =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Error de conexion con el servidor.";
+        errorMessage.value = msg;
+        alert(msg);
       }
     };
 
@@ -393,9 +411,9 @@ export default {
       currentPage,
       pageSize,
       totalPages,
-      pagedCais,
-      filteredCount,
       totalCais,
+      visibleCount,
+      caisWithNames,
       modalOpen,
       modalMode,
       modalInitial,

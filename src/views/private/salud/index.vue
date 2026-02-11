@@ -10,16 +10,16 @@
       </div>
 
       <div class="hero-stats">
-        <div class="stat-card">
-          <span class="label">Total</span>
-          <strong>{{ totalItems }}</strong>
-          <span class="hint">Registros de salud</span>
-        </div>
-        <div class="stat-card">
-          <span class="label">Visibles</span>
-          <strong>{{ filteredCount }}</strong>
-          <span class="hint">Resultado del filtro</span>
-        </div>
+      <div class="stat-card">
+        <span class="label">Total</span>
+        <strong>{{ totalItems }}</strong>
+        <span class="hint">Registros de salud</span>
+      </div>
+      <div class="stat-card">
+        <span class="label">En esta página</span>
+        <strong>{{ items.length }}</strong>
+        <span class="hint">Resultado del filtro</span>
+      </div>
         <div class="stat-card">
           <span class="label">Página</span>
           <strong>{{ currentPage }} / {{ totalPages }}</strong>
@@ -31,7 +31,7 @@
     <section class="panel">
       <SaludToolbar
         :search="search"
-        :total="filteredCount"
+        :total="totalItems"
         @update:search="search = $event"
         @create="openCreate"
       />
@@ -44,7 +44,7 @@
 
       <SaludTable
         v-else
-        :items="pagedItems"
+        :items="items"
         @view="goToDetail"
         @edit="openEdit"
         @remove="removeItem"
@@ -53,6 +53,7 @@
       <SaludPagination
         :current-page="currentPage"
         :total-pages="totalPages"
+        :total="totalItems"
         @update:page="currentPage = $event"
       />
     </section>
@@ -91,6 +92,37 @@ const resolveList = (response) => {
   if (Array.isArray(payload?.data)) return payload.data;
   if (Array.isArray(payload?.items)) return payload.items;
   return [];
+};
+
+const unwrap = (maybeAxiosResponse) => {
+  if (maybeAxiosResponse && typeof maybeAxiosResponse === "object" && "data" in maybeAxiosResponse) {
+    return maybeAxiosResponse.data;
+  }
+  return maybeAxiosResponse;
+};
+
+const parsePaginated = (payload) => {
+  const top = payload || {};
+  const inner = top.data && typeof top.data === "object" && !Array.isArray(top.data) ? top.data : null;
+
+  const list =
+    (Array.isArray(top.data) ? top.data : null) ??
+    (Array.isArray(inner?.data) ? inner.data : null) ??
+    (Array.isArray(inner?.items) ? inner.items : null) ??
+    (Array.isArray(top.items) ? top.items : null) ??
+    (Array.isArray(top.rows) ? top.rows : null) ??
+    (Array.isArray(inner?.rows) ? inner.rows : null) ??
+    [];
+
+  const rawTotalPages =
+    top.totalPages ?? inner?.totalPages ?? inner?.last_page ?? inner?.lastPage ?? inner?.total_pages;
+  const totalPages = Math.max(1, Number(rawTotalPages) || 1);
+
+  const rawTotal =
+    top.total ?? inner?.total ?? inner?.totalRecords ?? inner?.totalElements ?? inner?.total_items;
+  const total = Number(rawTotal) || list.length;
+
+  return { list, totalPages, total };
 };
 
 const normalize01 = (v, fallback = "0") => {
@@ -134,6 +166,7 @@ const mapItem = (row) => {
    STATE
 ====================== */
 const items = ref([]);
+const totalItems = ref(0);
 const isLoading = ref(false);
 const isSaving = ref(false);
 const errorMessage = ref("");
@@ -141,6 +174,7 @@ const errorMessage = ref("");
 const search = ref("");
 const currentPage = ref(1);
 const pageSize = ref(6);
+const totalPages = ref(1);
 
 const modalOpen = ref(false);
 const modalMode = ref("create");
@@ -155,37 +189,32 @@ const filteredItems = computed(() => {
   if (!term) return items.value;
 
   return items.value.filter((i) => {
-    // Agregamos el nombre al buscador
     const haystack = [
       i.id,
-      i.adolescenteNombre, 
+      i.adolescenteNombre,
       i.fecha,
       i.diagnostico,
       i.tipoSustancia,
-      i.observacion
-    ].join(" ").toLowerCase();
+      i.observacion,
+    ]
+      .join(" ")
+      .toLowerCase();
 
     return haystack.includes(term);
   });
 });
 
-const filteredCount = computed(() => filteredItems.value.length);
-const totalItems = computed(() => items.value.length);
-
-const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredCount.value / pageSize.value))
-);
-
-const pagedItems = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  return filteredItems.value.slice(start, start + pageSize.value);
-});
-
 /* ======================
    WATCHERS
 ====================== */
-watch(search, () => { currentPage.value = 1; });
-watch(totalPages, (val) => { if (currentPage.value > val) currentPage.value = val; });
+watch(search, () => {
+  currentPage.value = 1;
+  loadItems();
+});
+watch(totalPages, (val) => {
+  if (currentPage.value > val) currentPage.value = val;
+});
+watch(currentPage, () => loadItems());
 
 /* ======================
    METHODS
@@ -194,13 +223,25 @@ const loadItems = async () => {
   isLoading.value = true;
   errorMessage.value = "";
   try {
-    const res = await getSalud();
-    const list = resolveList(res);
+    const res = await getSalud({
+      termino: search.value || undefined,
+      page: currentPage.value,
+      size: pageSize.value,
+    });
+    const payload = unwrap(res);
+    const { list, totalPages: tp, total } = parsePaginated(payload);
     items.value = list.map(mapItem);
+    totalPages.value = tp || 1;
+    totalItems.value = total ?? items.value.length;
+
+    if (currentPage.value > totalPages.value) currentPage.value = totalPages.value;
+    if (currentPage.value < 1) currentPage.value = 1;
   } catch (e) {
     console.error("Error cargando salud:", e);
     errorMessage.value = "No se pudo cargar registros de salud.";
     items.value = [];
+    totalItems.value = 0;
+    totalPages.value = 1;
   } finally {
     isLoading.value = false;
   }

@@ -15,8 +15,8 @@
           <span class="hint">Cantones registrados</span>
         </div>
         <div class="stat-card">
-          <span class="label">Visibles</span>
-          <strong>{{ filteredCount }}</strong>
+          <span class="label">En esta página</span>
+          <strong>{{ visibleCount }}</strong>
           <span class="hint">Resultado del filtro actual</span>
         </div>
         <div class="stat-card">
@@ -32,7 +32,7 @@
         :search="search"
         :province-id="selectedProvinceId"
         :provincias="provincias"
-        :total="filteredCount"
+        :total="totalCantones"
         @update:search="search = $event"
         @update:province="selectedProvinceId = $event"
         @create="openCreate"
@@ -42,7 +42,7 @@
       <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
 
       <CantonTable
-        :items="pagedCantones"
+        :items="cantones"
         @view="goToDetail"
         @edit="openEdit"
         @remove="removeCanton"
@@ -52,7 +52,7 @@
         :current-page="currentPage"
         :total-pages="totalPages"
         :page-size="pageSize"
-        :total="filteredCount"
+        :total="totalCantones"
         @update:page="currentPage = $event"
       />
     </section>
@@ -113,6 +113,39 @@ const mapProvincia = (item) => {
   };
 };
 
+const unwrap = (maybeAxiosResponse) => {
+  if (maybeAxiosResponse && typeof maybeAxiosResponse === "object" && "data" in maybeAxiosResponse) {
+    return maybeAxiosResponse.data;
+  }
+  return maybeAxiosResponse;
+};
+
+const parsePaginated = (payload) => {
+  const top = payload || {};
+  const inner = top.data && typeof top.data === "object" && !Array.isArray(top.data) ? top.data : null;
+
+  const list =
+    (Array.isArray(top.data) ? top.data : null) ??
+    (Array.isArray(inner?.data) ? inner.data : null) ??
+    (Array.isArray(inner?.items) ? inner.items : null) ??
+    (Array.isArray(inner?.rows) ? inner.rows : null) ??
+    (Array.isArray(top.items) ? top.items : null) ??
+    (Array.isArray(top.rows) ? top.rows : null) ??
+    (Array.isArray(inner?.cantones) ? inner.cantones : null) ??
+    (Array.isArray(top.cantones) ? top.cantones : null) ??
+    [];
+
+  const rawTotalPages =
+    top.totalPages ?? inner?.totalPages ?? inner?.last_page ?? inner?.lastPage ?? inner?.total_pages;
+  const totalPages = Math.max(1, Number(rawTotalPages) || 1);
+
+  const rawTotal =
+    top.total ?? inner?.total ?? inner?.totalRecords ?? inner?.totalElements ?? inner?.total_items;
+  const total = Number(rawTotal) || list.length;
+
+  return { list, totalPages, total };
+};
+
 export default {
   components: {
     CantonToolbar,
@@ -123,6 +156,7 @@ export default {
   setup() {
     const router = useRouter();
     const cantones = ref([]);
+    const totalCantones = ref(0);
     const provincias = ref([]);
     const isLoading = ref(false);
     const isSaving = ref(false);
@@ -132,40 +166,52 @@ export default {
     const selectedProvinceId = ref("");
     const currentPage = ref(1);
     const pageSize = ref(6);
+    const totalPages = ref(1);
 
     const modalOpen = ref(false);
     const modalMode = ref("create");
     const modalInitial = ref(null);
     const editingId = ref(null);
 
-    const filteredCantones = computed(() => {
-      const term = search.value.trim().toLowerCase();
-      return cantones.value.filter((item) => {
-        const matchesTerm = term
-          ? (item.nombre || "").toLowerCase().includes(term)
-          : true;
-        const matchesProvince = selectedProvinceId.value
-          ? Number(item.provinciaId) === Number(selectedProvinceId.value)
-          : true;
-        return matchesTerm && matchesProvince;
-      });
-    });
+    const visibleCount = computed(() => cantones.value.length);
 
-    const filteredCount = computed(() => filteredCantones.value.length);
+    const loadCantones = async () => {
+      isLoading.value = true;
+      errorMessage.value = "";
+      try {
+        const res = await getCantones({
+          nombre: search.value,
+          provinciaId: selectedProvinceId.value || undefined,
+          page: currentPage.value,
+          size: pageSize.value,
+        });
 
-    const totalPages = computed(() => {
-      return Math.max(1, Math.ceil(filteredCantones.value.length / pageSize.value));
-    });
+        const payload = unwrap(res);
+        const { list, totalPages: tp, total } = parsePaginated(payload);
 
-    const pagedCantones = computed(() => {
-      const start = (currentPage.value - 1) * pageSize.value;
-      return filteredCantones.value.slice(start, start + pageSize.value);
-    });
+        cantones.value = list.map(mapCanton).filter((item) => item.nombre);
+        totalPages.value = tp || 1;
+        totalCantones.value = total ?? cantones.value.length;
 
-    const totalCantones = computed(() => cantones.value.length);
+        if (currentPage.value > totalPages.value) currentPage.value = totalPages.value;
+        if (currentPage.value < 1) currentPage.value = 1;
+      } catch (err) {
+        console.error("Error cargando cantones:", err);
+        errorMessage.value =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Error de conexion con el servidor.";
+        cantones.value = [];
+        totalPages.value = 1;
+        totalCantones.value = 0;
+      } finally {
+        isLoading.value = false;
+      }
+    };
 
     watch([search, selectedProvinceId], () => {
       currentPage.value = 1;
+      loadCantones();
     });
 
     watch(totalPages, (value) => {
@@ -174,26 +220,7 @@ export default {
       }
     });
 
-    const loadCantones = async () => {
-      isLoading.value = true;
-      errorMessage.value = "";
-      try {
-        const res = await getCantones();
-        if (res.data?.success === false) {
-          errorMessage.value = res.data?.message || "No se pudo cargar cantones.";
-          cantones.value = [];
-          return;
-        }
-        const list = resolveList(res);
-        cantones.value = list.map(mapCanton).filter((item) => item.nombre);
-      } catch (err) {
-        console.error("Error cargando cantones:", err);
-        errorMessage.value = "Error de conexion con el servidor.";
-        cantones.value = [];
-      } finally {
-        isLoading.value = false;
-      }
-    };
+    watch(currentPage, loadCantones);
 
     const loadProvincias = async () => {
       try {
@@ -247,26 +274,7 @@ export default {
           errorMessage.value = res.data?.message || "No se pudo guardar el canton.";
           return;
         }
-        const saved = res.data?.data;
-        if (modalMode.value === "create") {
-          if (saved?.id) {
-            cantones.value = [...cantones.value, mapCanton(saved)];
-          } else {
-            await loadCantones();
-          }
-        } else if (editingId.value !== null) {
-          if (saved?.id) {
-            cantones.value = cantones.value.map((item) =>
-              item.id === editingId.value ? mapCanton(saved) : item
-            );
-          } else {
-            cantones.value = cantones.value.map((item) =>
-              item.id === editingId.value
-                ? { ...item, nombre, provinciaId }
-                : item
-            );
-          }
-        }
+        await loadCantones();
         closeModal();
       } catch (err) {
         console.error("Error guardando canton:", err);
@@ -285,13 +293,24 @@ export default {
       try {
         const res = await deleteCanton(item.id);
         if (res.data?.success === false) {
-          errorMessage.value = res.data?.message || "No se pudo eliminar el canton.";
-          return;
+          throw new Error(res.data?.message || "No se pudo eliminar el canton.");
         }
-        cantones.value = cantones.value.filter((canton) => canton.id !== item.id);
+        const message = res?.data?.message || "Éxito";
+        const isLastItemOnPage = cantones.value.length === 1 && currentPage.value > 1;
+        if (isLastItemOnPage) {
+          currentPage.value -= 1;
+        } else {
+          await loadCantones();
+        }
+        alert(message);
       } catch (err) {
         console.error("Error eliminando canton:", err);
-        errorMessage.value = "Error de conexion con el servidor.";
+        const msg =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Error de conexion con el servidor.";
+        errorMessage.value = msg;
+        alert(msg);
       }
     };
 
@@ -308,9 +327,9 @@ export default {
       currentPage,
       pageSize,
       totalPages,
-      pagedCantones,
-      filteredCount,
       totalCantones,
+      visibleCount,
+      cantones,
       modalOpen,
       modalMode,
       modalInitial,

@@ -16,8 +16,8 @@
           <span class="hint">Ocupaciones registradas</span>
         </div>
         <div class="stat-card">
-          <span class="label">Visibles</span>
-          <strong>{{ filteredCount }}</strong>
+          <span class="label">En esta página</span>
+          <strong>{{ visibleCount }}</strong>
           <span class="hint">Resultado del filtro</span>
         </div>
         <div class="stat-card">
@@ -29,23 +29,23 @@
     </section>
 
     <section class="panel">
-      <OcupacionToolbar
-        :search="search"
-        :total="filteredCount"
-        @update:search="search = $event"
+     <OcupacionToolbar
+       :search="search"
+        :total="totalItems"
+       @update:search="search = $event"
         @create="openCreate"
       />
 
       <div v-if="isLoading" class="status">Cargando ocupaciones...</div>
       <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
 
-      <OcupacionTable :items="pagedItems" @edit="openEdit" @remove="removeItem" />
+      <OcupacionTable :items="items" @edit="openEdit" @remove="removeItem" />
 
       <OcupacionPagination
         :current-page="currentPage"
         :total-pages="totalPages"
         :page-size="pageSize"
-        :total="filteredCount"
+        :total="totalItems"
         @update:page="currentPage = $event"
       />
     </section>
@@ -67,6 +67,7 @@ import {
   getOcupaciones,
   createOcupacion,
   updateOcupacion,
+  deleteOcupacion,
 } from "@/service/ocupacion.service";
 
 import OcupacionToolbar from "./components/OcupacionToolbar.vue";
@@ -78,6 +79,7 @@ import OcupacionFormModal from "./components/OcupacionFormModal.vue";
    STATE
 ====================== */
 const items = ref([]);
+const totalItems = ref(0);
 const isLoading = ref(false);
 const isSaving = ref(false);
 const errorMessage = ref("");
@@ -85,6 +87,8 @@ const errorMessage = ref("");
 const search = ref("");
 const currentPage = ref(1);
 const pageSize = ref(6);
+const totalPages = ref(1);
+const adolescenteId = ref("");
 
 const modalOpen = ref(false);
 const modalMode = ref("create");
@@ -99,24 +103,7 @@ const filteredItems = computed(() => {
   return items.value.filter((i) => !term || `${i.nombre} ${i.id}`.toLowerCase().includes(term));
 });
 
-const filteredCount = computed(() => filteredItems.value.length);
-const totalItems = computed(() => items.value.length);
-
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredCount.value / pageSize.value)));
-
-const pagedItems = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  return filteredItems.value.slice(start, start + pageSize.value);
-});
-
-/* ======================
-   WATCHERS
-====================== */
-watch(search, () => (currentPage.value = 1));
-
-watch(totalPages, (val) => {
-  if (currentPage.value > val) currentPage.value = val;
-});
+const visibleCount = computed(() => items.value.length);
 
 /* ======================
    METHODS
@@ -125,15 +112,57 @@ const loadItems = async () => {
   isLoading.value = true;
   errorMessage.value = "";
   try {
-    const res = await getOcupaciones();
-    items.value = res.data?.data ?? [];
-  } catch {
-    errorMessage.value = "No se pudo cargar ocupaciones.";
+    const res = await getOcupaciones({
+      termino: search.value || undefined,
+      adolescenteId: adolescenteId.value || undefined,
+      page: currentPage.value,
+      size: pageSize.value,
+    });
+
+    const payload = res?.data ?? res;
+    const data = payload?.data ?? payload;
+
+    const list =
+      (Array.isArray(data) ? data : null) ??
+      (Array.isArray(data?.data) ? data.data : null) ??
+      (Array.isArray(payload?.items) ? payload.items : null) ??
+      [];
+
+    const tp =
+      Number(payload?.totalPages ?? payload?.data?.totalPages ?? data?.totalPages) || 1;
+    const total =
+      Number(payload?.total ?? payload?.data?.total ?? data?.total ?? payload?.totalItems) ||
+      list.length;
+
+    items.value = list;
+    totalPages.value = Math.max(1, tp);
+    totalItems.value = total;
+
+    if (currentPage.value > totalPages.value) currentPage.value = totalPages.value;
+    if (currentPage.value < 1) currentPage.value = 1;
+  } catch (e) {
+    errorMessage.value = e?.response?.data?.message || e?.message || "No se pudo cargar ocupaciones.";
     items.value = [];
+    totalPages.value = 1;
+    totalItems.value = 0;
   } finally {
     isLoading.value = false;
   }
 };
+
+/* ======================
+   WATCHERS
+====================== */
+watch(search, () => {
+  currentPage.value = 1;
+  loadItems();
+});
+
+watch(totalPages, (val) => {
+  if (currentPage.value > val) currentPage.value = val;
+});
+
+watch(currentPage, loadItems);
 
 const openCreate = () => {
   modalMode.value = "create";
@@ -163,24 +192,16 @@ const saveItem = async ({ nombre }) => {
   errorMessage.value = "";
 
   try {
+    const payload = { nombre: clean, adolescenteId: adolescenteId.value || undefined };
     if (modalMode.value === "create") {
-      const res = await createOcupacion({ nombre: clean });
-      if (res?.data?.data) items.value.push(res.data.data);
-      else await loadItems();
+      await createOcupacion(payload);
     } else {
-      const res = await updateOcupacion(editingId.value, { nombre: clean });
-      const saved = res?.data?.data;
-      if (saved) {
-        items.value = items.value.map((i) => (i.id === editingId.value ? saved : i));
-      } else {
-        items.value = items.value.map((i) =>
-          i.id === editingId.value ? { ...i, nombre: clean } : i
-        );
-      }
+      await updateOcupacion(editingId.value, payload);
     }
+    await loadItems();
     closeModal();
-  } catch {
-    errorMessage.value = "Error guardando ocupación.";
+  } catch (e) {
+    errorMessage.value = e?.response?.data?.message || e?.message || "Error guardando ocupación.";
   } finally {
     isSaving.value = false;
   }
@@ -192,9 +213,14 @@ const removeItem = async (item) => {
   errorMessage.value = "";
   try {
     await deleteOcupacion(item.id);
-    items.value = items.value.filter((i) => i.id !== item.id);
-  } catch {
-    errorMessage.value = "No se pudo eliminar la ocupación.";
+    const isLastItemOnPage = items.value.length === 1 && currentPage.value > 1;
+    if (isLastItemOnPage) {
+      currentPage.value -= 1;
+    } else {
+      await loadItems();
+    }
+  } catch (e) {
+    errorMessage.value = e?.response?.data?.message || e?.message || "No se pudo eliminar la ocupación.";
   }
 };
 

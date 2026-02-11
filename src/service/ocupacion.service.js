@@ -1,19 +1,12 @@
 // src/api/ocupacion.service.js
 import { api } from './apiClient';
 
-/**
- * Función auxiliar para asegurar tipos de datos antes de enviar
- */
-function normalizePayload(payload) {
+function normalizePayload(payload = {}) {
   return {
     ...payload,
-    // Aseguramos que sea número (si viene null o string vacío, enviamos null o undefined según convenga, 
-    // pero tu DTO requiere número, así que Number() está bien si el form valida que no sea nulo)
-    adolescenteId: Number(payload.adolescenteId),
+    adolescenteId: payload.adolescenteId != null ? Number(payload.adolescenteId) : undefined,
     participacion: payload.participacion ? Number(payload.participacion) : 0,
-    // La fecha ya suele ir bien como YYYY-MM-DD, pero aseguramos que sea string
-    fecha: String(payload.fecha), 
-    // Limpiamos espacios en blanco de textos
+    fecha: payload.fecha ? String(payload.fecha) : undefined,
     taller: payload.taller?.trim(),
     instructor: payload.instructor?.trim(),
     observacion: payload.observacion?.trim(),
@@ -21,7 +14,6 @@ function normalizePayload(payload) {
 }
 
 export function createOcupacion(payload) {
-  // Aplicamos la normalización antes de enviar
   return api.post('/ocupacion', normalizePayload(payload));
 }
 
@@ -34,6 +26,9 @@ export function getOcupacionById(id) {
 }
 
 export function updateOcupacion(id, payload) {
-  // Aplicamos la normalización antes de enviar
   return api.patch(`/ocupacion/${id}`, normalizePayload(payload));
+}
+
+export function deleteOcupacion(id) {
+  return api.delete(`/ocupacion/${id}`);
 }

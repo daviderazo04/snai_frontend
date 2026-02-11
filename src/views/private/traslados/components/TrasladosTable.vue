@@ -6,7 +6,8 @@
         <tr>
           <th>ID</th>
           <th>Adolescente</th>
-          <th>CAI</th>
+          <th>CAI Origen</th>
+          <th>CAI Destino</th>
           <th>Fecha</th>
           <th>Observaciones</th>
           <th class="text-right">Acciones</th>
@@ -19,6 +20,10 @@
           <td>
             <div class="cell-main">{{ row.adolescenteNombre || "—" }}</div>
             <div v-if="row.adolescenteId" class="cell-sub">ID {{ row.adolescenteId }}</div>
+          </td>
+          <td>
+            <div class="cell-main">{{ row.fromCaiNombre || "—" }}</div>
+            <div v-if="row.fromCaiId" class="cell-sub">ID {{ row.fromCaiId }}</div>
           </td>
           <td>
             <div class="cell-main">{{ row.caiNombre || "—" }}</div>

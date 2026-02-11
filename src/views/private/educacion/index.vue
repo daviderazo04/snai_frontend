@@ -11,17 +11,17 @@
       </div>
 
       <div class="hero-stats">
-        <div class="stat-card">
-          <span class="label">Total</span>
-          <strong>{{ totalItems }}</strong>
-          <span class="hint">Registros educativos</span>
-        </div>
+      <div class="stat-card">
+        <span class="label">Total</span>
+        <strong>{{ totalItems }}</strong>
+        <span class="hint">Registros educativos</span>
+      </div>
 
-        <div class="stat-card">
-          <span class="label">Visibles</span>
-          <strong>{{ filteredCount }}</strong>
-          <span class="hint">Resultado del filtro</span>
-        </div>
+      <div class="stat-card">
+        <span class="label">En esta página</span>
+        <strong>{{ items.length }}</strong>
+        <span class="hint">Resultado del filtro</span>
+      </div>
 
         <div class="stat-card">
           <span class="label">Página</span>
@@ -37,7 +37,7 @@
         :estudia="estudiaFilter"
         :nivel="nivelFilter"
         :institucion="institucionFilter"
-        :total="filteredCount"
+        :total="totalItems"
         @update:search="search = $event"
         @update:estudia="estudiaFilter = $event"
         @update:nivel="nivelFilter = $event"
@@ -53,7 +53,7 @@
 
       <EducacionTable
         v-else
-        :items="pagedItems"
+        :items="items"
         @view="goToDetail"
         @edit="openEdit"
         @remove="removeItem"
@@ -62,6 +62,7 @@
       <EducacionPagination
         :current-page="currentPage"
         :total-pages="totalPages"
+        :total="totalItems"
         @update:page="currentPage = $event"
       />
     </section>
@@ -102,6 +103,41 @@ const resolveList = (response) => {
   if (Array.isArray(payload?.educaciones)) return payload.educaciones;
   if (Array.isArray(payload?.educa)) return payload.educa;
   return [];
+};
+
+const unwrap = (maybeAxiosResponse) => {
+  if (maybeAxiosResponse && typeof maybeAxiosResponse === "object" && "data" in maybeAxiosResponse) {
+    return maybeAxiosResponse.data;
+  }
+  return maybeAxiosResponse;
+};
+
+const parsePaginated = (payload) => {
+  const top = payload || {};
+  const inner = top.data && typeof top.data === "object" && !Array.isArray(top.data) ? top.data : null;
+
+  const list =
+    (Array.isArray(top.data) ? top.data : null) ??
+    (Array.isArray(inner?.data) ? inner.data : null) ??
+    (Array.isArray(inner?.items) ? inner.items : null) ??
+    (Array.isArray(top.items) ? top.items : null) ??
+    (Array.isArray(top.rows) ? top.rows : null) ??
+    (Array.isArray(inner?.rows) ? inner.rows : null) ??
+    (Array.isArray(inner?.educaciones) ? inner.educaciones : null) ??
+    (Array.isArray(top.educaciones) ? top.educaciones : null) ??
+    (Array.isArray(inner?.educa) ? inner.educa : null) ??
+    (Array.isArray(top.educa) ? top.educa : null) ??
+    [];
+
+  const rawTotalPages =
+    top.totalPages ?? inner?.totalPages ?? inner?.last_page ?? inner?.lastPage ?? inner?.total_pages;
+  const totalPages = Math.max(1, Number(rawTotalPages) || 1);
+
+  const rawTotal =
+    top.total ?? inner?.total ?? inner?.totalRecords ?? inner?.totalElements ?? inner?.total_items;
+  const total = Number(rawTotal) || list.length;
+
+  return { list, totalPages, total };
 };
 
 const normalize01 = (v, fallback = "0") => {
@@ -150,6 +186,7 @@ const mapItem = (row, adolescentesById) => {
 
 const router = useRouter();
 const items = ref([]);
+const totalItems = ref(0);
 const adolescentes = ref([]);
 const isLoading = ref(false);
 const isSaving = ref(false);
@@ -223,16 +260,7 @@ const filteredItems = computed(() => {
 });
 
 const filteredCount = computed(() => filteredItems.value.length);
-const totalItems = computed(() => items.value.length);
-
-const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredCount.value / pageSize.value))
-);
-
-const pagedItems = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  return filteredItems.value.slice(start, start + pageSize.value);
-});
+const totalPages = ref(1);
 
 watch([search, estudiaFilter, nivelFilter, institucionFilter], () => {
   currentPage.value = 1;
@@ -246,40 +274,41 @@ const loadItems = async () => {
   isLoading.value = true;
   errorMessage.value = "";
   try {
-    const res = await getEducaciones();
+    const res = await getEducaciones({
+      termino: search.value || undefined,
+      estudia: estudiaFilter.value || undefined,
+      nivel: nivelFilter.value || undefined,
+      institucion: institucionFilter.value || undefined,
+      page: currentPage.value,
+      size: pageSize.value,
+    });
     if (res?.data?.success === false) {
       errorMessage.value = res?.data?.message || "No se pudo cargar registros educativos.";
       items.value = [];
       return;
     }
-    const list = resolveList(res);
+    const payload = unwrap(res);
+    const { list, totalPages: tp, total } = parsePaginated(payload);
     items.value = list.map((row) => mapItem(row, adolescentesById.value));
+    totalPages.value = tp || 1;
+    totalItems.value = total ?? items.value.length;
+
+    if (currentPage.value > totalPages.value) currentPage.value = totalPages.value;
+    if (currentPage.value < 1) currentPage.value = 1;
   } catch (e) {
     console.error("Error cargando educación:", e);
     errorMessage.value = "No se pudo cargar registros educativos.";
     items.value = [];
+    totalPages.value = 1;
+    totalItems.value = 0;
   } finally {
     isLoading.value = false;
   }
 };
 
 const loadAdolescentes = async () => {
-  try {
-    const res = await getAdolescentes({ size: 500 });
-    const payload = res?.data?.data ?? res?.data;
-    if (Array.isArray(payload)) {
-      adolescentes.value = payload;
-    } else if (Array.isArray(payload?.data)) {
-      adolescentes.value = payload.data;
-    } else if (Array.isArray(payload?.items)) {
-      adolescentes.value = payload.items;
-    } else {
-      adolescentes.value = [];
-    }
-  } catch (e) {
-    console.error("Error cargando adolescentes:", e);
-    adolescentes.value = [];
-  }
+  // Ya viene en la respuesta de educación, no se carga aparte
+  adolescentes.value = [];
 };
 
 const openCreate = () => {
@@ -388,7 +417,6 @@ const goToDetail = (row) => {
 };
 
 onMounted(async () => {
-  await loadAdolescentes();
   await loadItems();
 });
 </script>
