@@ -16,8 +16,8 @@
           <span class="hint">Estados civiles registrados</span>
         </div>
         <div class="stat-card">
-          <span class="label">Visibles</span>
-          <strong>{{ filteredCount }}</strong>
+          <span class="label">En esta página</span>
+          <strong>{{ visibleCount }}</strong>
           <span class="hint">Resultado del filtro actual</span>
         </div>
         <div class="stat-card">
@@ -31,7 +31,7 @@
     <section class="panel">
       <EstadoCivilToolbar
         :search="search"
-        :total="filteredCount"
+        :total="totalEstados"
         @update:search="search = $event"
         @create="openCreate"
       />
@@ -40,7 +40,7 @@
       <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
 
       <EstadoCivilTable
-        :items="pagedEstados"
+        :items="estados"
         @edit="openEdit"
         @remove="removeEstado"
       />
@@ -49,7 +49,7 @@
         :current-page="currentPage"
         :total-pages="totalPages"
         :page-size="pageSize"
-        :total="filteredCount"
+        :total="totalEstados"
         @update:page="currentPage = $event"
       />
     </section>
@@ -78,23 +78,47 @@ import EstadoCivilTable from "./components/EstadoCivilTable.vue";
 import EstadoCivilPagination from "./components/EstadoCivilPagination.vue";
 import EstadoCivilFormModal from "./components/EstadoCivilFormModal.vue";
 
-const resolveList = (response) => {
-  const payload = response?.data?.data ?? response?.data;
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.items)) return payload.items;
-  if (Array.isArray(payload?.rows)) return payload.rows;
-  if (Array.isArray(payload?.estadosCiviles)) return payload.estadosCiviles;
-  if (Array.isArray(payload?.estadoCivil)) return payload.estadoCivil;
-  return [];
-};
-
 const mapEstado = (item) => {
   const rawId = item?.id ?? item?.estadoCivilId ?? item?.idEstadoCivil;
   return {
     id: Number.isNaN(Number(rawId)) ? rawId : Number(rawId),
     nombre: item?.nombre ?? item?.name ?? item?.estadoCivil ?? "",
   };
+};
+
+const unwrap = (maybeAxiosResponse) => {
+  if (maybeAxiosResponse && typeof maybeAxiosResponse === "object" && "data" in maybeAxiosResponse) {
+    return maybeAxiosResponse.data;
+  }
+  return maybeAxiosResponse;
+};
+
+const parsePaginated = (payload) => {
+  const top = payload || {};
+  const inner = top.data && typeof top.data === "object" && !Array.isArray(top.data) ? top.data : null;
+
+  const list =
+    (Array.isArray(top.data) ? top.data : null) ??
+    (Array.isArray(inner?.data) ? inner.data : null) ??
+    (Array.isArray(inner?.items) ? inner.items : null) ??
+    (Array.isArray(inner?.rows) ? inner.rows : null) ??
+    (Array.isArray(top.items) ? top.items : null) ??
+    (Array.isArray(top.rows) ? top.rows : null) ??
+    (Array.isArray(inner?.estadosCiviles) ? inner.estadosCiviles : null) ??
+    (Array.isArray(top.estadosCiviles) ? top.estadosCiviles : null) ??
+    (Array.isArray(inner?.estadoCivil) ? inner.estadoCivil : null) ??
+    (Array.isArray(top.estadoCivil) ? top.estadoCivil : null) ??
+    [];
+
+  const rawTotalPages =
+    top.totalPages ?? inner?.totalPages ?? inner?.last_page ?? inner?.lastPage ?? inner?.total_pages;
+  const totalPages = Math.max(1, Number(rawTotalPages) || 1);
+
+  const rawTotal =
+    top.total ?? inner?.total ?? inner?.totalRecords ?? inner?.totalElements ?? inner?.total_items;
+  const total = Number(rawTotal) || list.length;
+
+  return { list, totalPages, total };
 };
 
 export default {
@@ -106,6 +130,7 @@ export default {
   },
   setup() {
     const estados = ref([]);
+    const totalEstados = ref(0);
     const isLoading = ref(false);
     const isSaving = ref(false);
     const errorMessage = ref("");
@@ -113,58 +138,56 @@ export default {
     const search = ref("");
     const currentPage = ref(1);
     const pageSize = ref(6);
+    const totalPages = ref(1);
 
     const modalOpen = ref(false);
     const modalMode = ref("create");
     const modalInitial = ref(null);
     const editingId = ref(null);
 
-    const filteredEstados = computed(() => {
-      const term = search.value.trim().toLowerCase();
-      return estados.value.filter((item) =>
-        term ? (item.nombre || "").toLowerCase().includes(term) : true
-      );
-    });
-
-    const filteredCount = computed(() => filteredEstados.value.length);
-
-    const totalPages = computed(() =>
-      Math.max(1, Math.ceil(filteredEstados.value.length / pageSize.value))
-    );
-
-    const pagedEstados = computed(() => {
-      const start = (currentPage.value - 1) * pageSize.value;
-      return filteredEstados.value.slice(start, start + pageSize.value);
-    });
-
-    const totalEstados = computed(() => estados.value.length);
-
-    watch(search, () => (currentPage.value = 1));
-    watch(totalPages, (value) => {
-      if (currentPage.value > value) currentPage.value = value;
-    });
+    const visibleCount = computed(() => estados.value.length);
 
     const loadEstados = async () => {
       isLoading.value = true;
       errorMessage.value = "";
       try {
-        const res = await getEstadosCiviles();
-        if (res.data?.success === false) {
-          errorMessage.value =
-            res.data?.message || "No se pudo cargar estados civiles.";
-          estados.value = [];
-          return;
-        }
-        const list = resolveList(res);
+        const res = await getEstadosCiviles({
+          nombre: search.value,
+          page: currentPage.value,
+          size: pageSize.value,
+        });
+
+        const payload = unwrap(res);
+        const { list, totalPages: tp, total } = parsePaginated(payload);
+
         estados.value = list.map(mapEstado).filter((item) => item.nombre);
+        totalPages.value = tp || 1;
+        totalEstados.value = total ?? estados.value.length;
+
+        if (currentPage.value > totalPages.value) currentPage.value = totalPages.value;
+        if (currentPage.value < 1) currentPage.value = 1;
       } catch (err) {
         console.error("Error cargando estados civiles:", err);
-        errorMessage.value = "Error de conexion con el servidor.";
+        errorMessage.value =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Error de conexion con el servidor.";
         estados.value = [];
+        totalPages.value = 1;
+        totalEstados.value = 0;
       } finally {
         isLoading.value = false;
       }
     };
+
+    watch(search, () => {
+      currentPage.value = 1;
+      loadEstados();
+    });
+    watch(currentPage, loadEstados);
+    watch(totalPages, (value) => {
+      if (currentPage.value > value) currentPage.value = value;
+    });
 
     const openCreate = () => {
       modalMode.value = "create";
@@ -205,22 +228,7 @@ export default {
           return;
         }
 
-        const saved = res.data?.data;
-        if (modalMode.value === "create") {
-          if (saved?.id) estados.value = [...estados.value, mapEstado(saved)];
-          else await loadEstados();
-        } else if (editingId.value !== null) {
-          if (saved?.id) {
-            estados.value = estados.value.map((item) =>
-              item.id === editingId.value ? mapEstado(saved) : item
-            );
-          } else {
-            estados.value = estados.value.map((item) =>
-              item.id === editingId.value ? { ...item, nombre } : item
-            );
-          }
-        }
-
+        await loadEstados();
         closeModal();
       } catch (err) {
         console.error("Error guardando estado civil:", err);
@@ -244,10 +252,22 @@ export default {
             res.data?.message || "No se pudo eliminar el estado civil.";
           return;
         }
-        estados.value = estados.value.filter((estado) => estado.id !== item.id);
+        const message = res?.data?.message || "Éxito";
+        const isLastItemOnPage = estados.value.length === 1 && currentPage.value > 1;
+        if (isLastItemOnPage) {
+          currentPage.value -= 1;
+        } else {
+          await loadEstados();
+        }
+        alert(message);
       } catch (err) {
         console.error("Error eliminando estado civil:", err);
-        errorMessage.value = "Error de conexion con el servidor.";
+        const msg =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Error de conexion con el servidor.";
+        errorMessage.value = msg;
+        alert(msg);
       }
     };
 
@@ -258,9 +278,9 @@ export default {
       currentPage,
       pageSize,
       totalPages,
-      pagedEstados,
-      filteredCount,
       totalEstados,
+      visibleCount,
+      estados,
       modalOpen,
       modalMode,
       modalInitial,

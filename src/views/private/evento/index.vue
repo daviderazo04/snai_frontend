@@ -18,8 +18,8 @@
         </div>
 
         <div class="stat-card">
-          <span class="label">Visibles</span>
-          <strong>{{ filteredCount }}</strong>
+          <span class="label">En esta página</span>
+          <strong>{{ visibleCount }}</strong>
           <span class="hint">Resultado del filtro</span>
         </div>
 
@@ -34,7 +34,7 @@
     <section class="panel">
       <EventoToolbar
         :search="search"
-        :total="filteredCount"
+        :total="totalItems"
         @update:search="search = $event"
         @create="openCreate"
       />
@@ -47,7 +47,7 @@
 
       <EventoTable
         v-else
-        :items="pagedItems"
+        :items="items"
         @edit="openEdit"
         @remove="removeItem"
       />
@@ -84,32 +84,49 @@ import EventoTable from "./components/EventoTable.vue";
 import EventoPagination from "./components/EventoPagination.vue";
 import EventoFormModal from "./components/EventoFormModal.vue";
 
-// Utilidad para extraer el array de datos de cualquier respuesta
-const resolveList = (response) => {
-  const payload = response?.data?.data ?? response?.data;
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.items)) return payload.items;
-  return [];
+const unwrap = (maybeAxiosResponse) => {
+  if (maybeAxiosResponse && typeof maybeAxiosResponse === "object" && "data" in maybeAxiosResponse) {
+    return maybeAxiosResponse.data;
+  }
+  return maybeAxiosResponse;
 };
 
-// --- CORRECCIÓN CLAVE AQUÍ ---
+const parsePaginated = (payload) => {
+  const top = payload || {};
+  const inner = top.data && typeof top.data === "object" && !Array.isArray(top.data) ? top.data : null;
+
+  const list =
+    (Array.isArray(top.data) ? top.data : null) ??
+    (Array.isArray(inner?.data) ? inner.data : null) ??
+    (Array.isArray(inner?.items) ? inner.items : null) ??
+    (Array.isArray(top.items) ? top.items : null) ??
+    [];
+
+  const rawTotalPages =
+    top.totalPages ?? inner?.totalPages ?? inner?.last_page ?? inner?.lastPage ?? inner?.total_pages;
+  const totalPages = Math.max(1, Number(rawTotalPages) || 1);
+
+  const rawTotal =
+    top.total ?? inner?.total ?? inner?.totalRecords ?? inner?.totalElements ?? inner?.total_items;
+  const total = Number(rawTotal) || list.length;
+
+  return { list, totalPages, total };
+};
+
 const mapItem = (row) => {
   const rawId = row?.id ?? row?.eventoId ?? row?.idEvento;
   const idNum = Number(rawId);
-  
-  // Normalizamos: Si viene 'descripcion' (backend) o 'nombre' (dto), 
-  // lo guardamos en ambas propiedades para evitar errores en la tabla/filtros.
   const texto = row?.nombre ?? row?.descripcion ?? row?.name ?? "";
 
   return {
     id: Number.isNaN(idNum) ? rawId : idNum,
-    nombre: texto,       // Para que funcionen los filtros y forms viejos
-    descripcion: texto,  // Por si la tabla espera descripcion
+    nombre: texto,
+    descripcion: texto,
   };
 };
 
 const items = ref([]);
+const totalItems = ref(0);
 const isLoading = ref(false);
 const isSaving = ref(false);
 const errorMessage = ref("");
@@ -117,64 +134,54 @@ const errorMessage = ref("");
 const search = ref("");
 const currentPage = ref(1);
 const pageSize = ref(6);
+const totalPages = ref(1);
 
 const modalOpen = ref(false);
 const modalMode = ref("create");
 const modalInitial = ref(null);
 const editingId = ref(null);
 
-// Filtro en frontend (ahora sí funcionará porque mapItem asegura que 'nombre' exista)
-const filteredItems = computed(() => {
-  const term = search.value.trim().toLowerCase();
-  if (!term) return items.value;
+const visibleCount = computed(() => items.value.length);
 
-  return items.value.filter((i) => {
-    // Buscamos en nombre o descripcion para asegurar
-    const haystack = `${i.nombre} ${i.descripcion} ${i.id}`.toLowerCase();
-    return haystack.includes(term);
-  });
-});
-
-const filteredCount = computed(() => filteredItems.value.length);
-const totalItems = computed(() => items.value.length);
-
-const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredCount.value / pageSize.value))
-);
-
-const pagedItems = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  return filteredItems.value.slice(start, start + pageSize.value);
-});
-
-/* ======================
-   WATCHERS
-====================== */
-watch(search, () => (currentPage.value = 1));
-
-watch(totalPages, (val) => {
-  if (currentPage.value > val) currentPage.value = val;
-});
-
-/* ======================
-   METHODS
-====================== */
 const loadItems = async () => {
   isLoading.value = true;
   errorMessage.value = "";
   try {
-    const res = await getEventos();
-    const list = resolveList(res);
-    // Mapeamos los datos para corregir el problema nombre vs descripcion
+    const res = await getEventos({
+      nombre: search.value,
+      page: currentPage.value,
+      size: pageSize.value,
+    });
+
+    const payload = unwrap(res);
+    const { list, totalPages: tp, total } = parsePaginated(payload);
+
     items.value = list.map(mapItem);
+    totalPages.value = tp || 1;
+    totalItems.value = total ?? items.value.length;
+
+    if (currentPage.value > totalPages.value) currentPage.value = totalPages.value;
+    if (currentPage.value < 1) currentPage.value = 1;
   } catch (e) {
     console.error("Error cargando eventos:", e);
-    errorMessage.value = "No se pudo cargar eventos.";
+    errorMessage.value =
+      e?.response?.data?.message || e?.message || "No se pudo cargar eventos.";
     items.value = [];
+    totalPages.value = 1;
+    totalItems.value = 0;
   } finally {
     isLoading.value = false;
   }
 };
+
+watch(search, () => {
+  currentPage.value = 1;
+  loadItems();
+});
+watch(currentPage, loadItems);
+watch(totalPages, (val) => {
+  if (currentPage.value > val) currentPage.value = val;
+});
 
 const openCreate = () => {
   modalMode.value = "create";
@@ -185,7 +192,6 @@ const openCreate = () => {
 
 const openEdit = (row) => {
   modalMode.value = "edit";
-  // Pasamos el objeto mapeado
   modalInitial.value = { ...row };
   editingId.value = row.id;
   modalOpen.value = true;
@@ -198,7 +204,6 @@ const closeModal = () => {
 };
 
 const saveItem = async (payload) => {
-  // El formulario envía 'nombre', aseguramos que no esté vacío
   const nombre = payload?.nombre ? String(payload.nombre).trim() : "";
   if (!nombre) return;
 
@@ -208,31 +213,17 @@ const saveItem = async (payload) => {
   try {
     if (modalMode.value === "create") {
       const res = await createEvento({ nombre });
-      const saved = res?.data?.data ?? res?.data;
-      if (saved?.id != null) {
-        items.value.push(mapItem(saved));
-      } else {
-        await loadItems();
-      }
+      if (res?.data?.success === false) throw new Error(res?.data?.message || "No se pudo guardar.");
     } else {
       if (editingId.value == null) return;
-
       const res = await updateEvento(editingId.value, { nombre });
-      const saved = res?.data?.data ?? res?.data;
-
-      // Actualizamos la lista localmente
-      if (saved?.id != null) {
-        const updated = mapItem(saved);
-        const idx = items.value.findIndex(i => String(i.id) === String(editingId.value));
-        if (idx !== -1) items.value[idx] = updated;
-      } else {
-        await loadItems();
-      }
+      if (res?.data?.success === false) throw new Error(res?.data?.message || "No se pudo guardar.");
     }
+    await loadItems();
     closeModal();
   } catch (e) {
     console.error("Error guardando evento:", e);
-    errorMessage.value = "Error guardando el evento.";
+    errorMessage.value = e?.response?.data?.message || e?.message || "Error guardando el evento.";
   } finally {
     isSaving.value = false;
   }
@@ -242,11 +233,22 @@ const removeItem = async (row) => {
   if (!confirm(`¿Eliminar el evento "${row.nombre}"?`)) return;
 
   try {
-    await deleteEvento(row.id);
-    items.value = items.value.filter((i) => String(i.id) !== String(row.id));
+    const res = await deleteEvento(row.id);
+    if (res?.data?.success === false) {
+      throw new Error(res?.data?.message || "No se pudo eliminar el evento.");
+    }
+    const message = res?.data?.message || "Éxito";
+    const isLastItemOnPage = items.value.length === 1 && currentPage.value > 1;
+    if (isLastItemOnPage) {
+      currentPage.value -= 1;
+    } else {
+      await loadItems();
+    }
+    alert(message);
   } catch (e) {
     console.error("Error eliminando evento:", e);
-    alert("No se pudo eliminar el evento.");
+    const msg = e?.response?.data?.message || e?.message || "No se pudo eliminar el evento.";
+    alert(msg);
   }
 };
 

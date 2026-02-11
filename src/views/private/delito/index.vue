@@ -18,8 +18,8 @@
         </div>
 
         <div class="stat-card">
-          <span class="label">Visibles</span>
-          <strong>{{ filteredCount }}</strong>
+          <span class="label">En esta página</span>
+          <strong>{{ visibleCount }}</strong>
           <span class="hint">Resultado del filtro</span>
         </div>
 
@@ -34,7 +34,7 @@
     <section class="panel">
       <DelitoToolbar
         :search="search"
-        :total="filteredCount"
+        :total="totalItems"
         @update:search="search = $event"
         @create="openCreate"
       />
@@ -47,7 +47,7 @@
 
       <DelitoTable
         v-else
-        :items="pagedItems"
+        :items="items"
         @edit="openEdit"
         @remove="removeItem"
       />
@@ -55,6 +55,8 @@
       <DelitoPagination
         :current-page="currentPage"
         :total-pages="totalPages"
+        :page-size="pageSize"
+        :total="totalItems"
         @update:page="currentPage = $event"
       />
     </section>
@@ -72,7 +74,6 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
-// Importa el servicio desde donde lo tengas
 import {
   getDelitos,
   createDelito,
@@ -85,16 +86,48 @@ import DelitoTable from "./components/DelitoTable.vue";
 import DelitoPagination from "./components/DelitoPagination.vue";
 import DelitoFormModal from "./components/DelitoFormModal.vue";
 
-// Función auxiliar para extraer datos de la respuesta
-const resolveList = (response) => {
-  const payload = response?.data?.data ?? response?.data;
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.items)) return payload.items;
-  return [];
+const unwrap = (maybeAxiosResponse) => {
+  if (maybeAxiosResponse && typeof maybeAxiosResponse === "object" && "data" in maybeAxiosResponse) {
+    return maybeAxiosResponse.data;
+  }
+  return maybeAxiosResponse;
+};
+
+const parsePaginated = (payload) => {
+  const top = payload || {};
+  const inner = top.data && typeof top.data === "object" && !Array.isArray(top.data) ? top.data : null;
+
+  const list =
+    (Array.isArray(top.data) ? top.data : null) ??
+    (Array.isArray(inner?.data) ? inner.data : null) ??
+    (Array.isArray(inner?.items) ? inner.items : null) ??
+    (Array.isArray(inner?.rows) ? inner.rows : null) ??
+    (Array.isArray(top.items) ? top.items : null) ??
+    (Array.isArray(top.rows) ? top.rows : null) ??
+    [];
+
+  const rawTotalPages =
+    top.totalPages ?? inner?.totalPages ?? inner?.last_page ?? inner?.lastPage ?? inner?.total_pages;
+  const totalPages = Math.max(1, Number(rawTotalPages) || 1);
+
+  const rawTotal =
+    top.total ?? inner?.total ?? inner?.totalRecords ?? inner?.totalElements ?? inner?.total_items;
+  const total = Number(rawTotal) || list.length;
+
+  return { list, totalPages, total };
+};
+
+const mapItem = (row) => {
+  const rawId = row?.id ?? row?.delitoId ?? row?.idDelito;
+  const idNum = Number(rawId);
+  return {
+    id: Number.isNaN(idNum) ? rawId : idNum,
+    nombre: row?.nombre ?? row?.name ?? row?.delito ?? "",
+  };
 };
 
 const items = ref([]);
+const totalItems = ref(0);
 const isLoading = ref(false);
 const isSaving = ref(false);
 const errorMessage = ref("");
@@ -102,47 +135,54 @@ const errorMessage = ref("");
 const search = ref("");
 const currentPage = ref(1);
 const pageSize = ref(10);
+const totalPages = ref(1);
 
 const modalOpen = ref(false);
 const modalMode = ref("create");
 const modalInitial = ref(null);
 const editingId = ref(null);
 
-// Filtro Frontend (si el backend no filtra, o para inmediatez)
-const filteredItems = computed(() => {
-  const term = search.value.trim().toLowerCase();
-  if (!term) return items.value;
-  return items.value.filter((i) => {
-    const haystack = `${i.nombre} ${i.id}`.toLowerCase();
-    return haystack.includes(term);
-  });
-});
-
-const filteredCount = computed(() => filteredItems.value.length);
-const totalItems = computed(() => items.value.length);
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredCount.value / pageSize.value)));
-
-const pagedItems = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  return filteredItems.value.slice(start, start + pageSize.value);
-});
-
-watch(search, () => (currentPage.value = 1));
+const visibleCount = computed(() => items.value.length);
 
 const loadItems = async () => {
   isLoading.value = true;
   errorMessage.value = "";
   try {
-    const res = await getDelitos();
-    items.value = resolveList(res);
+    const res = await getDelitos({
+      nombre: search.value,
+      page: currentPage.value,
+      size: pageSize.value,
+    });
+
+    const payload = unwrap(res);
+    const { list, totalPages: tp, total } = parsePaginated(payload);
+
+    items.value = list.map(mapItem);
+    totalPages.value = tp || 1;
+    totalItems.value = total ?? items.value.length;
+
+    if (currentPage.value > totalPages.value) currentPage.value = totalPages.value;
+    if (currentPage.value < 1) currentPage.value = 1;
   } catch (e) {
     console.error("Error cargando delitos:", e);
-    errorMessage.value = "No se pudo cargar delitos.";
+    errorMessage.value =
+      e?.response?.data?.message || e?.message || "No se pudo cargar delitos.";
     items.value = [];
+    totalPages.value = 1;
+    totalItems.value = 0;
   } finally {
     isLoading.value = false;
   }
 };
+
+watch(search, () => {
+  currentPage.value = 1;
+  loadItems();
+});
+watch(currentPage, loadItems);
+watch(totalPages, (val) => {
+  if (currentPage.value > val) currentPage.value = val;
+});
 
 const openCreate = () => {
   modalMode.value = "create";
@@ -174,26 +214,18 @@ const saveItem = async (payload) => {
   try {
     if (modalMode.value === "create") {
       const res = await createDelito({ nombre });
-      // Si la respuesta trae el objeto creado, lo agregamos
-      const saved = res?.data?.data ?? res?.data;
-      if (saved?.id) items.value.push(saved);
-      else await loadItems();
+      if (res?.data?.success === false) throw new Error(res?.data?.message || "No se pudo guardar.");
     } else {
       if (!editingId.value) return;
       const res = await updateDelito(editingId.value, { nombre });
-      const saved = res?.data?.data ?? res?.data;
-      
-      if (saved?.id) {
-        const idx = items.value.findIndex(i => i.id === editingId.value);
-        if (idx !== -1) items.value[idx] = saved;
-      } else {
-        await loadItems();
-      }
+      if (res?.data?.success === false) throw new Error(res?.data?.message || "No se pudo guardar.");
     }
+
+    await loadItems();
     closeModal();
   } catch (e) {
     console.error("Error guardando delito:", e);
-    errorMessage.value = "Error al guardar el delito.";
+    errorMessage.value = e?.response?.data?.message || e?.message || "Error al guardar el delito.";
   } finally {
     isSaving.value = false;
   }
@@ -202,11 +234,22 @@ const saveItem = async (payload) => {
 const removeItem = async (row) => {
   if (!confirm(`¿Eliminar el delito "${row.nombre}"?`)) return;
   try {
-    await deleteDelito(row.id);
-    items.value = items.value.filter((i) => i.id !== row.id);
+    const res = await deleteDelito(row.id);
+    if (res?.data?.success === false) {
+      throw new Error(res?.data?.message || "No se pudo eliminar el registro.");
+    }
+    const message = res?.data?.message || "Éxito";
+    const isLastItemOnPage = items.value.length === 1 && currentPage.value > 1;
+    if (isLastItemOnPage) {
+      currentPage.value -= 1;
+    } else {
+      await loadItems();
+    }
+    alert(message);
   } catch (e) {
     console.error("Error eliminando delito:", e);
-    alert("No se pudo eliminar el registro.");
+    const msg = e?.response?.data?.message || e?.message || "No se pudo eliminar el registro.";
+    alert(msg);
   }
 };
 
