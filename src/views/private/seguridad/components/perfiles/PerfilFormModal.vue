@@ -160,13 +160,6 @@ const normalizeDetallePerfil = (res) => {
   return { detalle, permisos };
 };
 
-// Heurística para compensar si backend devolvió VIEW/EDIT invertidos.
-// (Si hay permisos con EDIT=true y VIEW=false, asumimos swap)
-const shouldSwap = (permisos) => {
-  const suspicious = (permisos || []).filter(p => !!p.EDIT && !p.VIEW).length;
-  return suspicious > 0;
-};
-
 const buildMatrix = async () => {
   form.nombre = props.initialData?.nombre || '';
   form.descripcion = props.initialData?.descripcion || '';
@@ -191,14 +184,12 @@ const buildMatrix = async () => {
       const resDetalle = await getDetallePerfil(props.initialData.id);
 
       const { permisos } = normalizeDetallePerfil(resDetalle);
-      const useSwap = shouldSwap(permisos);
 
       permisos.forEach(activo => {
         const match = tempPermissions.find(p => p.endpoint === activo.endpoint);
         if (match) {
-          // ✅ lectura correcta (y future-proof por heurística)
-          match.VIEW = useSwap ? !!activo.EDIT : !!activo.VIEW;
-          match.EDIT = useSwap ? !!activo.VIEW : !!activo.EDIT;
+          match.VIEW = !!activo.VIEW;
+          match.EDIT = !!activo.EDIT;
         }
       });
     }
