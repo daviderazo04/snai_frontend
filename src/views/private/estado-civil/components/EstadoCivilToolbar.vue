@@ -5,9 +5,22 @@
         <h2>Listado de estado civil</h2>
         <p class="subtitle">{{ total }} registros disponibles</p>
       </div>
-      <button class="primary" type="button" @click="$emit('create')">
-        Nuevo estado civil
-      </button>
+
+      <div class="actions-right">
+        <!-- Botón Limpiar -->
+        <button
+          v-if="search"
+          type="button"
+          class="btn-clear"
+          @click="$emit('update:search', '')"
+        >
+          🧹 Limpiar
+        </button>
+
+        <button class="primary" type="button" @click="$emit('create')">
+          + Nuevo estado civil
+        </button>
+      </div>
     </div>
 
     <div class="filters">
@@ -27,14 +40,8 @@
 <script>
 export default {
   props: {
-    search: {
-      type: String,
-      default: "",
-    },
-    total: {
-      type: Number,
-      default: 0,
-    },
+    search: { type: String, default: "" },
+    total: { type: Number, default: 0 },
   },
   emits: ["update:search", "create"],
 };
@@ -66,6 +73,12 @@ export default {
   font-size: 0.9rem;
 }
 
+.actions-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .primary {
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
   color: white;
@@ -85,8 +98,9 @@ export default {
 
 .filters {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: 1fr;
   gap: 14px;
+  align-items: center;
 }
 
 .field {
@@ -112,13 +126,39 @@ export default {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
+/* Botón Limpiar */
+.btn-clear {
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  color: #475569;
+  font-size: 0.85rem;
+  height: 36px;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.btn-clear:hover {
+  background: #f1f5f9;
+}
+
 @media (max-width: 720px) {
   .title-block {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .primary {
+  .actions-right {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .primary,
+  .btn-clear {
     width: 100%;
   }
 }

@@ -6,9 +6,20 @@
         <p class="subtitle">{{ total }} registros disponibles</p>
       </div>
 
-      <button class="primary" type="button" @click="$emit('create')">
-        Nuevo delito
-      </button>
+      <div class="actions-right">
+        <button
+          v-if="search"
+          type="button"
+          class="btn-clear"
+          @click="$emit('update:search', '')"
+        >
+          🧹 Limpiar
+        </button>
+
+        <button class="primary" type="button" @click="$emit('create')">
+          + Nuevo delito
+        </button>
+      </div>
     </div>
 
     <div class="filters">
@@ -34,32 +45,116 @@ defineEmits(["update:search", "create"]);
 </script>
 
 <style scoped>
-.toolbar { display: flex; flex-direction: column; gap: 18px; }
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
 
 .title-block {
-  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
-.title-block h2 { margin: 0 0 4px; font-size: 1.2rem; color: #0f172a; }
-.subtitle { margin: 0; color: #64748b; font-size: 0.9rem; }
+
+.title-block h2 {
+  margin: 0 0 4px;
+  font-size: 1.2rem;
+  color: #0f172a;
+}
+
+.subtitle {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.actions-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
 .primary {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border: none;
-  padding: 10px 16px; border-radius: 10px; font-weight: 600; cursor: pointer;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
   box-shadow: 0 6px 16px rgba(37, 99, 235, 0.25);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-.primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3); }
 
-.filters { display: grid; grid-template-columns: 1fr; gap: 14px; }
-.field { display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; color: #475569; }
-.field input {
-  padding: 10px 12px; border-radius: 10px; border: 1px solid #e2e8f0;
-  background: white; font-size: 0.95rem; color: #0f172a;
+.primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
 }
-.field input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+
+.filters {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  align-items: center;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.field input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.field input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.btn-clear {
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  color: #475569;
+  transition: background 0.15s ease;
+  font-size: 0.85rem;
+  height: 36px; /* altura para alinear con botón primary */
+  white-space: nowrap;
+}
+
+.btn-clear:hover {
+  background: #f1f5f9;
+}
 
 @media (max-width: 720px) {
-  .title-block { flex-direction: column; align-items: flex-start; }
-  .primary { width: 100%; }
+  .title-block {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .actions-right {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .primary {
+    width: 100%;
+  }
 }
 </style>

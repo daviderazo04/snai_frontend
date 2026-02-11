@@ -1,4 +1,3 @@
-<!-- src/views/private/evento/components/EventoToolbar.vue -->
 <template>
   <div class="toolbar">
     <input
@@ -7,6 +6,17 @@
       :value="search"
       @input="$emit('update:search', $event.target.value)"
     />
+
+    <!-- Botón Limpiar -->
+    <button
+      v-if="search"
+      type="button"
+      class="btn-clear"
+      @click="$emit('update:search', '')"
+    >
+      🧹 Limpiar
+    </button>
+
     <button class="btn-primary" @click="$emit('create')">+ Nuevo evento</button>
   </div>
 </template>
@@ -16,6 +26,7 @@ defineProps({
   search: String,
   total: Number,
 });
+defineEmits(["update:search", "create"]);
 </script>
 
 <style scoped>
@@ -62,5 +73,33 @@ defineProps({
 
 .btn-primary:active {
   transform: translateY(1px);
+}
+
+/* Botón Limpiar */
+.btn-clear {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  color: #475569;
+  transition: background 0.15s ease;
+}
+
+.btn-clear:hover {
+  background: #f1f5f9;
+}
+
+@media (max-width: 720px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-primary,
+  .btn-clear {
+    width: 100%;
+  }
 }
 </style>

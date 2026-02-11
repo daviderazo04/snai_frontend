@@ -5,9 +5,21 @@
         <h2>Listado de provincias</h2>
         <p class="subtitle">{{ total }} registros disponibles</p>
       </div>
-      <button class="primary" type="button" @click="$emit('create')">
-        Nueva provincia
-      </button>
+
+      <div class="buttons-right">
+        <!-- Botón Limpiar -->
+        <button
+          v-if="localSearch"
+          class="btn-clear"
+          @click="clearSearch"
+        >
+          🧹 Limpiar
+        </button>
+
+        <button class="primary" type="button" @click="$emit('create')">
+          + Nueva provincia
+        </button>
+      </div>
     </div>
 
     <div class="filters">
@@ -15,9 +27,9 @@
         <span class="label">Buscar</span>
         <input
           type="search"
-          :value="search"
+          v-model="localSearch"
           placeholder="Nombre o ID"
-          @input="$emit('update:search', $event.target.value)"
+          @input="emitSearch"
         />
       </label>
     </div>
@@ -37,6 +49,25 @@ export default {
     },
   },
   emits: ["update:search", "create"],
+  data() {
+    return {
+      localSearch: this.search,
+    };
+  },
+  watch: {
+    search(val) {
+      this.localSearch = val;
+    },
+  },
+  methods: {
+    emitSearch() {
+      this.$emit("update:search", this.localSearch);
+    },
+    clearSearch() {
+      this.localSearch = "";
+      this.$emit("update:search", "");
+    },
+  },
 };
 </script>
 
@@ -66,6 +97,12 @@ export default {
   font-size: 0.9rem;
 }
 
+.buttons-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .primary {
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
   color: white;
@@ -87,6 +124,7 @@ export default {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 14px;
+  align-items: center;
 }
 
 .field {
@@ -112,10 +150,34 @@ export default {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
+.btn-clear {
+  padding: 6px 12px;       /* Más pequeño */
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  color: #475569;
+  transition: background 0.15s ease;
+  font-size: 0.85rem;       /* Texto un poco más pequeño */
+  height: 36px;             /* Altura para que alinee bien con botón principal */
+  white-space: nowrap;
+}
+
+.btn-clear:hover {
+  background: #f1f5f9;
+}
+
 @media (max-width: 720px) {
   .title-block {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .buttons-right {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 8px;
   }
 
   .primary {

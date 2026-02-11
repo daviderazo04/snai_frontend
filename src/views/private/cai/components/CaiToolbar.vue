@@ -5,9 +5,21 @@
         <h2>Listado de CAI</h2>
         <p class="subtitle">{{ total }} registros disponibles</p>
       </div>
-      <button class="primary" type="button" @click="$emit('create')">
-        Nuevo CAI
-      </button>
+
+      <div class="buttons-right">
+        <button
+          v-if="localSearch || localProvinceId || localCantonId"
+          type="button"
+          class="btn-clear"
+          @click="clearFilters"
+        >
+          🧹 Limpiar
+        </button>
+
+        <button class="primary" type="button" @click="$emit('create')">
+          + Nuevo CAI
+        </button>
+      </div>
     </div>
 
     <div class="filters">
@@ -15,25 +27,27 @@
         <span class="label">Buscar CAI</span>
         <input
           type="search"
-          :value="search"
+          v-model="localSearch"
           placeholder="Nombre del CAI"
-          @input="$emit('update:search', $event.target.value)"
+          @input="emitSearch"
         />
       </label>
+
       <label class="field">
         <span class="label">Provincia</span>
-        <select :value="provinceId" @change="$emit('update:province', $event.target.value)">
-          <option value="">Todas las provincias</option>
-          <option v-for="provincia in provincias" :key="provincia.id" :value="provincia.id">
+        <select v-model="localProvinceId" @change="emitProvince" :disabled="loadingData">
+          <option value="">{{ loadingData ? 'Cargando...' : 'Todas las provincias' }}</option>
+          <option v-for="provincia in listaProvincias" :key="provincia.id" :value="provincia.id">
             {{ provincia.nombre }}
           </option>
         </select>
       </label>
+
       <label class="field">
-        <span class="label">Canton</span>
-        <select :value="cantonId" @change="$emit('update:canton', $event.target.value)">
-          <option value="">Todos los cantones</option>
-          <option v-for="canton in cantones" :key="canton.id" :value="canton.id">
+        <span class="label">Cantón</span>
+        <select v-model="localCantonId" @change="emitCanton" :disabled="loadingData">
+          <option value="">{{ loadingData ? 'Cargando...' : 'Todos los cantones' }}</option>
+          <option v-for="canton in listaCantones" :key="canton.id" :value="canton.id">
             {{ canton.nombre }}
           </option>
         </select>
@@ -43,119 +57,88 @@
 </template>
 
 <script>
+// Importamos los servicios para la carga masiva
+import { getProvincias } from "@/service/provincias.service";
+import { getCantones } from "@/service/cantones.service";
+
 export default {
   props: {
-    search: {
-      type: String,
-      default: "",
-    },
-    provinceId: {
-      type: [String, Number],
-      default: "",
-    },
-    cantonId: {
-      type: [String, Number],
-      default: "",
-    },
-    provincias: {
-      type: Array,
-      default: () => [],
-    },
-    cantones: {
-      type: Array,
-      default: () => [],
-    },
-    total: {
-      type: Number,
-      default: 0,
-    },
+    search: { type: String, default: "" },
+    provinceId: { type: [String, Number], default: "" },
+    cantonId: { type: [String, Number], default: "" },
+    total: { type: Number, default: 0 },
   },
   emits: ["update:search", "update:province", "update:canton", "create"],
+  data() {
+    return {
+      localSearch: this.search,
+      localProvinceId: this.provinceId,
+      localCantonId: this.cantonId,
+      listaProvincias: [],
+      listaCantones: [],
+      loadingData: false,
+    };
+  },
+  watch: {
+    search(val) { this.localSearch = val; },
+    provinceId(val) { this.localProvinceId = val; },
+    cantonId(val) { this.localCantonId = val; },
+  },
+  async mounted() {
+    await this.loadCatalogs();
+  },
+  methods: {
+    async loadCatalogs() {
+      this.loadingData = true;
+      try {
+        // Solicitamos carga masiva (size: 1000) para evitar cortes de paginación
+        const [resProv, resCant] = await Promise.all([
+          getProvincias({ size: 1000 }),
+          getCantones({ size: 1000 })
+        ]);
+        
+        this.listaProvincias = resProv.data?.data || resProv.data || [];
+        this.listaCantones = resCant.data?.data || resCant.data || [];
+      } catch (error) {
+        console.error("Error cargando catálogos en CAI Toolbar:", error);
+      } finally {
+        this.loadingData = false;
+      }
+    },
+    emitSearch() { this.$emit("update:search", this.localSearch); },
+    emitProvince() { this.$emit("update:province", this.localProvinceId); },
+    emitCanton() { this.$emit("update:canton", this.localCantonId); },
+    clearFilters() {
+      this.localSearch = "";
+      this.localProvinceId = "";
+      this.localCantonId = "";
+      this.$emit("update:search", "");
+      this.$emit("update:province", "");
+      this.$emit("update:canton", "");
+    },
+  },
 };
 </script>
 
 <style scoped>
-.toolbar {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.title-block {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.title-block h2 {
-  margin: 0 0 4px;
-  font-size: 1.2rem;
-  color: #0f172a;
-}
-
-.subtitle {
-  margin: 0;
-  color: #64748b;
-  font-size: 0.9rem;
-}
-
-.primary {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.25);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
-}
-
-.filters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 0.85rem;
-  color: #475569;
-}
-
-.field input,
-.field select {
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  background: white;
-  font-size: 0.95rem;
-  color: #0f172a;
-}
-
-.field input:focus,
-.field select:focus {
-  outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-}
+/* Tus estilos se mantienen idénticos */
+.toolbar { display: flex; flex-direction: column; gap: 18px; }
+.title-block { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.title-block h2 { margin: 0 0 4px; font-size: 1.2rem; color: #0f172a; }
+.subtitle { margin: 0; color: #64748b; font-size: 0.9rem; }
+.buttons-right { display: flex; align-items: center; gap: 10px; }
+.primary { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border: none; padding: 10px 16px; border-radius: 10px; font-weight: 600; cursor: pointer; box-shadow: 0 6px 16px rgba(37, 99, 235, 0.25); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3); }
+.filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; align-items: center; }
+.field { display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; color: #475569; }
+.field input, .field select { padding: 10px 12px; border-radius: 10px; border: 1px solid #e2e8f0; background: white; font-size: 0.95rem; color: #0f172a; }
+.field input:focus, .field select:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+.btn-clear { padding: 6px 12px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; cursor: pointer; font-weight: 600; color: #475569; transition: background 0.15s ease; font-size: 0.85rem; height: 36px; white-space: nowrap; }
+.btn-clear:hover { background: #f1f5f9; }
 
 @media (max-width: 720px) {
-  .title-block {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .primary {
-    width: 100%;
-  }
+  .title-block { flex-direction: column; align-items: flex-start; }
+  .buttons-right { width: 100%; justify-content: flex-start; gap: 8px; }
+  .primary { width: 100%; }
 }
 </style>

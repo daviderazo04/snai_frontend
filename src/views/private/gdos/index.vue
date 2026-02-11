@@ -6,7 +6,7 @@
         <p class="eyebrow">Catálogos</p>
         <h1>GDO (Grupos Organizados)</h1>
         <p class="subtitle">
-          Administración del catálogo de grupos G2 para el sistema penitenciario.
+          Administración del catálogo de GDOs para el sistema penitenciario.
         </p>
       </div>
 

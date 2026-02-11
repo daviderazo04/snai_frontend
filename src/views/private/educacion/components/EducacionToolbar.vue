@@ -6,9 +6,22 @@
         <h2>Listado de Educación</h2>
         <p class="subtitle">{{ total }} registros disponibles</p>
       </div>
-      <button class="btn-primary" type="button" @click="$emit('create')">
-        + Nuevo registro
-      </button>
+
+      <div class="actions">
+        <!-- Botón Limpiar (solo visible si hay filtros activos) -->
+        <button
+          v-if="hasFilters"
+          class="btn-clear"
+          type="button"
+          @click="clearFilters"
+        >
+          🧹 Limpiar
+        </button>
+
+        <button class="btn-primary" type="button" @click="$emit('create')">
+          + Nuevo registro
+        </button>
+      </div>
     </div>
 
     <div class="filters">
@@ -24,7 +37,10 @@
 
       <label class="field">
         <span class="label">Estudia</span>
-        <select :value="estudia" @change="$emit('update:estudia', $event.target.value)">
+        <select
+          :value="estudia"
+          @change="$emit('update:estudia', $event.target.value)"
+        >
           <option value="">Todos</option>
           <option value="1">Sí estudia</option>
           <option value="0">No estudia</option>
@@ -55,13 +71,41 @@
 </template>
 
 <script setup>
-defineProps({
-  search: String,
+import { computed } from "vue";
+
+const props = defineProps({
+  search: { type: String, default: "" },
   total: Number,
-  estudia: String,
-  nivel: String,
-  institucion: String,
+  estudia: { type: String, default: "" },
+  nivel: { type: String, default: "" },
+  institucion: { type: String, default: "" },
 });
+
+const emit = defineEmits([
+  "update:search",
+  "update:estudia",
+  "update:nivel",
+  "update:institucion",
+  "create",
+]);
+
+/* Detectar si hay filtros activos */
+const hasFilters = computed(() => {
+  return (
+    props.search ||
+    props.estudia ||
+    props.nivel ||
+    props.institucion
+  );
+});
+
+/* Limpiar todos los filtros */
+const clearFilters = () => {
+  emit("update:search", "");
+  emit("update:estudia", "");
+  emit("update:nivel", "");
+  emit("update:institucion", "");
+};
 </script>
 
 <style scoped>
@@ -90,6 +134,13 @@ defineProps({
   font-size: 0.9rem;
 }
 
+.actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Botón principal */
 .btn-primary {
   border: none;
   color: white;
@@ -111,6 +162,24 @@ defineProps({
   transform: translateY(1px);
 }
 
+/* Botón limpiar */
+.btn-clear {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  color: #475569;
+  transition: all 0.2s ease;
+}
+
+.btn-clear:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+/* Filtros */
 .filters {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -156,7 +225,12 @@ defineProps({
     align-items: flex-start;
   }
 
-  .btn-primary {
+  .actions {
+    width: 100%;
+  }
+
+  .btn-primary,
+  .btn-clear {
     width: 100%;
   }
 }

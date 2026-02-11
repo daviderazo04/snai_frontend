@@ -8,6 +8,16 @@
       @input="$emit('update:search', $event.target.value)"
     />
 
+    <!-- Botón Limpiar (solo visible si hay búsqueda) -->
+    <button
+      v-if="search"
+      class="btn-clear"
+      @click="clearFilters"
+    >
+      <span class="icon">🧹</span>
+      Limpiar
+    </button>
+
     <button class="btn-primary" @click="$emit('create')">
       + Nuevo registro
     </button>
@@ -15,10 +25,19 @@
 </template>
 
 <script setup>
-defineProps({
-  search: String,
+const props = defineProps({
+  search: {
+    type: String,
+    default: "",
+  },
   total: Number,
 });
+
+const emit = defineEmits(["update:search", "create"]);
+
+const clearFilters = () => {
+  emit("update:search", "");
+};
 </script>
 
 <style scoped>
@@ -47,6 +66,7 @@ defineProps({
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
 }
 
+/* Botón principal */
 .btn-primary {
   border: none;
   color: white;
@@ -65,5 +85,22 @@ defineProps({
 
 .btn-primary:active {
   transform: translateY(1px);
+}
+
+/* Botón limpiar */
+.btn-clear {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  color: #475569;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-clear:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
 </style>

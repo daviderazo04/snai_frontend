@@ -176,7 +176,7 @@ export default {
           { label: "Familia", path: "/app/familia", permission: "/familia", iconSvg: icons.family },
           { label: "Salud", path: "/app/salud", permission: "/salud", iconSvg: icons.health },
           { label: "Educación", path: "/app/educacion", permission: "/educacion", iconSvg: icons.book },
-          { label: "Ocupacion", path: "/app/ocupacion", permission: "/ocupacion", iconSvg: icons.job },
+          { label: "Ocupación", path: "/app/ocupacion", permission: "/ocupacion", iconSvg: icons.job },
           { label: "Traslados", path: "/app/traslados", permission: "/traslados", iconSvg: icons.transfer },
           { label: 'Jurídico', path: '/app/juridico', permission: '/juridico', iconSvg: icons.gavel},
 
@@ -197,8 +197,8 @@ export default {
         label: "PARÁMETROS",
         accordion: true,
         items: [
-          { label: "Delito", path: "/app/delito", permission: "/delito", iconSvg: icons.gavel },
-          { label: "Evento", path: "/app/evento", permission: "/evento", iconSvg: icons.calendar },
+          { label: "Infracción Penal", path: "/app/delito", permission: "/delito", iconSvg: icons.gavel },
+          { label: "Vinculación Familiar", path: "/app/evento", permission: "/evento", iconSvg: icons.calendar },
           { label: "Estado civil", path: "/app/estado-civil", permission: "/estado-civil", iconSvg: icons.userCheck },
           { label: "Etnia", path: "/app/etnia", permission: "/etnia", iconSvg: icons.users },
           { label: "GDO", path: "/app/gdos", permission: "/gdos", iconSvg: icons.star },

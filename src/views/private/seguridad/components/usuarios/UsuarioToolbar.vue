@@ -5,10 +5,23 @@
         <h2 class="main-title">Personal del Sistema</h2>
         <p class="subtitle">Gestión de cuentas de usuario y perfiles asignados</p>
       </div>
-      <button class="btn-create" @click="$emit('create')">
-        <span class="icon">+</span>
-        <span>Añadir Usuario</span>
-      </button>
+
+      <div class="actions-right">
+        <!-- Botón Limpiar -->
+        <button
+          v-if="search"
+          type="button"
+          class="btn-clear"
+          @click="clearSearch"
+        >
+          🧹 Limpiar
+        </button>
+
+        <button class="btn-create" @click="$emit('create')">
+          <span class="icon">+</span>
+          <span>Añadir Usuario</span>
+        </button>
+      </div>
     </div>
 
     <div class="filter-row">
@@ -27,7 +40,11 @@
 
 <script setup>
 defineProps(['search']);
-defineEmits(['update:search', 'create']);
+const emit = defineEmits(['update:search', 'create']);
+
+const clearSearch = () => {
+  emit('update:search', '');
+};
 </script>
 
 <style scoped>
@@ -35,8 +52,11 @@ defineEmits(['update:search', 'create']);
 
 .header-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
 
+.title-section { display: flex; flex-direction: column; gap: 4px; }
 .main-title { margin: 0; font-size: 1.5rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; }
-.subtitle { margin: 4px 0 0; font-size: 0.95rem; color: #64748b; }
+.subtitle { margin: 0; font-size: 0.95rem; color: #64748b; }
+
+.actions-right { display: flex; align-items: center; gap: 10px; }
 
 .btn-create {
   border: none; color: white; padding: 12px 24px; border-radius: 14px;
@@ -50,8 +70,25 @@ defineEmits(['update:search', 'create']);
 .btn-create:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(37, 99, 235, 0.3); }
 .btn-create .icon { font-size: 1.4rem; line-height: 1; }
 
-.filter-row { display: flex; width: 100%; }
+/* Botón Limpiar al lado derecho del header */
+.btn-clear {
+  border: none;
+  background: #f1f5f9;
+  padding: 10px 16px;
+  border-radius: 14px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s ease;
+}
 
+.btn-clear:hover { background: #e2e8f0; }
+
+.filter-row { display: flex; width: 100%; }
 .search-box { position: relative; flex: 1; max-width: 500px; }
 
 .search-icon {

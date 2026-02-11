@@ -4,38 +4,47 @@
       <div class="modal">
         <header class="modal-header">
           <div>
-            <p class="eyebrow">Formulario</p>
+            <p class="eyebrow">Administración Geográfica</p>
             <h3>
-              {{ mode === "edit" ? "Editar canton" : "Nuevo canton" }}
+              {{ mode === "edit" ? "Editar cantón" : "Nuevo cantón" }}
             </h3>
           </div>
           <button class="icon-btn" type="button" @click="$emit('close')">
-            X
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
         </header>
 
-        <form class="modal-body" @submit.prevent="submit">
-          <label class="field">
-            <span>Nombre</span>
-            <input v-model="form.nombre" type="text" required />
-          </label>
+        <div v-if="loadingProvincias" class="loading-state">
+          <div class="spinner"></div>
+          <p>Cargando lista de provincias...</p>
+        </div>
 
-          <label class="field">
-            <span>Provincia</span>
-            <select v-model.number="form.provinciaId" required>
-              <option disabled value="">Seleccione una provincia</option>
-              <option v-for="provincia in provincias" :key="provincia.id" :value="provincia.id">
-                {{ provincia.nombre }}
-              </option>
-            </select>
-          </label>
+        <form v-else class="modal-body" @submit.prevent="submit">
+          <div class="section-title">Datos del Cantón</div>
+          
+          <div class="form-row">
+            <label class="field">
+              <span>Nombre del Cantón</span>
+              <input v-model="form.nombre" type="text" placeholder="Ej: Quito" required />
+            </label>
+
+            <label class="field">
+              <span>Provincia</span>
+              <select v-model.number="form.provinciaId" required>
+                <option :value="null" disabled>Seleccione una provincia...</option>
+                <option v-for="provincia in listaProvincias" :key="provincia.id" :value="provincia.id">
+                  {{ provincia.nombre }}
+                </option>
+              </select>
+            </label>
+          </div>
 
           <div class="actions">
             <button class="ghost" type="button" @click="$emit('close')">
               Cancelar
             </button>
             <button class="primary" type="submit" :disabled="saving">
-              {{ saving ? "Guardando..." : "Guardar" }}
+              {{ saving ? "Guardando..." : "Guardar Registro" }}
             </button>
           </div>
         </form>
@@ -45,55 +54,57 @@
 </template>
 
 <script>
-import { ref, watch } from "vue";
+import { ref, watch, onMounted } from "vue";
+// Importamos el servicio de provincias para la carga interna
+import { getProvincias } from "@/service/provincias.service";
 
 const emptyForm = () => ({
   nombre: "",
-  provinciaId: "",
+  provinciaId: null,
 });
 
 export default {
   props: {
-    open: {
-      type: Boolean,
-      default: false,
-    },
-    mode: {
-      type: String,
-      default: "create",
-    },
-    initialData: {
-      type: Object,
-      default: null,
-    },
-    provincias: {
-      type: Array,
-      default: () => [],
-    },
-    saving: {
-      type: Boolean,
-      default: false,
-    },
+    open: Boolean,
+    mode: String,
+    initialData: Object,
+    saving: Boolean,
   },
   emits: ["close", "save"],
   setup(props, { emit }) {
     const form = ref(emptyForm());
+    const listaProvincias = ref([]);
+    const loadingProvincias = ref(false);
+
+    // Función para cargar la lista entera de provincias (sin paginación limitada)
+    const loadProvincias = async () => {
+      if (listaProvincias.value.length > 0) return;
+      loadingProvincias.value = true;
+      try {
+        // Pedimos un size grande para asegurar la lista completa
+        const res = await getProvincias({ size: 1000 });
+        listaProvincias.value = res.data?.data || res.data || [];
+      } catch (error) {
+        console.error("Error cargando provincias:", error);
+      } finally {
+        loadingProvincias.value = false;
+      }
+    };
 
     const syncForm = () => {
       if (props.initialData) {
-        form.value = {
-          ...emptyForm(),
-          ...props.initialData,
-        };
+        form.value = { ...emptyForm(), ...props.initialData };
       } else {
         form.value = emptyForm();
       }
     };
 
+    // Al abrir el modal, cargamos provincias y sincronizamos datos
     watch(
-      () => [props.open, props.initialData],
-      () => {
-        if (props.open) {
+      () => props.open,
+      async (isOpen) => {
+        if (isOpen) {
+          await loadProvincias();
           syncForm();
         }
       },
@@ -109,6 +120,8 @@ export default {
 
     return {
       form,
+      listaProvincias,
+      loadingProvincias,
       submit,
     };
   },
@@ -117,137 +130,73 @@ export default {
 
 <style scoped>
 .backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.55);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 24px;
-  z-index: 50;
+  position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
+  display: flex; justify-content: center; align-items: center; padding: 24px; z-index: 60;
 }
 
 .modal {
-  width: min(640px, 100%);
-  background: white;
-  border-radius: 18px;
-  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.2);
-  overflow: hidden;
+  width: min(640px, 100%); background: white; border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); display: flex; flex-direction: column;
 }
 
 .modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 24px;
-  background: linear-gradient(120deg, #1e293b, #2563eb);
-  color: white;
+  display: flex; align-items: center; justify-content: space-between; padding: 24px 32px;
+  background: linear-gradient(125deg, #0f172a 0%, #1d4ed8 55%, #38bdf8 100%); 
+  color: white; border-top-left-radius: 20px; border-top-right-radius: 20px;
 }
 
-.modal-header h3 {
-  margin: 4px 0 0;
-}
-
-.eyebrow {
-  margin: 0;
-  font-size: 0.75rem;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  opacity: 0.75;
-}
+.modal-header h3 { margin: 4px 0 0; font-weight: 700; }
+.eyebrow { margin: 0; font-size: 0.75rem; letter-spacing: 1px; text-transform: uppercase; opacity: 0.8; font-weight: 600; }
 
 .icon-btn {
-  background: rgba(255, 255, 255, 0.15);
-  border: none;
-  color: white;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  cursor: pointer;
+  background: rgba(255, 255, 255, 0.15); border: none; color: white; width: 36px; height: 36px;
+  border-radius: 10px; cursor: pointer; display: grid; place-items: center; transition: background 0.2s;
+}
+.icon-btn:hover { background: rgba(255, 255, 255, 0.25); }
+
+.modal-body { padding: 32px; display: flex; flex-direction: column; gap: 20px; }
+
+.section-title {
+  font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: 700;
+  border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;
 }
 
-.modal-body {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  padding: 24px;
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+.field { display: flex; flex-direction: column; gap: 6px; font-size: 0.875rem; color: #334155; font-weight: 500; }
+
+.field input, .field select {
+  padding: 10px 14px; border-radius: 10px; border: 1px solid #cbd5e1; font-size: 0.95rem;
+  color: #0f172a; background-color: #f8fafc; transition: all 0.2s;
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 0.85rem;
-  color: #475569;
+.field input:focus, .field select:focus {
+  outline: none; border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
-.field input {
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  font-size: 0.95rem;
-}
-
-.field select {
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  font-size: 0.95rem;
-  background: white;
-}
+.loading-state { padding: 40px; text-align: center; color: #64748b; }
+.spinner { width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 12px; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .actions {
-  grid-column: 1 / -1;
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 8px;
+  display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px; padding-top: 20px; border-top: 1px solid #f1f5f9;
 }
 
 .primary {
-  background: #2563eb;
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.primary:disabled {
-  cursor: not-allowed;
-  opacity: 0.7;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border: none; padding: 12px 24px;
+  border-radius: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
 }
 
 .ghost {
-  background: #f1f5f9;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 10px;
-  cursor: pointer;
+  background: white; border: 1px solid #cbd5e1; color: #475569; padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer;
 }
 
-.modal-fade-enter-active,
-.modal-fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-
-.modal-fade-enter-from,
-.modal-fade-leave-to {
-  opacity: 0;
-}
+.modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.2s ease; }
+.modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
 
 @media (max-width: 640px) {
-  .modal-body {
-    grid-template-columns: 1fr;
-  }
-
-  .actions {
-    flex-direction: column-reverse;
-  }
-
-  .actions button {
-    width: 100%;
-  }
+  .form-row { grid-template-columns: 1fr; }
+  .actions { flex-direction: column-reverse; }
+  .actions button { width: 100%; }
 }
 </style>

@@ -2,7 +2,6 @@
   <div class="toolbar">
     <div class="filters">
 
-      <!-- N° de causa -->
       <input
         type="text"
         placeholder="Buscar por N° de causa..."
@@ -10,16 +9,15 @@
         @input="emitTermino"
       />
 
-      <!-- Adolescente -->
       <div class="autocomplete" ref="adolescenteRef">
         <input
           type="text"
-          placeholder="Adolescente..."
+          placeholder="Buscar adolescente..."
           v-model="adolescenteQuery"
-          @focus="loadAdolescentesDefault"
+          @focus="showAdolescentes = true"
         />
 
-        <ul v-if="showAdolescentes">
+        <ul v-if="showAdolescentes && (adolescenteQuery || adolescentes.length)">
           <li
             v-for="a in adolescentes"
             :key="a.id"
@@ -28,22 +26,22 @@
             {{ a.label }}
           </li>
 
-          <li v-if="!adolescentes.length">
+          <li v-if="!adolescentes.length" class="no-results">
             Sin resultados
           </li>
         </ul>
       </div>
 
-      <!-- Delito -->
       <div class="autocomplete" ref="delitoRef">
         <input
           type="text"
-          placeholder="Delito..."
+          placeholder="Buscar delito..."
           v-model="delitoQuery"
+          @input="showDelitos = true"
           @focus="showDelitos = true"
         />
 
-        <ul v-if="showDelitos">
+        <ul v-if="showDelitos && (delitoQuery || filteredDelitos.length)">
           <li
             v-for="d in filteredDelitos"
             :key="d.id"
@@ -52,20 +50,23 @@
             {{ d.nombre }}
           </li>
 
-          <li v-if="!filteredDelitos.length">
+          <li v-if="!filteredDelitos.length" class="no-results">
             Sin resultados
           </li>
         </ul>
       </div>
 
-      <!-- Limpiar -->
-      <button class="btn-clear" @click="clearFilters">
-        <span class="icon">🧹</span>
-        Limpiar
+      <button
+        v-if="hasFilters"
+        class="btn-clear"
+        @click="clearFilters"
+        type="button"
+      >
+        扫 Limpiar
       </button>
     </div>
 
-    <button class="btn-primary" @click="$emit('create')">
+    <button class="btn-primary" @click="$emit('create')" type="button">
       + Nuevo Registro
     </button>
   </div>
@@ -101,37 +102,65 @@ const delitos = ref([]);
 const showAdolescentes = ref(false);
 const showDelitos = ref(false);
 
+/* ================= DETECTAR FILTROS ================= */
+
+const hasFilters = computed(() => {
+  return (
+    localTermino.value ||
+    adolescenteQuery.value ||
+    delitoQuery.value ||
+    props.adolescenteId ||
+    props.delitoId
+  );
+});
+
 /* ================= WATCH ================= */
 
 watch(() => props.termino, v => localTermino.value = v || "");
 
-/* ================= LOAD ================= */
+/* ================= LOAD DELITOS (Carga Completa) ================= */
 
 const loadDelitos = async () => {
-  const { data } = await getDelitos();
+  // Traemos 1000 para asegurar que el filtro por nombre encuentre todo
+  const { data } = await getDelitos({ size: 1000 }); 
   delitos.value = data?.data ?? data ?? [];
 };
 
 onMounted(loadDelitos);
 
-const loadAdolescentesDefault = async () => {
-  showAdolescentes.value = true;
+/* ================= BÚSQUEDA GLOBAL ADOLESCENTES ================= */
 
-  const res = await getAdolescentes({ page: 1, size: 10 });
+watch(adolescenteQuery, async (newValue) => {
+  if (!newValue) {
+    adolescentes.value = [];
+    return;
+  }
+
+  // Si ya tenemos un ID seleccionado y el query coincide con el label, no buscamos de nuevo
+  if (props.adolescenteId && adolescentes.value.some(a => a.label === newValue)) return;
+
+  const res = await getAdolescentes({
+    nombre: newValue, // Usamos el parámetro correcto de tu API para búsqueda global
+    page: 1,
+    size: 20,         // Traemos más resultados para filtrar mejor
+  });
+
   const data = res.data?.data ?? [];
 
   adolescentes.value = data.map(a => ({
     id: a.id,
     label: `${a.nombre} ${a.apellido}`,
-  }));
-};
+  })).slice(0, 5); // Mostramos solo los primeros 5 en la lista desplegable
+});
 
-/* ================= FILTER ================= */
+/* ================= FILTRO DELITOS EN MEMORIA ================= */
 
 const filteredDelitos = computed(() =>
-  delitos.value.filter(d =>
-    d.nombre.toLowerCase().includes(delitoQuery.value.toLowerCase())
-  )
+  delitos.value
+    .filter(d =>
+      d.nombre.toLowerCase().includes(delitoQuery.value.toLowerCase())
+    )
+    .slice(0, 5) // Solo mostramos los primeros 5 para mantener limpia la UI
 );
 
 /* ================= SELECT ================= */
@@ -161,6 +190,7 @@ const clearFilters = () => {
   adolescenteQuery.value = "";
   delitoQuery.value = "";
 
+  adolescentes.value = [];
   showAdolescentes.value = false;
   showDelitos.value = false;
 
@@ -186,6 +216,7 @@ const handleClickOutside = (e) => {
 onMounted(() => {
   document.addEventListener("click", handleClickOutside);
 });
+
 onBeforeUnmount(() => {
   document.removeEventListener("click", handleClickOutside);
 });
@@ -221,6 +252,13 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
 }
 
+.no-results {
+  padding: 10px 16px;
+  color: #94a3b8;
+  font-style: italic;
+  font-size: 0.85rem;
+}
+
 /* Botones */
 .btn-primary {
   border: none;
@@ -240,6 +278,7 @@ onBeforeUnmount(() => {
   cursor: pointer;
   font-weight: 600;
   color: #475569;
+  transition: background 0.15s ease;
 }
 
 .btn-clear:hover {
@@ -250,11 +289,6 @@ onBeforeUnmount(() => {
 
 .autocomplete {
   position: relative;
-}
-
-.autocomplete input {
-  position: relative;
-  z-index: 2;
 }
 
 .autocomplete ul {
@@ -271,12 +305,14 @@ onBeforeUnmount(() => {
   max-height: 220px;
   overflow-y: auto;
   animation: fadeDown 0.15s ease-out;
+  list-style: none;
 }
 
 .autocomplete ul li {
   padding: 10px 16px;
   cursor: pointer;
   font-size: 0.9rem;
+  color: #1e293b;
 }
 
 .autocomplete ul li:hover {
