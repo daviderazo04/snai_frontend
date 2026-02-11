@@ -18,7 +18,7 @@
       🧹 Limpiar
     </button>
 
-    <button class="btn-primary" @click="$emit('create')" type="button">
+    <button v-if="canEdit" class="btn-primary" @click="$emit('create')" type="button">
       + Nueva ocupación
     </button>
   </div>
@@ -31,6 +31,10 @@ const props = defineProps({
     default: "",
   },
   total: Number,
+  canEdit: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const emit = defineEmits(["update:search", "create"]);

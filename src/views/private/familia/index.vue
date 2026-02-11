@@ -11,6 +11,7 @@
       <FamiliaToolbar 
         v-model:search="search"
         :total="pagination.total"
+        :can-edit="canEdit"
         @create="openCreateModal"
       />
 
@@ -23,6 +24,7 @@
         <FamiliaTable 
           v-else
           :items="items"
+          :can-edit="canEdit"
           @edit="openEditModal"
           @remove="handleDelete"
         />
@@ -47,8 +49,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from "vue";
+import { ref, reactive, onMounted, watch, computed } from "vue";
 import { getFamilias, deleteFamilia } from "../../../service/familia.service";
+import { puedeEditar } from "@/utils/permisos";
 
 import FamiliaToolbar from "./components/FamiliaToolbar.vue";
 import FamiliaTable from "./components/FamiliaTable.vue";
@@ -69,6 +72,7 @@ const pagination = reactive({
 const modalOpen = ref(false);
 const modalMode = ref("create");
 const selectedItem = ref(null);
+const canEdit = computed(() => puedeEditar("/familia"));
 
 const loadItems = async () => {
   loading.value = true;
@@ -110,12 +114,14 @@ watch(search, () => {
 });
 
 const openCreateModal = () => {
+  if (!canEdit.value) return;
   modalMode.value = "create";
   selectedItem.value = null;
   modalOpen.value = true;
 };
 
 const openEditModal = (item) => {
+  if (!canEdit.value) return;
   modalMode.value = "edit";
   selectedItem.value = { ...item };
   modalOpen.value = true;
@@ -131,6 +137,7 @@ const handleSuccess = () => {
 };
 
 const handleDelete = async (item) => {
+  if (!canEdit.value) return;
   if (confirm(`¿Eliminar el registro de familia ID #${item.id}?`)) {
     try {
       await deleteFamilia(item.id);

@@ -18,7 +18,7 @@
           🧹 Limpiar
         </button>
 
-        <button class="btn-primary" type="button" @click="$emit('create')">
+        <button v-if="canEdit" class="btn-primary" type="button" @click="$emit('create')">
           + Nuevo registro
         </button>
       </div>
@@ -79,6 +79,10 @@ const props = defineProps({
   estudia: { type: String, default: "" },
   nivel: { type: String, default: "" },
   institucion: { type: String, default: "" },
+  canEdit: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const emit = defineEmits([

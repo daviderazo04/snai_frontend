@@ -32,6 +32,7 @@
       <EtniaToolbar
         :search="search"
         :total="totalEtnias"
+        :can-edit="canEdit"
         @update:search="search = $event"
         @create="openCreate"
       />
@@ -39,7 +40,7 @@
       <div v-if="isLoading" class="status">Cargando etnias...</div>
       <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
 
-      <EtniaTable :items="etnias" @edit="openEdit" @remove="removeEtnia" />
+      <EtniaTable :items="etnias" :can-edit="canEdit" @edit="openEdit" @remove="removeEtnia" />
 
       <EtniaPagination
         :current-page="currentPage"
@@ -69,6 +70,7 @@ import {
   updateEtnia,
   deleteEtnia,
 } from "../../../service/etnia.service.js";
+import { puedeEditar } from "@/utils/permisos";
 import EtniaToolbar from "./components/EtniaToolbar.vue";
 import EtniaTable from "./components/EtniaTable.vue";
 import EtniaPagination from "./components/EtniaPagination.vue";
@@ -140,6 +142,7 @@ export default {
     const modalMode = ref("create");
     const modalInitial = ref(null);
     const editingId = ref(null);
+    const canEdit = computed(() => puedeEditar("/etnia"));
 
     const visibleCount = computed(() => etnias.value.length);
 
@@ -186,6 +189,7 @@ export default {
     });
 
     const openCreate = () => {
+      if (!canEdit.value) return;
       modalMode.value = "create";
       modalInitial.value = null;
       editingId.value = null;
@@ -193,6 +197,7 @@ export default {
     };
 
     const openEdit = (item) => {
+      if (!canEdit.value) return;
       modalMode.value = "edit";
       modalInitial.value = { ...item };
       editingId.value = item.id;
@@ -206,6 +211,7 @@ export default {
     };
 
     const saveEtnia = async (payload) => {
+      if (!canEdit.value) return;
       const nombre = payload?.nombre ? String(payload.nombre).trim() : "";
       if (!nombre) return;
       if (modalMode.value === "edit" && editingId.value === null) return;
@@ -236,6 +242,7 @@ export default {
     };
 
     const removeEtnia = async (item) => {
+      if (!canEdit.value) return;
       const confirmed = window.confirm(
         `Eliminar la etnia ${item.nombre}? Esta accion no se puede revertir.`
       );
@@ -279,6 +286,7 @@ export default {
       modalOpen,
       modalMode,
       modalInitial,
+      canEdit,
       isLoading,
       isSaving,
       errorMessage,

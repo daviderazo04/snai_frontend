@@ -32,6 +32,7 @@
       <EstadoCivilToolbar
         :search="search"
         :total="totalEstados"
+        :can-edit="canEdit"
         @update:search="search = $event"
         @create="openCreate"
       />
@@ -41,6 +42,7 @@
 
       <EstadoCivilTable
         :items="estados"
+        :can-edit="canEdit"
         @edit="openEdit"
         @remove="removeEstado"
       />
@@ -73,6 +75,7 @@ import {
   updateEstadoCivil,
   deleteEstadoCivil,
 } from "../../../service/estadoCivil.service.js";
+import { puedeEditar } from "@/utils/permisos";
 import EstadoCivilToolbar from "./components/EstadoCivilToolbar.vue";
 import EstadoCivilTable from "./components/EstadoCivilTable.vue";
 import EstadoCivilPagination from "./components/EstadoCivilPagination.vue";
@@ -144,6 +147,7 @@ export default {
     const modalMode = ref("create");
     const modalInitial = ref(null);
     const editingId = ref(null);
+    const canEdit = computed(() => puedeEditar("/estado-civil"));
 
     const visibleCount = computed(() => estados.value.length);
 
@@ -190,6 +194,7 @@ export default {
     });
 
     const openCreate = () => {
+      if (!canEdit.value) return;
       modalMode.value = "create";
       modalInitial.value = null;
       editingId.value = null;
@@ -197,6 +202,7 @@ export default {
     };
 
     const openEdit = (item) => {
+      if (!canEdit.value) return;
       modalMode.value = "edit";
       modalInitial.value = { ...item };
       editingId.value = item.id;
@@ -210,6 +216,7 @@ export default {
     };
 
     const saveEstado = async (payload) => {
+      if (!canEdit.value) return;
       const nombre = payload?.nombre ? String(payload.nombre).trim() : "";
       if (!nombre) return;
       if (modalMode.value === "edit" && editingId.value === null) return;
@@ -239,6 +246,7 @@ export default {
     };
 
     const removeEstado = async (item) => {
+      if (!canEdit.value) return;
       const confirmed = window.confirm(
         `Eliminar el estado civil ${item.nombre}? Esta accion no se puede revertir.`
       );
@@ -284,6 +292,7 @@ export default {
       modalOpen,
       modalMode,
       modalInitial,
+      canEdit,
       isLoading,
       isSaving,
       errorMessage,

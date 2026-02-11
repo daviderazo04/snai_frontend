@@ -174,8 +174,8 @@ export default {
         items: [
           { label: "Adolescentes", path: "/app/adolescentes", permission: "/adolescentes", iconSvg: icons.youth },
           { label: "Familia", path: "/app/familia", permission: "/familia", iconSvg: icons.family },
-          { label: "Salud", path: "/app/salud", permission: "/salud", iconSvg: icons.health },
-          { label: "Educación", path: "/app/educacion", permission: "/educacion", iconSvg: icons.book },
+          { label: "Salud integral", path: "/app/salud", permission: "/salud", iconSvg: icons.health },
+          { label: "Educación laboral", path: "/app/educacion", permission: "/educacion", iconSvg: icons.book },
           { label: "Ocupación", path: "/app/ocupacion", permission: "/ocupacion", iconSvg: icons.job },
           { label: "Traslados", path: "/app/traslados", permission: "/traslados", iconSvg: icons.transfer },
           { label: 'Jurídico', path: '/app/juridico', permission: '/juridico', iconSvg: icons.gavel},

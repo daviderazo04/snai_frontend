@@ -33,8 +33,8 @@
           <td class="truncate" :title="row.observaciones || ''">{{ row.observaciones || "—" }}</td>
           <td class="text-right">
             <div class="actions">
-              <button class="ghost" @click="$emit('edit', row)">Editar</button>
-              <button class="danger" @click="$emit('remove', row)">Eliminar</button>
+              <button v-if="canEdit" class="ghost" @click="$emit('edit', row)">Editar</button>
+              <button v-if="canEdit" class="danger" @click="$emit('remove', row)">Eliminar</button>
             </div>
           </td>
         </tr>
@@ -54,6 +54,10 @@ defineProps({
   items: {
     type: Array,
     default: () => [],
+  },
+  canEdit: {
+    type: Boolean,
+    default: true,
   },
 });
 

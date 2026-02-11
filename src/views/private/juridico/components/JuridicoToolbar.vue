@@ -66,7 +66,7 @@
       </button>
     </div>
 
-    <button class="btn-primary" @click="$emit('create')" type="button">
+    <button v-if="canEdit" class="btn-primary" @click="$emit('create')" type="button">
       + Nuevo Registro
     </button>
   </div>
@@ -81,6 +81,10 @@ const props = defineProps({
   termino: String,
   adolescenteId: Number,
   delitoId: Number,
+  canEdit: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const emit = defineEmits([

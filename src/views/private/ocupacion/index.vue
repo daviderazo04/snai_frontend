@@ -31,15 +31,16 @@
     <section class="panel">
      <OcupacionToolbar
        :search="search"
-        :total="totalItems"
+       :total="totalItems"
+       :can-edit="canEdit"
        @update:search="search = $event"
-        @create="openCreate"
+       @create="openCreate"
       />
 
       <div v-if="isLoading" class="status">Cargando ocupaciones...</div>
       <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
 
-      <OcupacionTable :items="items" @edit="openEdit" @remove="removeItem" />
+      <OcupacionTable :items="items" :can-edit="canEdit" @edit="openEdit" @remove="removeItem" />
 
       <OcupacionPagination
         :current-page="currentPage"
@@ -69,6 +70,7 @@ import {
   updateOcupacion,
   deleteOcupacion,
 } from "@/service/ocupacion.service";
+import { puedeEditar } from "@/utils/permisos";
 
 import OcupacionToolbar from "./components/OcupacionToolbar.vue";
 import OcupacionTable from "./components/OcupacionTable.vue";
@@ -94,6 +96,7 @@ const modalOpen = ref(false);
 const modalMode = ref("create");
 const modalInitial = ref(null);
 const editingId = ref(null);
+const canEdit = computed(() => puedeEditar("/ocupacion"));
 
 /* ======================
    COMPUTED
@@ -165,6 +168,7 @@ watch(totalPages, (val) => {
 watch(currentPage, loadItems);
 
 const openCreate = () => {
+  if (!canEdit.value) return;
   modalMode.value = "create";
   modalInitial.value = null;
   editingId.value = null;
@@ -172,6 +176,7 @@ const openCreate = () => {
 };
 
 const openEdit = (item) => {
+  if (!canEdit.value) return;
   modalMode.value = "edit";
   modalInitial.value = { ...item };
   editingId.value = item.id;
@@ -185,6 +190,7 @@ const closeModal = () => {
 };
 
 const saveItem = async ({ nombre }) => {
+  if (!canEdit.value) return;
   const clean = nombre ? String(nombre).trim() : "";
   if (!clean) return;
 
@@ -208,6 +214,7 @@ const saveItem = async ({ nombre }) => {
 };
 
 const removeItem = async (item) => {
+  if (!canEdit.value) return;
   if (!confirm(`Eliminar la ocupación "${item.nombre}"?`)) return;
 
   errorMessage.value = "";

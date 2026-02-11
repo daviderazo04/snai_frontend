@@ -19,7 +19,7 @@
             </td>
             <td>
               <div class="actions">
-                <button class="ghost" type="button" @click="$emit('edit', item)">
+                <button v-if="canEdit" class="ghost" type="button" @click="$emit('edit', item)">
                   Editar
                 </button>
               </div>
@@ -45,6 +45,10 @@ export default {
     items: {
       type: Array,
       default: () => [],
+    },
+    canEdit: {
+      type: Boolean,
+      default: true,
     },
   },
   emits: ["edit"],

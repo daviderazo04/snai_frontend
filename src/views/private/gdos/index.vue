@@ -33,6 +33,7 @@
       <GdosToolbar
         :search="search"
         :total="totalGdos"
+        :can-edit="canEdit"
         @update:search="search = $event"
         @create="openCreate"
       />
@@ -46,6 +47,7 @@
       <GdosTable 
         v-else
         :items="gdos" 
+        :can-edit="canEdit"
         @edit="openEdit" 
         @remove="removeItem" 
       />
@@ -79,6 +81,7 @@ import {
   updateGdo, 
   deleteGdo 
 } from "../../../service/gdos.service.js";
+import { puedeEditar } from "@/utils/permisos";
 
 import GdosToolbar from "./components/GdosToolbar.vue";
 import GdosTable from "./components/GdosTable.vue";
@@ -147,6 +150,7 @@ export default {
     const modalMode = ref("create");
     const modalInitial = ref(null);
     const editingId = ref(null);
+    const canEdit = computed(() => puedeEditar("/gdos"));
 
     const visibleCount = computed(() => gdos.value.length);
 
@@ -195,6 +199,7 @@ export default {
 
     // --- ACCIONES MODAL ---
     const openCreate = () => {
+      if (!canEdit.value) return;
       modalMode.value = "create";
       modalInitial.value = null;
       editingId.value = null;
@@ -202,6 +207,7 @@ export default {
     };
 
     const openEdit = (item) => {
+      if (!canEdit.value) return;
       modalMode.value = "edit";
       modalInitial.value = { ...item };
       editingId.value = item.id;
@@ -216,6 +222,7 @@ export default {
 
     // --- GUARDAR (Crear / Editar) ---
     const saveGdo = async (payload) => {
+      if (!canEdit.value) return;
       const nombre = payload?.nombre ? String(payload.nombre).trim() : "";
       if (!nombre) return;
 
@@ -249,6 +256,7 @@ export default {
 
     // --- ELIMINAR ---
     const removeItem = async (item) => {
+      if (!canEdit.value) return;
       if (!confirm(`¿Eliminar el GDO "${item.nombre}"?`)) return;
 
       try {
@@ -287,6 +295,7 @@ export default {
       modalOpen,
       modalMode,
       modalInitial,
+      canEdit,
       isLoading,
       isSaving,
       errorMessage,

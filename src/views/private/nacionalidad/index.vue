@@ -32,6 +32,7 @@
       <NacionalidadToolbar
         :search="search"
         :total="totalNacionalidades"
+        :can-edit="canEdit"
         @update:search="search = $event"
         @create="openCreate"
       />
@@ -42,6 +43,7 @@
       <NacionalidadTable 
         v-else
         :items="nacionalidades" 
+        :can-edit="canEdit"
         @edit="openEdit" 
         @remove="removeItem"
       />
@@ -74,6 +76,7 @@ import {
   updateNacionalidad, // Importante: Importar función de editar
   deleteNacionalidad, // Importante: Importar función de eliminar
 } from "../../../service/nacionalidad.service.js";
+import { puedeEditar } from "@/utils/permisos";
 
 import NacionalidadToolbar from "./components/NacionalidadToolbar.vue";
 import NacionalidadTable from "./components/NacionalidadTable.vue";
@@ -140,6 +143,7 @@ export default {
     const modalMode = ref("create");
     const modalInitial = ref(null);
     const editingId = ref(null); // Variable para almacenar el ID en edición
+    const canEdit = computed(() => puedeEditar("/nacionalidad"));
 
     const visibleCount = computed(() => nacionalidades.value.length);
 
@@ -188,6 +192,7 @@ export default {
     });
 
     const openCreate = () => {
+      if (!canEdit.value) return;
       modalMode.value = "create";
       modalInitial.value = null;
       editingId.value = null;
@@ -195,6 +200,7 @@ export default {
     };
 
     const openEdit = (item) => {
+      if (!canEdit.value) return;
       modalMode.value = "edit";
       modalInitial.value = { ...item };
       editingId.value = item.id; // Guardamos el ID que vamos a editar
@@ -208,6 +214,7 @@ export default {
     };
 
     const saveNacionalidad = async (payload) => {
+      if (!canEdit.value) return;
       const nombre = payload?.nombre ? String(payload.nombre).trim() : "";
       if (!nombre) return;
 
@@ -241,6 +248,7 @@ export default {
     };
 
     const removeItem = async (item) => {
+      if (!canEdit.value) return;
       if (!confirm(`¿Estás seguro de eliminar la nacionalidad "${item.nombre}"?`)) return;
       
       try {
@@ -279,6 +287,7 @@ export default {
       modalOpen,
       modalMode,
       modalInitial,
+      canEdit,
       isLoading,
       isSaving,
       errorMessage,

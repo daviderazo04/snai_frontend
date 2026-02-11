@@ -24,17 +24,18 @@
           <div v-else class="form-grid">
             <label class="field full-width">
               <span>Adolescente <span class="required">*</span></span>
-              <div class="select-wrapper">
-                <select v-model.number="adolescenteId" :disabled="mode === 'edit'">
-                  <option value="" disabled>Seleccione el adolescente...</option>
-                  <option v-for="item in adolescentesList" :key="item.id" :value="item.id">
-                    {{ item.nombre }} {{ item.apellido }} ({{ item.cedula }})
-                  </option>
-                </select>
-              </div>
-              <small v-if="mode === 'edit'" class="helper-text">
-                ID seleccionado: {{ adolescenteId }}
-              </small>
+              <AdolescenteSearch
+                :key="`${mode}-${adolescenteId || 'nuevo'}`"
+                v-model="adolescenteId"
+                :initial-raw="initialAdolescente"
+                :initial-label="initialAdolescenteLabel"
+                :disabled="mode === 'edit'"
+                :hide-controls-when-disabled="mode === 'edit'"
+                :label="''"
+                :fetch-by-id="true"
+                placeholder="Buscar por nombre o cédula..."
+                @selected="onAdolescenteSelected"
+              />
             </label>
 
             <label class="field full-width">
@@ -76,7 +77,8 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import { getCais } from "../../../../service/cai.service.js";
-import { getAdolescentes, getAdolescenteById } from "../../../../service/adolescente.service.js";
+import { getAdolescenteById } from "../../../../service/adolescente.service.js";
+import AdolescenteSearch from "@/components/adolescente/AdolescenteSearch.vue";
 
 const props = defineProps({
   open: Boolean,
@@ -87,12 +89,13 @@ const props = defineProps({
 
 const emit = defineEmits(["close", "save"]);
 
-const adolescenteId = ref("");
+const adolescenteId = ref(null);
 const caiId = ref("");
 const fecha = ref("");
 const observaciones = ref("");
+const initialAdolescente = ref(null);
+const initialAdolescenteLabel = ref("");
 
-const adolescentesList = ref([]);
 const caisList = ref([]);
 const loadingData = ref(false);
 
@@ -107,16 +110,6 @@ const extractList = (response) => {
   return [];
 };
 
-const loadAdolescentes = async () => {
-  if (adolescentesList.value.length > 0) return;
-  try {
-    const response = await getAdolescentes({ size: 100 });
-    adolescentesList.value = extractList(response);
-  } catch (error) {
-    console.error("Error listando adolescentes:", error);
-  }
-};
-
 const loadCais = async () => {
   if (caisList.value.length > 0) return;
   try {
@@ -129,13 +122,15 @@ const loadCais = async () => {
 
 const ensureAdolescenteLoaded = async (id) => {
   if (!id) return;
-  const exists = adolescentesList.value.some((a) => Number(a.id) === Number(id));
-  if (exists) return;
   try {
     const res = await getAdolescenteById(id);
     const adol = res?.data?.data ?? res?.data ?? null;
     if (adol && adol.id) {
-      adolescentesList.value.push(adol);
+      initialAdolescente.value = adol;
+      const name = `${adol.nombre || ""} ${adol.apellido || ""}`.trim();
+      const ced = adol.cedula ? ` (${adol.cedula})` : "";
+      const cai = adol.cai?.nombre ? ` · CAI: ${adol.cai.nombre}` : "";
+      initialAdolescenteLabel.value = `${name}${ced}${cai}`.trim();
     }
   } catch (e) {
     console.warn("No se pudo cargar el adolescente:", id, e);
@@ -159,7 +154,7 @@ watch(
 
     loadingData.value = true;
     try {
-      await Promise.all([loadAdolescentes(), loadCais()]);
+      await Promise.all([loadCais()]);
     } finally {
       loadingData.value = false;
     }
@@ -170,10 +165,22 @@ watch(
       const caiRaw = val.caiId ?? val.cai?.id;
 
       if (adolescenteRaw) {
-        await ensureAdolescenteLoaded(Number(adolescenteRaw));
-        adolescenteId.value = Number(adolescenteRaw);
+        const targetId = Number(adolescenteRaw);
+        adolescenteId.value = targetId;
+
+        if (val.adolescente) {
+          initialAdolescente.value = val.adolescente;
+          const name = `${val.adolescente.nombre || ""} ${val.adolescente.apellido || ""}`.trim();
+          const ced = val.adolescente.cedula ? ` (${val.adolescente.cedula})` : "";
+          const cai = val.adolescente.cai?.nombre ? ` · CAI: ${val.adolescente.cai.nombre}` : "";
+          initialAdolescenteLabel.value = `${name}${ced}${cai}`.trim();
+        } else {
+          await ensureAdolescenteLoaded(targetId);
+        }
       } else {
         adolescenteId.value = "";
+        initialAdolescente.value = null;
+        initialAdolescenteLabel.value = "";
       }
 
       if (caiRaw) {
@@ -190,6 +197,8 @@ watch(
       caiId.value = "";
       fecha.value = new Date().toISOString().slice(0, 10);
       observaciones.value = "";
+      initialAdolescente.value = null;
+      initialAdolescenteLabel.value = "";
     }
   },
   { immediate: true }
@@ -206,6 +215,13 @@ const canSave = computed(() => {
   }
   return true;
 });
+
+const onAdolescenteSelected = (opt) => {
+  if (opt?.raw) {
+    initialAdolescente.value = opt.raw;
+    initialAdolescenteLabel.value = opt.label;
+  }
+};
 
 const onSave = () => {
   const payload = {

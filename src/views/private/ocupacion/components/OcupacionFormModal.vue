@@ -28,14 +28,18 @@
               
               <label class="field full-width">
                 <span>Adolescente <span class="required">*</span></span>
-                <div class="select-wrapper">
-                  <select v-model.number="form.adolescenteId" :disabled="mode === 'edit'" required>
-                    <option :value="null" disabled>Seleccione un adolescente...</option>
-                    <option v-for="item in adolescentesList" :key="item.id" :value="item.id">
-                      {{ item.nombre }} {{ item.apellido }} ({{ item.cedula }})
-                    </option>
-                  </select>
-                </div>
+                <AdolescenteSearch
+                  :key="`${mode}-${form.adolescenteId || 'nuevo'}`"
+                  v-model="form.adolescenteId"
+                  :initial-raw="initialAdolescente"
+                  :initial-label="initialAdolescenteLabel"
+                  :disabled="internalSaving || mode === 'edit'"
+                  :hide-controls-when-disabled="mode === 'edit'"
+                  :label="''"
+                  :fetch-by-id="true"
+                  placeholder="Buscar por nombre o cédula..."
+                  @selected="onAdolescenteSelected"
+                />
                 <small v-if="mode === 'edit' && form.adolescenteId" class="helper-text">
                   Editando registros de: ID {{ form.adolescenteId }}
                 </small>
@@ -105,9 +109,9 @@
 
 <script setup>
 import { ref, computed, watch, reactive } from "vue";
-// IMPORTANTE: Asegúrate de importar ambas funciones
-import { getAdolescentes, getAdolescenteById } from "../../../../service/adolescente.service"; 
+import { getAdolescenteById } from "../../../../service/adolescente.service"; 
 import { createOcupacion, updateOcupacion } from "../../../../service/ocupacion.service";
+import AdolescenteSearch from "@/components/adolescente/AdolescenteSearch.vue";
 
 const props = defineProps({
   open: Boolean,
@@ -126,48 +130,26 @@ const form = reactive({
   observacion: ""
 });
 
-const adolescentesList = ref([]);
+const initialAdolescente = ref(null);
+const initialAdolescenteLabel = ref("");
 const loadingCatalog = ref(false);
 const internalSaving = ref(false);
 
-// Helper para extraer datos
-const extractData = (res) => {
-  if (Array.isArray(res)) return res;
-  if (res.data && Array.isArray(res.data.data)) return res.data.data;
-  if (res.data && Array.isArray(res.data)) return res.data;
-  return [];
-};
-
-// Carga inicial de catálogo (primeros 100)
-const loadAdolescentes = async () => {
-  if (adolescentesList.value.length > 0) return;
-  
-  loadingCatalog.value = true;
-  try {
-    const res = await getAdolescentes({ size: 100 });
-    adolescentesList.value = extractData(res);
-  } catch (e) {
-    console.error("Error cargando adolescentes:", e);
-  } finally {
-    loadingCatalog.value = false;
-  }
-};
-
-// Lógica para asegurar que el adolescente a editar esté en la lista
+// Lógica para asegurar que el adolescente a editar esté disponible en el selector
 const ensureAdolescenteLoaded = async (id) => {
   if (!id) return;
-  const exists = adolescentesList.value.some(a => a.id === id);
-  
-  if (!exists) {
-    try {
-      const res = await getAdolescenteById(id);
-      const adol = res.data?.data ?? res.data ?? res;
-      if (adol && adol.id) {
-        adolescentesList.value.push(adol);
-      }
-    } catch (e) {
-      console.warn("No se pudo cargar el adolescente individual:", id);
+  try {
+    const res = await getAdolescenteById(id);
+    const adol = res.data?.data ?? res.data ?? res;
+    if (adol && adol.id) {
+      initialAdolescente.value = adol;
+      const name = `${adol.nombre || ""} ${adol.apellido || ""}`.trim();
+      const ced = adol.cedula ? ` (${adol.cedula})` : "";
+      const cai = adol.cai?.nombre ? ` · CAI: ${adol.cai.nombre}` : "";
+      initialAdolescenteLabel.value = `${name}${ced}${cai}`.trim();
     }
+  } catch (e) {
+    console.warn("No se pudo cargar el adolescente individual:", id);
   }
 };
 
@@ -175,7 +157,6 @@ watch(
   () => props.open,
   async (isOpen) => {
     if (isOpen) {
-      await loadAdolescentes();
       internalSaving.value = false;
       
       if (props.initialData) {
@@ -185,12 +166,14 @@ watch(
         // 1. Extraer ID de manera robusta (objeto anidado o propiedad plana)
         const targetId = Number(d.adolescente?.id || d.adolescenteId);
         
-        // 2. Asegurar que exista en la lista del select
+        // 2. Asegurar que exista en el selector
         if (targetId) {
           await ensureAdolescenteLoaded(targetId);
           form.adolescenteId = targetId;
         } else {
           form.adolescenteId = null;
+          initialAdolescente.value = null;
+          initialAdolescenteLabel.value = "";
         }
 
         // 3. Mapear el resto de campos
@@ -207,6 +190,8 @@ watch(
         form.participacion = 0;
         form.instructor = "";
         form.observacion = "";
+        initialAdolescente.value = null;
+        initialAdolescenteLabel.value = "";
       }
     }
   },
@@ -216,6 +201,13 @@ watch(
 const canSave = computed(() => {
   return form.adolescenteId && form.taller && form.taller.trim().length > 0 && form.fecha;
 });
+
+const onAdolescenteSelected = (opt) => {
+  if (opt?.raw) {
+    initialAdolescente.value = opt.raw;
+    initialAdolescenteLabel.value = opt.label;
+  }
+};
 
 const handleSaveClick = async () => {
   if (!canSave.value) return;

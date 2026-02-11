@@ -37,6 +37,7 @@
         v-model:nivel="nivelFilter"
         v-model:institucion="institucionFilter"
         :total="totalItems"
+        :can-edit="canEdit"
         @create="openCreate"
       />
 
@@ -49,6 +50,7 @@
       <EducacionTable
         v-else
         :items="filteredItems"
+        :can-edit="canEdit"
         @view="goToDetail"
         @edit="openEdit"
         @remove="removeItem"
@@ -82,6 +84,7 @@ import {
   updateEducacion,
   deleteEducacion,
 } from "@/service/educacion.service.js";
+import { puedeEditar } from "@/utils/permisos";
 
 import EducacionToolbar from "./components/EducacionToolbar.vue";
 import EducacionTable from "./components/EducacionTable.vue";
@@ -113,6 +116,7 @@ const modalOpen = ref(false);
 const modalMode = ref("create");
 const modalInitial = ref(null);
 const editingId = ref(null);
+const canEdit = computed(() => puedeEditar("/educacion"));
 
 /* ======================
    LÓGICA DE FILTRADO (Frontend)
@@ -197,12 +201,14 @@ const loadItems = async () => {
 };
 
 const openCreate = () => {
+  if (!canEdit.value) return;
   modalMode.value = "create";
   modalInitial.value = null;
   modalOpen.value = true;
 };
 
 const openEdit = (row) => {
+  if (!canEdit.value) return;
   modalMode.value = "edit";
   modalInitial.value = { ...row };
   editingId.value = row.id;
@@ -212,6 +218,7 @@ const openEdit = (row) => {
 const closeModal = () => { modalOpen.value = false; };
 
 const saveItem = async (payload) => {
+  if (!canEdit.value) return;
   isSaving.value = true;
   try {
     if (modalMode.value === "create") {
@@ -229,6 +236,7 @@ const saveItem = async (payload) => {
 };
 
 const removeItem = async (row) => {
+  if (!canEdit.value) return;
   if (!confirm(`¿Eliminar registro #${row.id}?`)) return;
   try {
     await deleteEducacion(row.id);

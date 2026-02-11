@@ -33,6 +33,7 @@
         v-model:searchNombre="searchNombre"
         v-model:diagnostico="diagnostico"
         v-model:discapacidad="discapacidad"
+        :can-edit="canEdit"
         @create="openCreate"
       />
 
@@ -46,6 +47,7 @@
       <SaludTable
         v-else
         :items="filteredItems"
+        :can-edit="canEdit"
         @view="goToDetail"
         @edit="openEdit"
         @remove="removeItem"
@@ -79,6 +81,7 @@ import {
   updateSalud,
   deleteSalud,
 } from "@/service/salud.service.js";
+import { puedeEditar } from "@/utils/permisos";
 
 import SaludToolbar from "./components/SaludToolbar.vue";
 import SaludTable from "./components/SaludTable.vue";
@@ -109,6 +112,7 @@ const modalOpen = ref(false);
 const modalMode = ref("create");
 const modalInitial = ref(null);
 const editingId = ref(null);
+const canEdit = computed(() => puedeEditar("/salud"));
 
 /* ======================
    LÓGICA DE FILTRADO (Frontend)
@@ -201,6 +205,7 @@ const loadItems = async () => {
 const goToDetail = (item) => router.push({ name: 'saludDetalle', params: { id: item.id } });
 
 const openCreate = () => {
+  if (!canEdit.value) return;
   modalMode.value = "create";
   modalInitial.value = null;
   editingId.value = null;
@@ -208,6 +213,7 @@ const openCreate = () => {
 };
 
 const openEdit = (row) => {
+  if (!canEdit.value) return;
   modalMode.value = "edit";
   modalInitial.value = { ...row };
   editingId.value = row.id;
@@ -219,6 +225,7 @@ const closeModal = () => {
 };
 
 const saveItem = async (payload) => {
+  if (!canEdit.value) return;
   isSaving.value = true;
   try {
     if (modalMode.value === "create") {
@@ -237,6 +244,7 @@ const saveItem = async (payload) => {
 };
 
 const removeItem = async (row) => {
+  if (!canEdit.value) return;
   if (!confirm(`¿Eliminar registro #${row.id}?`)) return;
   try {
     await deleteSalud(row.id);

@@ -35,6 +35,7 @@
       <DelitoToolbar
         :search="search"
         :total="totalItems"
+        :can-edit="canEdit"
         @update:search="search = $event"
         @create="openCreate"
       />
@@ -48,6 +49,7 @@
       <DelitoTable
         v-else
         :items="items"
+        :can-edit="canEdit"
         @edit="openEdit"
         @remove="removeItem"
       />
@@ -80,6 +82,7 @@ import {
   updateDelito,
   deleteDelito,
 } from "../../../service/delito.service";
+import { puedeEditar } from "@/utils/permisos";
 
 import DelitoToolbar from "./components/DelitoToolbar.vue";
 import DelitoTable from "./components/DelitoTable.vue";
@@ -141,6 +144,7 @@ const modalOpen = ref(false);
 const modalMode = ref("create");
 const modalInitial = ref(null);
 const editingId = ref(null);
+const canEdit = computed(() => puedeEditar("/delito"));
 
 const visibleCount = computed(() => items.value.length);
 
@@ -185,6 +189,7 @@ watch(totalPages, (val) => {
 });
 
 const openCreate = () => {
+  if (!canEdit.value) return;
   modalMode.value = "create";
   modalInitial.value = null;
   editingId.value = null;
@@ -192,6 +197,7 @@ const openCreate = () => {
 };
 
 const openEdit = (row) => {
+  if (!canEdit.value) return;
   modalMode.value = "edit";
   modalInitial.value = { ...row };
   editingId.value = row.id;
@@ -205,6 +211,7 @@ const closeModal = () => {
 };
 
 const saveItem = async (payload) => {
+  if (!canEdit.value) return;
   const nombre = payload?.nombre ? String(payload.nombre).trim() : "";
   if (!nombre) return;
 
@@ -232,6 +239,7 @@ const saveItem = async (payload) => {
 };
 
 const removeItem = async (row) => {
+  if (!canEdit.value) return;
   if (!confirm(`¿Eliminar el delito "${row.nombre}"?`)) return;
   try {
     const res = await deleteDelito(row.id);

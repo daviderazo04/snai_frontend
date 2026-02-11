@@ -41,6 +41,7 @@
     :cantones="cantonOptions"
     :cais="caiOptions"
     :total="totalItems"
+    :can-edit="canEdit"
     @update:search="search = $event"
     @update:dateFrom="dateFrom = $event"
     @update:dateTo="dateTo = $event"
@@ -60,6 +61,7 @@
       <TrasladosTable
         v-else
         :items="items"
+        :can-edit="canEdit"
         @edit="openEdit"
         @remove="removeItem"
       />
@@ -90,6 +92,7 @@ import {
   updateTraslado,
   deleteTraslado,
 } from "../../../service/traslados.service.js";
+import { puedeEditar } from "@/utils/permisos";
 
 import TrasladosToolbar from "./components/TrasladosToolbar.vue";
 import TrasladosTable from "./components/TrasladosTable.vue";
@@ -237,6 +240,7 @@ const modalOpen = ref(false);
 const modalMode = ref("create");
 const modalInitial = ref(null);
 const editingId = ref(null);
+const canEdit = computed(() => puedeEditar("/traslados"));
 
 const baseCaiList = computed(() => {
   // Se arma a partir de los datos que devuelve el endpoint (cai y fromCai)
@@ -397,6 +401,7 @@ watch([selectedProvinceId, selectedCantonId, caiOptions], () => {
 });
 
 const openCreate = () => {
+  if (!canEdit.value) return;
   modalMode.value = "create";
   modalInitial.value = null;
   editingId.value = null;
@@ -404,6 +409,7 @@ const openCreate = () => {
 };
 
 const openEdit = (row) => {
+  if (!canEdit.value) return;
   modalMode.value = "edit";
   modalInitial.value = { ...row };
   editingId.value = row.id;
@@ -417,6 +423,7 @@ const closeModal = () => {
 };
 
 const saveItem = async (payload) => {
+  if (!canEdit.value) return;
   const caiId = Number(payload?.caiId);
   const fecha = payload?.fecha ? String(payload.fecha).slice(0, 10) : "";
   const observaciones = payload?.observaciones ?? "";
@@ -461,6 +468,7 @@ const saveItem = async (payload) => {
 };
 
 const removeItem = async (row) => {
+  if (!canEdit.value) return;
   const nombre = row?.adolescenteNombre ? ` de ${row.adolescenteNombre}` : "";
   if (!confirm(`¿Eliminar el traslado${nombre}?`)) return;
 

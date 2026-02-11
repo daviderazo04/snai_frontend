@@ -13,6 +13,7 @@
         v-model:termino="termino"
         v-model:adolescenteId="adolescenteId"
         v-model:delitoId="delitoId"
+        :can-edit="canEdit"
         @create="openCreate"
       />
 
@@ -22,13 +23,14 @@
           <p>Sincronizando con la base de datos...</p>
         </div>
 
-        <JuridicoTable
-          v-else
-          :items="items"
-          @view="goToDetail"
-          @edit="openEdit"
-          @delete="confirmDelete"
-        />
+      <JuridicoTable
+        v-else
+        :items="items"
+        :can-edit="canEdit"
+        @view="goToDetail"
+        @edit="openEdit"
+        @delete="confirmDelete"
+      />
       </div>
 
       <JuridicoPagination
@@ -43,6 +45,7 @@
       :mode="modalMode"
       :initial-data="selected"
       :saving="saving"
+      :can-edit="canEdit"
       @close="closeModal"
       @save="save"
     />
@@ -52,6 +55,7 @@
 <script setup>
 import { ref, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { computed } from "vue";
 
 // Importación de servicios
 import {
@@ -59,6 +63,7 @@ import {
   createJuridico,
   updateJuridico,
 } from "@/service/juridico.service";
+import { puedeEditar } from "@/utils/permisos";
 
 // Importación de componentes
 import JuridicoToolbar from "./components/JuridicoToolbar.vue";
@@ -85,6 +90,7 @@ const saving = ref(false);
 const modalOpen = ref(false);
 const modalMode = ref("create"); // 'create' | 'edit'
 const selected = ref(null);
+const canEdit = computed(() => puedeEditar("/juridico"));
 
 /* --- CARGAR DATOS (Sincronizado con tu API) --- */
 const loadData = async () => {
@@ -122,12 +128,14 @@ watch([termino, adolescenteId, delitoId], () => {
 
 /* --- ACCIONES DEL MODAL --- */
 const openCreate = () => {
+  if (!canEdit.value) return;
   modalMode.value = "create";
   selected.value = null;
   modalOpen.value = true;
 };
 
 const openEdit = (row) => {
+  if (!canEdit.value) return;
   modalMode.value = "edit";
   selected.value = row;
   modalOpen.value = true;
@@ -139,6 +147,7 @@ const closeModal = () => {
 
 /* --- GUARDAR (El punto crítico) --- */
 const save = async (payload) => {
+  if (!canEdit.value) return;
   saving.value = true;
   try {
     if (modalMode.value === "create") {
@@ -149,10 +158,7 @@ const save = async (payload) => {
     
     // Recargamos la tabla para que aparezca el nuevo registro
     await loadData();
-    
-    // NOTA: No llamamos a closeModal() aquí.
-    // El componente JuridicoFormModal.vue detectará que saving pasó a false
-    // y mostrará su propia alerta de éxito antes de cerrarse solo.
+    closeModal();
   } catch (e) {
     console.error("Error al guardar:", e);
     alert("No se pudo guardar el registro jurídico.");

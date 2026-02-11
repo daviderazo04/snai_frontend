@@ -16,7 +16,7 @@
           🧹 Limpiar
         </button>
 
-        <button class="btn-primary" type="button" @click="$emit('create')">
+        <button v-if="canEdit" class="btn-primary" type="button" @click="$emit('create')">
           + Nuevo traslado
         </button>
       </div>
@@ -111,6 +111,10 @@ const props = defineProps({
   provinceId: [String, Number],
   cantonId: [String, Number],
   caiId: [String, Number],
+  canEdit: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const emit = defineEmits([

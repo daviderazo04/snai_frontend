@@ -46,8 +46,11 @@
             <button class="view" @click="$emit('view', row)">
               Ver
             </button>
-            <button @click="$emit('edit', row)">
+            <button v-if="canEdit" @click="$emit('edit', row)">
               Editar
+            </button>
+            <button v-if="canEdit" class="danger" @click="$emit('delete', row)">
+              Eliminar
             </button>
           </div>
         </td>
@@ -67,6 +70,10 @@ defineProps({
   items: {
     type: Array,
     default: () => [],
+  },
+  canEdit: {
+    type: Boolean,
+    default: true,
   },
 });
 

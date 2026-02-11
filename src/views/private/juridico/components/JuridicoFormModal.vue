@@ -16,19 +16,16 @@
             
             <h4 class="internal-title">Identificación y Causa</h4>
             <div class="form-grid">
-              <div class="field full-width autocomplete">
-                <span>Adolescente <span class="required">*</span></span>
-                <input 
-                  v-model="adolescenteQuery" 
-                  placeholder="Escriba nombre o apellido para buscar..." 
-                  @focus="handleAdolescenteFocus" 
-                  :disabled="saving" 
+              <div class="field full-width">
+                <AdolescenteSearch
+                  v-model="form.adolescenteId"
+                  :initial-label="initialAdolescenteLabel"
+                  :initial-raw="initialAdolescenteRaw"
+                  :disabled="saving || mode === 'edit'"
+                  :hide-controls-when-disabled="mode === 'edit'"
+                  :fetch-by-id="true"
+                  placeholder="Buscar por nombre o cédula..."
                 />
-                <ul v-if="showAdolescentes && adolescentes.length" class="dropdown">
-                  <li v-for="a in adolescentes" :key="a.id" @click="selectAdolescente(a)">
-                    {{ a.label }}
-                  </li>
-                </ul>
               </div>
 
               <div class="field full-width autocomplete">
@@ -113,17 +110,14 @@
 
 <script setup>
 import { ref, reactive, watch, computed, onMounted } from "vue";
-import { getAdolescentes } from "@/service/adolescente.service";
 import { getDelitos } from "@/service/delito.service";
+import AdolescenteSearch from "@/components/adolescente/AdolescenteSearch.vue";
 
 const props = defineProps({ open: Boolean, mode: String, initialData: Object, saving: Boolean });
 const emit = defineEmits(["close", "save"]);
 
-const adolescenteQuery = ref("");
 const delitoQuery = ref("");
-const adolescentes = ref([]);
 const delitos = ref([]);
-const showAdolescentes = ref(false);
 const showDelitos = ref(false);
 
 const emptyForm = () => ({
@@ -135,34 +129,15 @@ const emptyForm = () => ({
 });
 
 const form = reactive(emptyForm());
-
-// --- BÚSQUEDA DINÁMICA DE ADOLESCENTES ---
-const searchAdolescentes = async (q) => {
-  // Al enviar 'nombre', el backend busca en todas las páginas
-  const res = await getAdolescentes({ nombre: q || undefined, page: 1, size: 20 });
-  adolescentes.value = (res.data?.data || []).map(a => ({ 
-    id: a.id, 
-    label: `${a.nombre} ${a.apellido} (${a.cedula})` 
-  }));
-};
-
-watch(adolescenteQuery, (newVal) => {
-  // Solo buscamos si no hemos seleccionado ya a alguien (id es null)
-  if (!form.adolescenteId) {
-    searchAdolescentes(newVal);
-  }
+const initialAdolescenteLabel = computed(() => {
+  const a = props.initialData?.adolescente;
+  if (!a) return "";
+  const name = `${a.nombre || ""} ${a.apellido || ""}`.trim();
+  const ced = a.cedula ? ` (${a.cedula})` : "";
+  return `${name}${ced}`.trim();
 });
+const initialAdolescenteRaw = computed(() => props.initialData?.adolescente || null);
 
-const handleAdolescenteFocus = () => {
-  showAdolescentes.value = true;
-  if (!form.adolescenteId) searchAdolescentes(adolescenteQuery.value);
-};
-
-const selectAdolescente = (a) => {
-  form.adolescenteId = a.id;
-  adolescenteQuery.value = a.label;
-  showAdolescentes.value = false;
-};
 
 // --- BÚSQUEDA DE DELITOS (CARGA COMPLETA AL INICIO) ---
 const selectDelito = (d) => {
@@ -220,16 +195,22 @@ watch([() => form.fechaInicio, () => form.tiempoAnio, () => form.tiempoMes, () =
 
 const closeAndReset = () => {
   Object.assign(form, emptyForm());
-  adolescenteQuery.value = ""; 
   delitoQuery.value = "";
+  initialAdolescenteRaw.value = null;
+  initialAdolescenteLabel.value = "";
   emit("close");
 };
 
 watch(() => props.initialData, (v) => {
   if (!v) return;
-  if (v.adolescente) { 
-    form.adolescenteId = v.adolescente.id; 
-    adolescenteQuery.value = `${v.adolescente.nombre} ${v.adolescente.apellido} (${v.adolescente.cedula})`; 
+  const adolId = v.adolescente?.id || v.adolescenteId || null;
+  form.adolescenteId = adolId;
+  // Si no hay objeto completo, deja que el componente haga fetch por id;
+  // si hay al menos nombre/cedula, úsalo como etiqueta provisional.
+  if (!v.adolescente && adolId && (v.adolescenteNombre || v.adolescenteCedula)) {
+    const name = `${v.adolescenteNombre || ""}`.trim();
+    const ced = v.adolescenteCedula ? ` (${v.adolescenteCedula})` : "";
+    initialAdolescenteLabel.value = `${name}${ced}`.trim();
   }
   if (v.delito) { 
     form.delitoId = v.delito.id; 

@@ -19,8 +19,8 @@
 
             <td class="text-right">
               <div class="actions">
-                <button class="ghost" @click="$emit('edit', item)">Editar</button>
-                <button class="danger" @click="$emit('remove', item)">Eliminar</button>
+                <button v-if="canEdit" class="ghost" @click="$emit('edit', item)">Editar</button>
+                <button v-if="canEdit" class="danger" @click="$emit('remove', item)">Eliminar</button>
               </div>
             </td>
           </tr>
@@ -46,6 +46,10 @@ defineProps({
   items: {
     type: Array,
     default: () => [],
+  },
+  canEdit: {
+    type: Boolean,
+    default: true,
   },
 });
 

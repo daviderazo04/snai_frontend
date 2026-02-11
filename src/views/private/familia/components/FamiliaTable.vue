@@ -28,8 +28,8 @@
           </span>
         </td>
         <td class="text-right">
-          <button @click="$emit('edit', item)">Editar</button>
-          <button class="danger" @click="$emit('remove', item)">Eliminar</button>
+          <button v-if="canEdit" @click="$emit('edit', item)">Editar</button>
+          <button v-if="canEdit" class="danger" @click="$emit('remove', item)">Eliminar</button>
         </td>
       </tr>
       <tr v-if="items.length === 0">
@@ -42,7 +42,13 @@
 <script setup>
 import { useRouter } from "vue-router";
 
-defineProps({ items: Array });
+defineProps({
+  items: Array,
+  canEdit: {
+    type: Boolean,
+    default: true,
+  },
+});
 
 const router = useRouter();
 

@@ -33,6 +33,7 @@
         :province-id="selectedProvinceId"
         :provincias="provincias"
         :total="totalCantones"
+        :can-edit="canEdit"
         @update:search="search = $event"
         @update:province="selectedProvinceId = $event"
         @create="openCreate"
@@ -43,6 +44,7 @@
 
       <CantonTable
         :items="cantones"
+        :can-edit="canEdit"
         @view="goToDetail"
         @edit="openEdit"
         @remove="removeCanton"
@@ -79,6 +81,7 @@ import {
   deleteCanton,
 } from "../../../service/cantones.service.js";
 import { getProvincias } from "../../../service/provincias.service.js";
+import { puedeEditar } from "@/utils/permisos";
 import CantonToolbar from "./components/CantonToolbar.vue";
 import CantonTable from "./components/CantonTable.vue";
 import CantonPagination from "./components/CantonPagination.vue";
@@ -172,6 +175,7 @@ export default {
     const modalMode = ref("create");
     const modalInitial = ref(null);
     const editingId = ref(null);
+    const canEdit = computed(() => puedeEditar("/cantones"));
 
     const visibleCount = computed(() => cantones.value.length);
 
@@ -238,6 +242,7 @@ export default {
     };
 
     const openCreate = () => {
+      if (!canEdit.value) return;
       modalMode.value = "create";
       modalInitial.value = null;
       editingId.value = null;
@@ -245,6 +250,7 @@ export default {
     };
 
     const openEdit = (item) => {
+      if (!canEdit.value) return;
       modalMode.value = "edit";
       modalInitial.value = { ...item };
       editingId.value = item.id;
@@ -258,6 +264,7 @@ export default {
     };
 
     const saveCanton = async (payload) => {
+      if (!canEdit.value) return;
       const nombre = payload?.nombre ? String(payload.nombre).trim() : "";
       const provinciaId = Number(payload?.provinciaId);
       if (!nombre || !provinciaId) return;
@@ -285,6 +292,7 @@ export default {
     };
 
     const removeCanton = async (item) => {
+      if (!canEdit.value) return;
       const confirmed = window.confirm(
         `Eliminar el canton ${item.nombre}? Esta accion no se puede revertir.`
       );
@@ -334,6 +342,7 @@ export default {
       modalMode,
       modalInitial,
       provincias,
+      canEdit,
       isLoading,
       isSaving,
       errorMessage,

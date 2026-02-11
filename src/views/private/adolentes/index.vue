@@ -34,6 +34,7 @@
         v-model:nombre="filters.nombre"
         v-model:cedula="filters.cedula"
         :total="total"
+        :can-edit="canEdit"
         @create="openCreate"
       />
 
@@ -46,6 +47,7 @@
         <AdolescenteTable
           v-else
           :items="items"
+          :can-edit="canEdit"
           @view="goToDetail"
           @edit="openEdit"
           @remove="onDelete"
@@ -72,12 +74,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch, onMounted } from "vue";
+import { ref, reactive, watch, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import AdolescenteToolbar from "./components/AdolescenteToolbar.vue";
 import AdolescenteTable from "./components/AdolescenteTable.vue";
 import AdolescentePagination from "./components/AdolescentePagination.vue";
 import AdolescenteFormModal from "./components/AdolescenteFormModal.vue";
+import { puedeEditar } from "@/utils/permisos";
 import {
   getAdolescentes,
   createAdolescente,
@@ -106,6 +109,8 @@ const modal = reactive({
   mode: "create",
   initialData: null,
 });
+
+const canEdit = computed(() => puedeEditar("/adolescentes"));
 
 // --- CORRECCIÓN DE REDIRECCIÓN ---
 const goToDetail = (item) => {
@@ -170,6 +175,7 @@ onMounted(() => {
 
 // --- MODAL & ACCIONES ---
 const openCreate = () => {
+  if (!canEdit.value) return;
   modal.mode = "create";
   modal.initialData = null;
   modal.open = true;
@@ -195,6 +201,7 @@ const mapItemToForm = (item) => ({
 });
 
 const openEdit = (item) => {
+  if (!canEdit.value) return;
   modal.mode = "edit";
   modal.initialData = mapItemToForm(item);
   modal.open = true;
@@ -206,6 +213,7 @@ const closeModal = () => {
 };
 
 const onSave = async (payload) => {
+  if (!canEdit.value) return;
   saving.value = true;
   try {
     let res;
@@ -227,6 +235,7 @@ const onSave = async (payload) => {
 };
 
 const onDelete = async (item) => {
+  if (!canEdit.value) return;
   if (confirm(`¿Eliminar a ${item.nombre} ${item.apellido}?`)) {
     try {
       await deleteAdolescente(item.id);

@@ -16,7 +16,7 @@
           🧹 Limpiar
         </button>
 
-        <button class="primary" type="button" @click="$emit('create')">
+        <button v-if="canEdit" class="primary" type="button" @click="$emit('create')">
           + Nuevo delito
         </button>
       </div>
@@ -40,6 +40,7 @@
 defineProps({
   search: { type: String, default: "" },
   total: { type: Number, default: 0 },
+  canEdit: { type: Boolean, default: true },
 });
 defineEmits(["update:search", "create"]);
 </script>

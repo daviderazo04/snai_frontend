@@ -32,6 +32,7 @@
       <ProvinciaToolbar
         :search="search"
         :total="totalProvincias"
+        :can-edit="canEdit"
         @update:search="search = $event"
         @create="openCreate"
       />
@@ -41,6 +42,7 @@
 
       <ProvinciaTable
         :items="provincias"
+        :can-edit="canEdit"
         @view="goToDetail"
         @edit="openEdit"
         @remove="removeProvincia"
@@ -75,6 +77,7 @@ import {
   updateProvincia,
   deleteProvincia,
 } from "../../../service/provincias.service.js";
+import { puedeEditar } from "@/utils/permisos";
 import ProvinciaToolbar from "./components/ProvinciaToolbar.vue";
 import ProvinciaTable from "./components/ProvinciaTable.vue";
 import ProvinciaPagination from "./components/ProvinciaPagination.vue";
@@ -156,6 +159,7 @@ export default {
     const modalMode = ref("create");
     const modalInitial = ref(null);
     const editingId = ref(null);
+    const canEdit = computed(() => puedeEditar("/provincias"));
 
     const visibleCount = computed(() => provincias.value.length);
 
@@ -206,6 +210,7 @@ export default {
     watch(currentPage, loadProvincias);
 
     const openCreate = () => {
+      if (!canEdit.value) return;
       modalMode.value = "create";
       modalInitial.value = null;
       editingId.value = null;
@@ -213,6 +218,7 @@ export default {
     };
 
     const openEdit = (item) => {
+      if (!canEdit.value) return;
       modalMode.value = "edit";
       modalInitial.value = { ...item };
       editingId.value = item.id;
@@ -226,6 +232,7 @@ export default {
     };
 
     const saveProvincia = async (payload) => {
+      if (!canEdit.value) return;
       const nombre = payload?.nombre ? String(payload.nombre).trim() : "";
       if (!nombre) return;
       if (modalMode.value === "edit" && editingId.value === null) return;
@@ -252,6 +259,7 @@ export default {
     };
 
     const removeProvincia = async (item) => {
+      if (!canEdit.value) return;
       const confirmed = window.confirm(
         `Eliminar la provincia ${item.nombre}? Esta accion no se puede revertir.`
       );
@@ -298,6 +306,7 @@ export default {
       modalOpen,
       modalMode,
       modalInitial,
+      canEdit,
       isLoading,
       isSaving,
       errorMessage,

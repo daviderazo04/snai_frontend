@@ -22,10 +22,10 @@
                 <button class="ghost" type="button" @click="$emit('view', item)">
                   Ver
                 </button>
-                <button class="ghost" type="button" @click="$emit('edit', item)">
+                <button v-if="canEdit" class="ghost" type="button" @click="$emit('edit', item)">
                   Editar
                 </button>
-                <button class="danger" type="button" @click="$emit('remove', item)">
+                <button v-if="canEdit" class="danger" type="button" @click="$emit('remove', item)">
                   Eliminar
                 </button>
               </div>
@@ -51,6 +51,10 @@ export default {
     items: {
       type: Array,
       default: () => [],
+    },
+    canEdit: {
+      type: Boolean,
+      default: true,
     },
   },
   emits: ["view", "edit", "remove"],

@@ -47,7 +47,7 @@
       </div>
     </div>
 
-    <button class="btn-primary" @click="$emit('create')" type="button">
+    <button v-if="canEdit" class="btn-primary" @click="$emit('create')" type="button">
       + Nuevo registro
     </button>
   </div>
@@ -68,6 +68,10 @@ const props = defineProps({
   discapacidad: {
     type: String,
     default: "",
+  },
+  canEdit: {
+    type: Boolean,
+    default: true,
   },
 });
 

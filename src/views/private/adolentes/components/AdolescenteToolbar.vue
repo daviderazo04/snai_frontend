@@ -28,7 +28,7 @@
         Limpiar
       </button>
 
-      <button class="btn-primary" @click="$emit('create')">
+      <button v-if="canEdit" class="btn-primary" @click="$emit('create')">
         + Nuevo Adolescente
       </button>
     </div>
@@ -41,6 +41,7 @@ export default {
     nombre: { type: String, default: "" },
     cedula: { type: String, default: "" },
     total: { type: Number, default: 0 },
+    canEdit: { type: Boolean, default: true },
   },
 
   emits: ["update:nombre", "update:cedula", "create"],

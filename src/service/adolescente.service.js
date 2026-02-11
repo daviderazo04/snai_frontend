@@ -40,7 +40,7 @@ export function createAdolescente(payload) {
  * @returns {Promise<any>}
  */
 export function getAdolescenteById(id) {
-  return api.get(`/adolescente/${id}`);
+  return api.get(`/adolescentes/${id}`);
 }
 /**
  * Obtener lista de adolescentes (paginado)

@@ -51,8 +51,8 @@
           
           <td class="actions text-right">
             <button class="view" @click="$emit('view', row)">Ver</button>
-            <button class="ghost" @click="$emit('edit', row)">Editar</button>
-            <button class="danger" @click="$emit('remove', row)">Eliminar</button>
+            <button v-if="canEdit" class="ghost" @click="$emit('edit', row)">Editar</button>
+            <button v-if="canEdit" class="danger" @click="$emit('remove', row)">Eliminar</button>
           </td>
         </tr>
 
@@ -65,7 +65,13 @@
 </template>
 
 <script setup>
-defineProps({ items: Array });
+defineProps({
+  items: Array,
+  canEdit: {
+    type: Boolean,
+    default: true,
+  },
+});
 defineEmits(["view", "edit", "remove"]);
 </script>
 

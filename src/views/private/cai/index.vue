@@ -35,6 +35,7 @@
         :provincias="provincias"
         :cantones="cantonOptions"
         :total="totalCais"
+        :can-edit="canEdit"
         @update:search="search = $event"
         @update:province="selectedProvinceId = $event"
         @update:canton="selectedCantonId = $event"
@@ -46,6 +47,7 @@
 
       <CaiTable
         :items="caisWithNames"
+        :can-edit="canEdit"
         @view="goToDetail"
         @edit="openEdit"
         @remove="removeCai"
@@ -78,6 +80,7 @@ import { useRouter } from "vue-router";
 import { getProvincias } from "../../../service/provincias.service.js";
 import { getCantones } from "../../../service/cantones.service.js";
 import { createCai, getCais, updateCai, deleteCai } from "../../../service/cai.service.js";
+import { puedeEditar } from "@/utils/permisos";
 import CaiToolbar from "./components/CaiToolbar.vue";
 import CaiTable from "./components/CaiTable.vue";
 import CaiPagination from "./components/CaiPagination.vue";
@@ -189,6 +192,7 @@ export default {
     const modalMode = ref("create");
     const modalInitial = ref(null);
     const editingId = ref(null);
+    const canEdit = computed(() => puedeEditar("/cai"));
 
     const cantonesById = computed(() => {
       const map = new Map();
@@ -308,6 +312,7 @@ export default {
     };
 
     const openCreate = () => {
+      if (!canEdit.value) return;
       modalMode.value = "create";
       modalInitial.value = null;
       editingId.value = null;
@@ -315,6 +320,7 @@ export default {
     };
 
     const openEdit = (item) => {
+      if (!canEdit.value) return;
       modalMode.value = "edit";
       modalInitial.value = { ...item };
       editingId.value = item.id;
@@ -328,6 +334,7 @@ export default {
     };
 
     const saveCai = async (payload) => {
+      if (!canEdit.value) return;
       const nombre = payload?.nombre ? String(payload.nombre).trim() : "";
       const cantonId = Number(payload?.cantonId);
       if (!nombre || !cantonId) return;
@@ -355,6 +362,7 @@ export default {
     };
 
     const removeCai = async (item) => {
+      if (!canEdit.value) return;
       const confirmed = window.confirm(
         `Eliminar el CAI ${item.nombre}? Esta accion no se puede revertir.`
       );
@@ -420,6 +428,7 @@ export default {
       cantones,
       provincias,
       cantonOptions,
+      canEdit,
       isLoading,
       isSaving,
       errorMessage,
