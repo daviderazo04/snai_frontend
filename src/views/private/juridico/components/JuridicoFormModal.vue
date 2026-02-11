@@ -19,8 +19,6 @@
               <div class="field full-width">
                 <AdolescenteSearch
                   v-model="form.adolescenteId"
-                  :initial-label="initialAdolescenteLabel"
-                  :initial-raw="initialAdolescenteRaw"
                   :disabled="saving || mode === 'edit'"
                   :hide-controls-when-disabled="mode === 'edit'"
                   :fetch-by-id="true"
@@ -129,15 +127,6 @@ const emptyForm = () => ({
 });
 
 const form = reactive(emptyForm());
-const initialAdolescenteLabel = computed(() => {
-  const a = props.initialData?.adolescente;
-  if (!a) return "";
-  const name = `${a.nombre || ""} ${a.apellido || ""}`.trim();
-  const ced = a.cedula ? ` (${a.cedula})` : "";
-  return `${name}${ced}`.trim();
-});
-const initialAdolescenteRaw = computed(() => props.initialData?.adolescente || null);
-
 
 // --- BÚSQUEDA DE DELITOS (CARGA COMPLETA AL INICIO) ---
 const selectDelito = (d) => {
@@ -196,8 +185,6 @@ watch([() => form.fechaInicio, () => form.tiempoAnio, () => form.tiempoMes, () =
 const closeAndReset = () => {
   Object.assign(form, emptyForm());
   delitoQuery.value = "";
-  initialAdolescenteRaw.value = null;
-  initialAdolescenteLabel.value = "";
   emit("close");
 };
 
@@ -205,13 +192,6 @@ watch(() => props.initialData, (v) => {
   if (!v) return;
   const adolId = v.adolescente?.id || v.adolescenteId || null;
   form.adolescenteId = adolId;
-  // Si no hay objeto completo, deja que el componente haga fetch por id;
-  // si hay al menos nombre/cedula, úsalo como etiqueta provisional.
-  if (!v.adolescente && adolId && (v.adolescenteNombre || v.adolescenteCedula)) {
-    const name = `${v.adolescenteNombre || ""}`.trim();
-    const ced = v.adolescenteCedula ? ` (${v.adolescenteCedula})` : "";
-    initialAdolescenteLabel.value = `${name}${ced}`.trim();
-  }
   if (v.delito) { 
     form.delitoId = v.delito.id; 
     delitoQuery.value = v.delito.nombre; 

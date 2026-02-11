@@ -26,17 +26,15 @@
             
             <label class="field full-width">
               <span>Adolescente <span class="required">*</span></span>
-              <div class="select-wrapper">
-                <select v-model.number="adolescenteId" :disabled="mode === 'edit'">
-                  <option value="" disabled>Seleccione el adolescente...</option>
-                  <option v-for="item in adolescentesList" :key="item.id" :value="item.id">
-                    {{ item.nombre }} {{ item.apellido }} ({{ item.cedula }})
-                  </option>
-                </select>
-              </div>
-              <small v-if="mode === 'edit'" class="helper-text">
-                ID Seleccionado: {{ adolescenteId }}
-              </small>
+              <AdolescenteSearch
+                :key="`${mode}-${adolescenteId || 'nuevo'}`"
+                v-model="adolescenteId"
+                :disabled="mode === 'edit'"
+                :hide-controls-when-disabled="mode === 'edit'"
+                :label="''"
+                :fetch-by-id="true"
+                placeholder="Buscar por nombre o cédula..."
+              />
             </label>
 
             <label class="field">
@@ -112,8 +110,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-// IMPORTAMOS ambas funciones: obtener lista y obtener uno por ID
-import { getAdolescentes, getAdolescenteById } from "../../../../service/adolescente.service";
+import AdolescenteSearch from "@/components/adolescente/AdolescenteSearch.vue";
 
 const props = defineProps({
   open: Boolean,
@@ -125,7 +122,7 @@ const props = defineProps({
 const emit = defineEmits(["close", "save"]);
 
 // Estado
-const adolescenteId = ref("");
+const adolescenteId = ref(null);
 const fecha = ref("");
 const diagnostico = ref("");
 const tomaMedicacion = ref("0");
@@ -135,77 +132,38 @@ const numAtenMedica = ref(0);
 const discapacidad = ref("0");
 const observacion = ref("");
 
-const adolescentesList = ref([]);
 const loadingData = ref(false);
 
-// Helper
-const extractData = (res) => {
-  if (Array.isArray(res)) return res;
-  if (res.data && Array.isArray(res.data.data)) return res.data.data;
-  if (res.data && Array.isArray(res.data)) return res.data;
-  return [];
-};
-
-// Carga inicial de lista (primeros 100)
-const loadAdolescentes = async () => {
-  if (adolescentesList.value.length > 0) return;
-  
-  loadingData.value = true;
-  try {
-    const response = await getAdolescentes({ size: 100 });
-    adolescentesList.value = extractData(response);
-  } catch (error) {
-    console.error("Error listando adolescentes:", error);
-  } finally {
-    loadingData.value = false;
-  }
-};
-
-// Carga de un adolescente específico si no está en la lista
-const ensureAdolescenteLoaded = async (id) => {
-  if (!id) return;
-  
-  // Verificamos si ya existe en la lista cargada
-  const exists = adolescentesList.value.some(a => a.id === id);
-  
-  if (!exists) {
-    // Si no existe, lo buscamos individualmente
-    try {
-      const res = await getAdolescenteById(id);
-      const adol = res.data?.data ?? res.data ?? res; // Manejo de respuesta flexible
-      
-      if (adol && adol.id) {
-        // Lo agregamos a la lista para que el <select> pueda mostrarlo
-        adolescentesList.value.push(adol);
-      }
-    } catch (e) {
-      console.warn("No se pudo cargar el adolescente individual:", id, e);
-    }
-  }
+const resetForm = () => {
+  adolescenteId.value = null;
+  fecha.value = new Date().toISOString().slice(0, 10);
+  diagnostico.value = "";
+  tomaMedicacion.value = "0";
+  consumeSustancia.value = "0";
+  tipoSustancia.value = "";
+  numAtenMedica.value = 0;
+  discapacidad.value = "0";
+  observacion.value = "";
 };
 
 watch(
   () => props.open,
   async (isOpen) => {
-    if (isOpen) {
-      // 1. Cargamos la lista general
-      await loadAdolescentes();
+    if (!isOpen) return;
 
+    loadingData.value = true;
+    try {
       if (props.initialData) {
         const val = props.initialData;
-        
-        // 2. Extraemos el ID que viene en la fila (puede ser adolescenteId o adolescente.id)
-        const targetId = Number(val.adolescenteId || val.adolescente?.id);
-        
-        // 3. ¡IMPORTANTE! Aseguramos que ese ID esté en la lista del select
-        if (targetId) {
-          await ensureAdolescenteLoaded(targetId);
+        const adolRaw = val?.adolescenteId ?? val?.adolescente?.id ?? null;
+
+        if (adolRaw) {
+          const targetId = Number(adolRaw);
           adolescenteId.value = targetId;
         } else {
-          adolescenteId.value = "";
+          adolescenteId.value = null;
         }
 
-        // Mapeo del resto de campos
         fecha.value = val.fecha ? String(val.fecha).slice(0, 10) : "";
         diagnostico.value = val.diagnostico || "";
         tomaMedicacion.value = val.tomaMedicacion === "1" ? "1" : "0";
@@ -215,17 +173,10 @@ watch(
         discapacidad.value = val.discapacidad === "1" ? "1" : "0";
         observacion.value = val.observacion || "";
       } else {
-        // Reset para crear
-        adolescenteId.value = "";
-        fecha.value = new Date().toISOString().slice(0, 10);
-        diagnostico.value = "";
-        tomaMedicacion.value = "0";
-        consumeSustancia.value = "0";
-        tipoSustancia.value = "";
-        numAtenMedica.value = 0;
-        discapacidad.value = "0";
-        observacion.value = "";
+        resetForm();
       }
+    } finally {
+      loadingData.value = false;
     }
   },
   { immediate: true }

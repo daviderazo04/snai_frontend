@@ -190,8 +190,6 @@ watch(
       return;
     }
 
-    // Si ya tenemos raw correspondiente, no refetch
-    if (selectedRaw.value && Number(selectedRaw.value.id) === Number(val)) return;
     if (!props.fetchById) return;
     if (loadingExisting) return;
 
@@ -212,6 +210,8 @@ watch(
       loadingExisting = false;
     }
   }
+,
+  { immediate: true }
 );
 
 watch(
@@ -241,11 +241,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.adolescente-search {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
 
 .label {
   font-weight: 700;
@@ -257,6 +252,9 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 8px;
   align-items: center;
+  width: 100%;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 select {
@@ -266,15 +264,21 @@ select {
   background: #f8fafc;
   font-weight: 600;
   color: #0f172a;
+  flex: 0 0 auto;
+  min-width: 120px;
+  max-width: 40%;
 }
 
 .input-wrap {
   position: relative;
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0; /* permite que el input se contraiga en contenedores estrechos */
+  max-width: 70%;
 }
 
 .input-wrap input {
   width: 100%;
+  min-width: 0;
   padding: 10px 38px 10px 12px;
   border-radius: 12px;
   border: 1px solid #e2e8f0;

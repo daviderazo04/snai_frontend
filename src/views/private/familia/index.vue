@@ -9,7 +9,7 @@
 
     <div class="content-area">
       <FamiliaToolbar 
-        v-model:search="search"
+        v-model:adolescenteId="adolescenteIdFilter"
         :total="pagination.total"
         :can-edit="canEdit"
         @create="openCreateModal"
@@ -60,7 +60,7 @@ import FamiliaFormModal from "./components/FamiliaFormModal.vue";
 
 const items = ref([]);
 const loading = ref(false);
-const search = ref("");
+const adolescenteIdFilter = ref(null);
 
 const pagination = reactive({
   page: 1,
@@ -80,8 +80,10 @@ const loadItems = async () => {
     const params = {
       page: pagination.page,
       size: pagination.size,
-      termino: search.value // El backend usa 'termino' para filtrar
     };
+    if (adolescenteIdFilter.value) {
+      params.adolescenteId = adolescenteIdFilter.value;
+    }
 
     const res = await getFamilias(params);
     const payload = res.data || res;
@@ -105,12 +107,12 @@ const loadItems = async () => {
 };
 
 let searchTimeout;
-watch(search, () => {
+watch(adolescenteIdFilter, () => {
   clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => {
     pagination.page = 1;
     loadItems();
-  }, 400);
+  }, 200);
 });
 
 const openCreateModal = () => {

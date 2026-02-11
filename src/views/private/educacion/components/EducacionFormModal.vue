@@ -24,14 +24,15 @@
           <div v-else class="form-grid">
             <label class="field full-width">
               <span>Adolescente <span class="required">*</span></span>
-              <div class="select-wrapper">
-                <select v-model.number="adolescenteId">
-                  <option value="" disabled>Seleccione el adolescente...</option>
-                  <option v-for="item in adolescentesList" :key="item.id" :value="item.id">
-                    {{ item.nombre }} {{ item.apellido }} ({{ item.cedula }})
-                  </option>
-                </select>
-              </div>
+              <AdolescenteSearch
+                :key="`${mode}-${adolescenteId || 'nuevo'}`"
+                v-model="adolescenteId"
+                :disabled="mode === 'edit'"
+                :hide-controls-when-disabled="mode === 'edit'"
+                :label="''"
+                :fetch-by-id="true"
+                placeholder="Buscar por nombre o cédula..."
+              />
             </label>
 
             <label class="field">
@@ -131,7 +132,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { getAdolescentes, getAdolescenteById } from "../../../../service/adolescente.service.js";
+import AdolescenteSearch from "@/components/adolescente/AdolescenteSearch.vue";
 
 const props = defineProps({
   open: Boolean,
@@ -142,7 +143,7 @@ const props = defineProps({
 
 const emit = defineEmits(["close", "save"]);
 
-const adolescenteId = ref("");
+const adolescenteId = ref(null);
 const fecha = ref("");
 const estudia = ref("1");
 const razonNoEstudia = ref("");
@@ -154,42 +155,20 @@ const modalidad = ref("");
 const contacto = ref("");
 const observacion = ref("");
 
-const adolescentesList = ref([]);
 const loadingData = ref(false);
 
-const extractList = (response) => {
-  const payload = response?.data?.data ?? response?.data;
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.items)) return payload.items;
-  if (Array.isArray(payload?.rows)) return payload.rows;
-  if (Array.isArray(payload?.adolescentes)) return payload.adolescentes;
-  return [];
-};
-
-const loadAdolescentes = async () => {
-  if (adolescentesList.value.length > 0) return;
-  try {
-    const response = await getAdolescentes({ size: 100 });
-    adolescentesList.value = extractList(response);
-  } catch (error) {
-    console.error("Error listando adolescentes:", error);
-  }
-};
-
-const ensureAdolescenteLoaded = async (id) => {
-  if (!id) return;
-  const exists = adolescentesList.value.some((a) => Number(a.id) === Number(id));
-  if (exists) return;
-  try {
-    const res = await getAdolescenteById(id);
-    const adol = res?.data?.data ?? res?.data ?? null;
-    if (adol && adol.id) {
-      adolescentesList.value.push(adol);
-    }
-  } catch (e) {
-    console.warn("No se pudo cargar el adolescente:", id, e);
-  }
+const resetForm = () => {
+  adolescenteId.value = null;
+  fecha.value = new Date().toISOString().slice(0, 10);
+  estudia.value = "1";
+  razonNoEstudia.value = "";
+  nivel.value = "";
+  cicloAcademico.value = "";
+  carrera.value = "";
+  institucion.value = "";
+  modalidad.value = "";
+  contacto.value = "";
+  observacion.value = "";
 };
 
 watch(
@@ -199,42 +178,32 @@ watch(
 
     loadingData.value = true;
     try {
-      await loadAdolescentes();
+      if (props.initialData) {
+        const val = props.initialData;
+        const adolRaw = val?.adolescenteId ?? val?.adolescente?.id ?? null;
+
+        if (adolRaw) {
+          const targetId = Number(adolRaw);
+          adolescenteId.value = targetId;
+        } else {
+          adolescenteId.value = null;
+        }
+
+        fecha.value = val?.fecha ? String(val.fecha).slice(0, 10) : "";
+        estudia.value = val?.estudia === "0" ? "0" : "1";
+        razonNoEstudia.value = val?.razonNoEstudia ?? "";
+        nivel.value = val?.nivel ?? "";
+        cicloAcademico.value = val?.cicloAcademico ?? "";
+        carrera.value = val?.carrera ?? "";
+        institucion.value = val?.institucion ?? "";
+        modalidad.value = val?.modalidad ?? "";
+        contacto.value = val?.contacto ?? "";
+        observacion.value = val?.observacion ?? "";
+      } else {
+        resetForm();
+      }
     } finally {
       loadingData.value = false;
-    }
-
-    if (props.initialData) {
-      const val = props.initialData;
-      if (val?.adolescenteId) {
-        await ensureAdolescenteLoaded(Number(val.adolescenteId));
-        adolescenteId.value = Number(val.adolescenteId);
-      } else {
-        adolescenteId.value = "";
-      }
-
-      fecha.value = val?.fecha ? String(val.fecha).slice(0, 10) : "";
-      estudia.value = val?.estudia === "0" ? "0" : "1";
-      razonNoEstudia.value = val?.razonNoEstudia ?? "";
-      nivel.value = val?.nivel ?? "";
-      cicloAcademico.value = val?.cicloAcademico ?? "";
-      carrera.value = val?.carrera ?? "";
-      institucion.value = val?.institucion ?? "";
-      modalidad.value = val?.modalidad ?? "";
-      contacto.value = val?.contacto ?? "";
-      observacion.value = val?.observacion ?? "";
-    } else {
-      adolescenteId.value = "";
-      fecha.value = new Date().toISOString().slice(0, 10);
-      estudia.value = "1";
-      razonNoEstudia.value = "";
-      nivel.value = "";
-      cicloAcademico.value = "";
-      carrera.value = "";
-      institucion.value = "";
-      modalidad.value = "";
-      contacto.value = "";
-      observacion.value = "";
     }
   },
   { immediate: true }

@@ -28,14 +28,15 @@
               
               <label class="field full-width">
                 <span>Adolescente <span class="required">*</span></span>
-                <div class="select-wrapper">
-                  <select v-model.number="form.adolescenteId" :disabled="mode === 'edit'" required>
-                    <option :value="null" disabled>Seleccione un adolescente...</option>
-                    <option v-for="item in adolescentesList" :key="item.id" :value="item.id">
-                      {{ item.apellido }} {{ item.nombre }} ({{ item.cedula }})
-                    </option>
-                  </select>
-                </div>
+                <AdolescenteSearch
+                  :key="`${mode}-${form.adolescenteId || 'nuevo'}`"
+                  v-model="form.adolescenteId"
+                  :disabled="mode === 'edit'"
+                  :hide-controls-when-disabled="mode === 'edit'"
+                  :label="''"
+                  :fetch-by-id="true"
+                  placeholder="Buscar por nombre o cédula..."
+                />
               </label>
 
               <label class="field">
@@ -91,10 +92,9 @@
 
 <script setup>
 import { ref, computed, watch, reactive } from "vue";
-// Ajusta las rutas según tu estructura
-import { getAdolescentes } from '../../../../service/adolescente.service';
-import { getEventos } from '../../../../service/evento.service'; 
+import { getEventos } from "../../../../service/evento.service"; 
 import { createFamilia, updateFamilia } from "../../../../service/familia.service";
+import AdolescenteSearch from "@/components/adolescente/AdolescenteSearch.vue";
 
 const props = defineProps({
   open: Boolean,
@@ -111,7 +111,6 @@ const form = reactive({
   detalle: ""
 });
 
-const adolescentesList = ref([]);
 const eventosList = ref([]);
 const loadingData = ref(false);
 const internalSaving = ref(false);
@@ -124,18 +123,12 @@ const extractData = (res) => {
 };
 
 const loadCatalogs = async () => {
-  if (adolescentesList.value.length > 0 && eventosList.value.length > 0) return;
+  if (eventosList.value.length > 0) return;
   
   loadingData.value = true;
   try {
-    const [resAdolescentes, resEventos] = await Promise.all([
-      getAdolescentes({ size: 100 }),
-      getEventos({ size: 100 })
-    ]);
-
-    adolescentesList.value = extractData(resAdolescentes);
+    const resEventos = await getEventos({ size: 100 });
     eventosList.value = extractData(resEventos);
-
   } catch (e) {
     console.error("Error cargando catálogos:", e);
   } finally {
@@ -143,34 +136,32 @@ const loadCatalogs = async () => {
   }
 };
 
+const resetForm = () => {
+  form.adolescenteId = null;
+  form.eventoId = null;
+  form.fecha = new Date().toISOString().slice(0, 10);
+  form.detalle = "";
+};
+
 watch(
   () => props.open,
   async (isOpen) => {
-    if (isOpen) {
-      await loadCatalogs();
-      internalSaving.value = false;
-      
-      if (props.initialData) {
-        // --- LÓGICA DE EDICIÓN CORREGIDA ---
-        const d = props.initialData;
-        
-        // Buscamos el ID dentro del objeto anidado (d.adolescente.id) O en la propiedad directa (d.adolescenteId)
-        const adolId = d.adolescente?.id || d.adolescenteId;
-        const evtId = d.evento?.id || d.eventoId;
+    if (!isOpen) return;
+    await loadCatalogs();
+    internalSaving.value = false;
+    
+    if (props.initialData) {
+      const d = props.initialData;
+      const adolId = d.adolescente?.id || d.adolescenteId;
+      const evtId = d.evento?.id || d.eventoId;
 
-        form.adolescenteId = adolId ? Number(adolId) : null;
-        form.eventoId = evtId ? Number(evtId) : null;
-        
-        // Formateo seguro de fecha
-        form.fecha = d.fecha ? new Date(d.fecha).toISOString().slice(0, 10) : "";
-        form.detalle = d.detalle || "";
-      } else {
-        // --- MODO CREAR ---
-        form.adolescenteId = null;
-        form.eventoId = null;
-        form.fecha = new Date().toISOString().slice(0, 10);
-        form.detalle = "";
-      }
+      form.adolescenteId = adolId ? Number(adolId) : null;
+      form.eventoId = evtId ? Number(evtId) : null;
+      
+      form.fecha = d.fecha ? new Date(d.fecha).toISOString().slice(0, 10) : "";
+      form.detalle = d.detalle || "";
+    } else {
+      resetForm();
     }
   },
   { immediate: true }

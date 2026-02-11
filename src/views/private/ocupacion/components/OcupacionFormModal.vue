@@ -31,14 +31,11 @@
                 <AdolescenteSearch
                   :key="`${mode}-${form.adolescenteId || 'nuevo'}`"
                   v-model="form.adolescenteId"
-                  :initial-raw="initialAdolescente"
-                  :initial-label="initialAdolescenteLabel"
                   :disabled="internalSaving || mode === 'edit'"
                   :hide-controls-when-disabled="mode === 'edit'"
                   :label="''"
                   :fetch-by-id="true"
                   placeholder="Buscar por nombre o cédula..."
-                  @selected="onAdolescenteSelected"
                 />
                 <small v-if="mode === 'edit' && form.adolescenteId" class="helper-text">
                   Editando registros de: ID {{ form.adolescenteId }}
@@ -109,7 +106,6 @@
 
 <script setup>
 import { ref, computed, watch, reactive } from "vue";
-import { getAdolescenteById } from "../../../../service/adolescente.service"; 
 import { createOcupacion, updateOcupacion } from "../../../../service/ocupacion.service";
 import AdolescenteSearch from "@/components/adolescente/AdolescenteSearch.vue";
 
@@ -130,28 +126,8 @@ const form = reactive({
   observacion: ""
 });
 
-const initialAdolescente = ref(null);
-const initialAdolescenteLabel = ref("");
 const loadingCatalog = ref(false);
 const internalSaving = ref(false);
-
-// Lógica para asegurar que el adolescente a editar esté disponible en el selector
-const ensureAdolescenteLoaded = async (id) => {
-  if (!id) return;
-  try {
-    const res = await getAdolescenteById(id);
-    const adol = res.data?.data ?? res.data ?? res;
-    if (adol && adol.id) {
-      initialAdolescente.value = adol;
-      const name = `${adol.nombre || ""} ${adol.apellido || ""}`.trim();
-      const ced = adol.cedula ? ` (${adol.cedula})` : "";
-      const cai = adol.cai?.nombre ? ` · CAI: ${adol.cai.nombre}` : "";
-      initialAdolescenteLabel.value = `${name}${ced}${cai}`.trim();
-    }
-  } catch (e) {
-    console.warn("No se pudo cargar el adolescente individual:", id);
-  }
-};
 
 watch(
   () => props.open,
@@ -165,16 +141,7 @@ watch(
         
         // 1. Extraer ID de manera robusta (objeto anidado o propiedad plana)
         const targetId = Number(d.adolescente?.id || d.adolescenteId);
-        
-        // 2. Asegurar que exista en el selector
-        if (targetId) {
-          await ensureAdolescenteLoaded(targetId);
-          form.adolescenteId = targetId;
-        } else {
-          form.adolescenteId = null;
-          initialAdolescente.value = null;
-          initialAdolescenteLabel.value = "";
-        }
+        form.adolescenteId = targetId || null;
 
         // 3. Mapear el resto de campos
         form.taller = d.taller || "";
@@ -190,8 +157,6 @@ watch(
         form.participacion = 0;
         form.instructor = "";
         form.observacion = "";
-        initialAdolescente.value = null;
-        initialAdolescenteLabel.value = "";
       }
     }
   },
@@ -201,13 +166,6 @@ watch(
 const canSave = computed(() => {
   return form.adolescenteId && form.taller && form.taller.trim().length > 0 && form.fecha;
 });
-
-const onAdolescenteSelected = (opt) => {
-  if (opt?.raw) {
-    initialAdolescente.value = opt.raw;
-    initialAdolescenteLabel.value = opt.label;
-  }
-};
 
 const handleSaveClick = async () => {
   if (!canSave.value) return;

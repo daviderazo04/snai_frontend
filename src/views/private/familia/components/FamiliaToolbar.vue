@@ -1,33 +1,40 @@
 <template>
   <div class="toolbar">
-    <input
-      type="text"
-      placeholder="Buscar por detalle..."
-      :value="search"
-      @input="$emit('update:search', $event.target.value)"
-    />
+    <div class="search-block">
+      <AdolescenteSearch
+        v-model="internalAdolescenteId"
+        :fetch-by-id="true"
+        :label="''"
+        placeholder="Buscar adolescente por nombre o cédula"
+        @clear="clearFilters"
+      />
+    </div>
 
-    <!-- Botón Limpiar (solo si hay búsqueda activa) -->
-    <button
-      v-if="search"
-      class="btn-clear"
-      @click="clearFilters"
-    >
-      <span class="icon">🧹</span>
-      Limpiar
-    </button>
+    <div class="actions">
+      <button
+        v-if="internalAdolescenteId"
+        class="btn-clear"
+        @click="clearFilters"
+      >
+        <span class="icon">🧹</span>
+        Limpiar
+      </button>
 
-    <button v-if="canEdit" class="btn-primary" @click="$emit('create')">
-      + Nueva Interacción
-    </button>
+      <button v-if="canEdit" class="btn-primary" @click="$emit('create')">
+        + Nueva Interacción
+      </button>
+    </div>
   </div>
 </template>
 
 <script setup>
+import { computed } from "vue";
+import AdolescenteSearch from "@/components/adolescente/AdolescenteSearch.vue";
+
 const props = defineProps({
-  search: {
-    type: String,
-    default: "",
+  adolescenteId: {
+    type: [Number, String, null],
+    default: null,
   },
   total: Number,
   canEdit: {
@@ -36,10 +43,15 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["update:search", "create"]);
+const emit = defineEmits(["update:adolescenteId", "create"]);
+
+const internalAdolescenteId = computed({
+  get: () => props.adolescenteId,
+  set: (val) => emit("update:adolescenteId", val),
+});
 
 const clearFilters = () => {
-  emit("update:search", "");
+  emit("update:adolescenteId", null);
 };
 </script>
 
@@ -52,21 +64,9 @@ const clearFilters = () => {
   flex-wrap: wrap;
 }
 
-.toolbar input {
-  flex: 1;
-  min-width: 220px;
-  padding: 12px 12px;
-  border-radius: 14px;
-  border: 1px solid #e2e8f0;
-  outline: none;
-  font-size: 0.95rem;
-  background: #fff;
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
-}
-
-.toolbar input:focus {
-  border-color: rgba(59, 130, 246, 0.55);
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
+.search-block {
+  flex: 1 1 280px;
+  min-width: 240px;
 }
 
 /* Botón principal */
@@ -105,5 +105,11 @@ const clearFilters = () => {
 .btn-clear:hover {
   background: #f1f5f9;
   border-color: #cbd5e1;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 </style>
