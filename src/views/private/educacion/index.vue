@@ -32,7 +32,7 @@
 
     <section class="panel">
       <EducacionToolbar
-        v-model:search="search"
+        v-model:adolescenteId="adolescenteIdFilter"
         v-model:estudia="estudiaFilter"
         v-model:nivel="nivelFilter"
         v-model:institucion="institucionFilter"
@@ -103,7 +103,7 @@ const isSaving = ref(false);
 const errorMessage = ref("");
 
 // Variables de búsqueda (conectadas al Toolbar)
-const search = ref("");
+const adolescenteIdFilter = ref(null);
 const estudiaFilter = ref("");
 const nivelFilter = ref("");
 const institucionFilter = ref("");
@@ -121,30 +121,7 @@ const canEdit = computed(() => puedeEditar("/educacion"));
 /* ======================
    LÓGICA DE FILTRADO (Frontend)
 ====================== */
-const filteredItems = computed(() => {
-  if (!items.value.length) return [];
-
-  return items.value.filter((i) => {
-    // 1. Filtro por Nombre o Cédula (Search)
-    const term = search.value.trim().toLowerCase();
-    const matchSearch = !term || 
-      `${i.adolescenteNombre} ${i.adolescenteCedula}`.toLowerCase().includes(term);
-
-    // 2. Filtro por Estudia (Sí/No)
-    const matchEstudia = !estudiaFilter.value || i.estudia === estudiaFilter.value;
-
-    // 3. Filtro por Nivel
-    const nTerm = nivelFilter.value.trim().toLowerCase();
-    const matchNivel = !nTerm || (i.nivel && i.nivel.toLowerCase().includes(nTerm));
-
-    // 4. Filtro por Institución
-    const iTerm = institucionFilter.value.trim().toLowerCase();
-    const matchInst = !iTerm || (i.institucion && i.institucion.toLowerCase().includes(iTerm));
-
-    // Debe cumplir todos los filtros activos
-    return matchSearch && matchEstudia && matchNivel && matchInst;
-  });
-});
+const filteredItems = computed(() => items.value);
 
 /* ======================
    HELPERS & MAPPING
@@ -183,6 +160,10 @@ const loadItems = async () => {
     const res = await getEducaciones({
       page: currentPage.value,
       size: pageSize.value,
+      adolescenteId: adolescenteIdFilter.value || undefined,
+      estudia: estudiaFilter.value || undefined,
+      nivel: nivelFilter.value || undefined,
+      institucion: institucionFilter.value || undefined,
     });
     
     // Simplificamos la extracción de datos
@@ -247,6 +228,12 @@ const removeItem = async (row) => {
 };
 
 const goToDetail = (row) => router.push(`/app/educacion/${row.id}`);
+const reloadFilters = () => {
+  currentPage.value = 1;
+  loadItems();
+};
+
+watch([adolescenteIdFilter, estudiaFilter, nivelFilter, institucionFilter], reloadFilters);
 
 onMounted(loadItems);
 </script>

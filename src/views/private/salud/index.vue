@@ -46,7 +46,7 @@
 
       <SaludTable
         v-else
-        :items="filteredItems"
+        :items="items"
         :can-edit="canEdit"
         @view="goToDetail"
         @edit="openEdit"
@@ -100,7 +100,7 @@ const isSaving = ref(false);
 const errorMessage = ref("");
 
 // Variables de búsqueda solicitadas
-const searchNombre = ref("");
+const searchNombre = ref(null);
 const diagnostico = ref("");
 const discapacidad = ref(""); // Almacenará "1", "0" o ""
 
@@ -114,27 +114,8 @@ const modalInitial = ref(null);
 const editingId = ref(null);
 const canEdit = computed(() => puedeEditar("/salud"));
 
-/* ======================
-   LÓGICA DE FILTRADO (Frontend)
-====================== */
-const filteredItems = computed(() => {
-  if (!items.value.length) return [];
-
-  return items.value.filter((i) => {
-    // 1. Match por nombre de adolescente
-    const matchNombre = !searchNombre.value || 
-      i.adolescenteNombre.toLowerCase().includes(searchNombre.value.toLowerCase());
-
-    // 2. Match por diagnóstico
-    const matchDiag = !diagnostico.value || 
-      (i.diagnostico && i.diagnostico.toLowerCase().includes(diagnostico.value.toLowerCase()));
-
-    // 3. Match por discapacidad (comparación de strings "1" o "0")
-    const matchDisc = !discapacidad.value || i.discapacidad === discapacidad.value;
-
-    return matchNombre && matchDiag && matchDisc;
-  });
-});
+// Para métricas y tabla, usamos directamente los items cargados
+const filteredItems = computed(() => items.value);
 
 /* ======================
    HELPERS & MAPPING
@@ -187,6 +168,9 @@ const loadItems = async () => {
     const res = await getSalud({
       page: currentPage.value,
       size: pageSize.value,
+      adolescenteId: searchNombre.value || undefined,
+      diagnostico: diagnostico.value || undefined,
+      discapacidad: discapacidad.value || undefined,
     });
     const payload = unwrap(res);
     const { list, totalPages: tp, total } = parsePaginated(payload);
@@ -253,6 +237,13 @@ const removeItem = async (row) => {
     alert("Error al eliminar.");
   }
 };
+
+const reloadFilters = () => {
+  currentPage.value = 1;
+  loadItems();
+};
+
+watch([searchNombre, diagnostico, discapacidad], reloadFilters);
 
 onMounted(loadItems);
 </script>

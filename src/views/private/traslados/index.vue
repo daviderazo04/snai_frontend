@@ -29,26 +29,19 @@
     </section>
 
     <section class="panel">
-  <TrasladosToolbar
+ <TrasladosToolbar
     :search="search"
     :date-from="dateFrom"
     :date-to="dateTo"
-    :date-sort="dateSort"
-    :province-id="selectedProvinceId"
-    :canton-id="selectedCantonId"
-    :cai-id="selectedCaiId"
-    :provincias="provinceOptions"
-    :cantones="cantonOptions"
-    :cais="caiOptions"
+    :cai-from-id="selectedCaiFromId"
+    :cai-to-id="selectedCaiToId"
     :total="totalItems"
     :can-edit="canEdit"
     @update:search="search = $event"
     @update:dateFrom="dateFrom = $event"
     @update:dateTo="dateTo = $event"
-    @update:dateSort="dateSort = $event"
-    @update:province="selectedProvinceId = $event"
-    @update:canton="selectedCantonId = $event"
-    @update:cai="selectedCaiId = $event"
+    @update:caiFrom="selectedCaiFromId = $event"
+    @update:caiTo="selectedCaiToId = $event"
     @create="openCreate"
   />
 
@@ -228,10 +221,8 @@ const errorMessage = ref("");
 const search = ref("");
 const dateFrom = ref("");
 const dateTo = ref("");
-const dateSort = ref("desc");
-const selectedProvinceId = ref("");
-const selectedCantonId = ref("");
-const selectedCaiId = ref("");
+const selectedCaiFromId = ref("");
+const selectedCaiToId = ref("");
 const currentPage = ref(1);
 const pageSize = ref(6);
 const totalPages = ref(1);
@@ -242,86 +233,6 @@ const modalInitial = ref(null);
 const editingId = ref(null);
 const canEdit = computed(() => puedeEditar("/traslados"));
 
-const baseCaiList = computed(() => {
-  // Se arma a partir de los datos que devuelve el endpoint (cai y fromCai)
-  const fromItems = items.value.flatMap((item) => {
-    const arr = [];
-    if (item.caiId) {
-      arr.push({
-        id: item.caiId,
-        nombre: item.caiNombre || "CAI",
-        cantonId: item.caiCantonId,
-        cantonNombre: item.caiCantonNombre,
-        provinciaId: item.caiProvinciaId,
-        provinciaNombre: item.caiProvinciaNombre,
-      });
-    }
-    if (item.fromCaiId) {
-      arr.push({
-        id: item.fromCaiId,
-        nombre: item.fromCaiNombre || "CAI Origen",
-        cantonId: item.fromCaiCantonId,
-        cantonNombre: item.fromCaiCantonNombre,
-        provinciaId: item.fromCaiProvinciaId,
-        provinciaNombre: item.fromCaiProvinciaNombre,
-      });
-    }
-    return arr;
-  });
-
-  const map = new Map();
-  fromItems.forEach((cai) => {
-    if (!map.has(String(cai.id))) {
-      map.set(String(cai.id), cai);
-    }
-  });
-  return Array.from(map.values());
-});
-
-const provinceOptions = computed(() => {
-  const map = new Map();
-  baseCaiList.value.forEach((item) => {
-    if (!item.provinciaId) return;
-    const key = String(item.provinciaId);
-    if (!map.has(key)) {
-      map.set(key, { id: item.provinciaId, nombre: item.provinciaNombre || "Provincia" });
-    }
-  });
-  return Array.from(map.values());
-});
-
-const cantonOptions = computed(() => {
-  const map = new Map();
-  baseCaiList.value.forEach((item) => {
-    if (!item.cantonId) return;
-    if (selectedProvinceId.value && String(item.provinciaId) !== String(selectedProvinceId.value)) {
-      return;
-    }
-    const key = String(item.cantonId);
-    if (!map.has(key)) {
-      map.set(key, {
-        id: item.cantonId,
-        nombre: item.cantonNombre || "Cantón",
-        provinciaId: item.provinciaId,
-      });
-    }
-  });
-  return Array.from(map.values());
-});
-
-const caiOptions = computed(() => {
-  const list = baseCaiList.value.filter((item) => {
-    if (selectedProvinceId.value && String(item.provinciaId) !== String(selectedProvinceId.value)) {
-      return false;
-    }
-    if (selectedCantonId.value && String(item.cantonId) !== String(selectedCantonId.value)) {
-      return false;
-    }
-    return true;
-  });
-  return list;
-});
-
 const visibleCount = computed(() => items.value.length);
 
 const loadItems = async () => {
@@ -330,12 +241,10 @@ const loadItems = async () => {
   try {
     const params = {
       search: search.value || undefined,
-      from: dateFrom.value ? String(dateFrom.value).slice(0, 10) : undefined,
-      to: dateTo.value ? String(dateTo.value).slice(0, 10) : undefined,
-      sort: dateSort.value || undefined,
-      provinciaId: selectedProvinceId.value || undefined,
-      cantonId: selectedCantonId.value || undefined,
-      caiId: selectedCaiId.value || undefined,
+      dateFrom: dateFrom.value ? String(dateFrom.value).slice(0, 10) : undefined,
+      dateTo: dateTo.value ? String(dateTo.value).slice(0, 10) : undefined,
+      caiFromId: selectedCaiFromId.value || undefined,
+      caiToId: selectedCaiToId.value || undefined,
       page: currentPage.value,
       size: pageSize.value,
     };
@@ -363,15 +272,7 @@ const loadItems = async () => {
 };
 
 watch(
-  [
-    search,
-    dateFrom,
-    dateTo,
-    dateSort,
-    selectedProvinceId,
-    selectedCantonId,
-    selectedCaiId,
-  ],
+  [search, dateFrom, dateTo, selectedCaiFromId, selectedCaiToId],
   () => {
     currentPage.value = 1;
     loadItems();
@@ -383,22 +284,6 @@ watch(totalPages, (val) => {
 });
 
 watch(currentPage, loadItems);
-
-watch([selectedProvinceId, cantonOptions], () => {
-  if (!selectedCantonId.value) return;
-  const exists = cantonOptions.value.some(
-    (item) => String(item.id) === String(selectedCantonId.value)
-  );
-  if (!exists) selectedCantonId.value = "";
-});
-
-watch([selectedProvinceId, selectedCantonId, caiOptions], () => {
-  if (!selectedCaiId.value) return;
-  const exists = caiOptions.value.some(
-    (item) => String(item.id) === String(selectedCaiId.value)
-  );
-  if (!exists) selectedCaiId.value = "";
-});
 
 const openCreate = () => {
   if (!canEdit.value) return;

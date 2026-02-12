@@ -27,11 +27,12 @@
     <div class="filters">
       <label class="field">
         <span class="label">Buscar adolescente</span>
-        <input
-          type="search"
+        <AdolescenteSearch
+          v-model="adolescenteIdInternal"
+          :fetch-by-id="true"
+          :label="''"
           placeholder="Nombre o cédula"
-          :value="search"
-          @input="$emit('update:search', $event.target.value)"
+          @clear="clearAdolescente"
         />
       </label>
 
@@ -72,9 +73,10 @@
 
 <script setup>
 import { computed } from "vue";
+import AdolescenteSearch from "@/components/adolescente/AdolescenteSearch.vue";
 
 const props = defineProps({
-  search: { type: String, default: "" },
+  adolescenteId: { type: [Number, String, null], default: null },
   total: Number,
   estudia: { type: String, default: "" },
   nivel: { type: String, default: "" },
@@ -86,26 +88,33 @@ const props = defineProps({
 });
 
 const emit = defineEmits([
-  "update:search",
+  "update:adolescenteId",
   "update:estudia",
   "update:nivel",
   "update:institucion",
   "create",
 ]);
 
+const adolescenteIdInternal = computed({
+  get: () => props.adolescenteId,
+  set: (val) => emit("update:adolescenteId", val),
+});
+
 /* Detectar si hay filtros activos */
 const hasFilters = computed(() => {
   return (
-    props.search ||
+    props.adolescenteId ||
     props.estudia ||
     props.nivel ||
     props.institucion
   );
 });
 
+const clearAdolescente = () => emit("update:adolescenteId", null);
+
 /* Limpiar todos los filtros */
 const clearFilters = () => {
-  emit("update:search", "");
+  clearAdolescente();
   emit("update:estudia", "");
   emit("update:nivel", "");
   emit("update:institucion", "");
@@ -186,7 +195,7 @@ const clearFilters = () => {
 /* Filtros */
 .filters {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 14px;
 }
 
@@ -207,7 +216,8 @@ const clearFilters = () => {
 }
 
 .field input,
-.field select {
+.field select,
+.field :deep(.adolescente-search) {
   padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid #e2e8f0;
@@ -217,7 +227,8 @@ const clearFilters = () => {
 }
 
 .field input:focus,
-.field select:focus {
+.field select:focus,
+.field :deep(.adolescente-search input) {
   outline: none;
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);

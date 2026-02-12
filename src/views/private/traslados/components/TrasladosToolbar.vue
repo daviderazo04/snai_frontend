@@ -25,55 +25,34 @@
     <div class="filters">
       <label class="field">
         <span class="label">Buscar adolescente</span>
-        <input
-          type="search"
+        <AdolescenteSearch
+          v-model="adolInternal"
+          :fetch-by-id="true"
+          :label="''"
           placeholder="Nombre o cédula"
-          :value="search"
-          @input="$emit('update:search', $event.target.value)"
+          @clear="clearAdolescente"
         />
       </label>
 
       <label class="field">
-        <span class="label">Orden por fecha</span>
-        <select :value="dateSort" @change="$emit('update:dateSort', $event.target.value)">
-          <option value="desc">Más recientes</option>
-          <option value="asc">Más antiguos</option>
-        </select>
-      </label>
-
-      <label class="field">
-        <span class="label">Desde</span>
+        <span class="label">Desde (Fecha)</span>
         <input type="date" :value="dateFrom" @input="$emit('update:dateFrom', $event.target.value)" />
       </label>
 
       <label class="field">
-        <span class="label">Hasta</span>
+        <span class="label">Hasta (Fecha)</span>
         <input type="date" :value="dateTo" @input="$emit('update:dateTo', $event.target.value)" />
       </label>
 
       <label class="field">
-        <span class="label">Provincia</span>
+        <span class="label">CAI Origen</span>
         <select 
-          :value="provinceId" 
-          @change="$emit('update:province', $event.target.value ? Number($event.target.value) : '')" 
-          :disabled="loading"
-        >
-          <option value="">Todas</option>
-          <option v-for="p in listaProvincias" :key="p.id" :value="p.id">
-            {{ p.nombre }}
-          </option>
-        </select>
-      </label>
-
-      <label class="field">
-        <span class="label">Cantón</span>
-        <select 
-          :value="cantonId" 
-          @change="$emit('update:canton', $event.target.value ? Number($event.target.value) : '')" 
+          :value="caiFromId" 
+          @change="$emit('update:caiFrom', $event.target.value ? Number($event.target.value) : '')" 
           :disabled="loading"
         >
           <option value="">Todos</option>
-          <option v-for="c in listaCantones" :key="c.id" :value="c.id">
+          <option v-for="c in listaCais" :key="c.id" :value="c.id">
             {{ c.nombre }}
           </option>
         </select>
@@ -82,8 +61,8 @@
       <label class="field">
         <span class="label">CAI Destino</span>
         <select 
-          :value="caiId" 
-          @change="$emit('update:cai', $event.target.value ? Number($event.target.value) : '')" 
+          :value="caiToId" 
+          @change="$emit('update:caiTo', $event.target.value ? Number($event.target.value) : '')" 
           :disabled="loading"
         >
           <option value="">Todos</option>
@@ -98,19 +77,16 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { getProvincias } from "@/service/provincias.service";
-import { getCantones } from "@/service/cantones.service";
 import { getCais } from "@/service/cai.service";
+import AdolescenteSearch from "@/components/adolescente/AdolescenteSearch.vue";
 
 const props = defineProps({
-  search: String,
+  search: [String, Number, null],
   total: Number,
   dateFrom: String,
   dateTo: String,
-  dateSort: String,
-  provinceId: [String, Number],
-  cantonId: [String, Number],
-  caiId: [String, Number],
+  caiFromId: [String, Number],
+  caiToId: [String, Number],
   canEdit: {
     type: Boolean,
     default: true,
@@ -121,39 +97,32 @@ const emit = defineEmits([
   "update:search",
   "update:dateFrom",
   "update:dateTo",
-  "update:dateSort",
-  "update:province",
-  "update:canton",
-  "update:cai",
+  "update:caiFrom",
+  "update:caiTo",
   "create"
 ]);
 
-const listaProvincias = ref([]);
-const listaCantones = ref([]);
 const listaCais = ref([]);
 const loading = ref(false);
+const adolInternal = computed({
+  get: () => props.search,
+  set: (val) => emit("update:search", val),
+});
 
 const hasFilters = computed(() => {
   return (
     props.search ||
     props.dateFrom ||
     props.dateTo ||
-    props.provinceId ||
-    props.cantonId ||
-    props.caiId
+    props.caiFromId ||
+    props.caiToId
   );
 });
 
 const loadCatalogs = async () => {
   loading.value = true;
   try {
-    const [resP, resC, resCai] = await Promise.all([
-      getProvincias({ size: 1000 }),
-      getCantones({ size: 1000 }),
-      getCais({ size: 1000 })
-    ]);
-    listaProvincias.value = resP.data?.data || resP.data || [];
-    listaCantones.value = resC.data?.data || resC.data || [];
+    const resCai = await getCais({ size: 1000 });
     listaCais.value = resCai.data?.data || resCai.data || [];
   } catch (error) {
     console.error("Error cargando catálogos:", error);
@@ -166,11 +135,11 @@ const clearFilters = () => {
   emit("update:search", "");
   emit("update:dateFrom", "");
   emit("update:dateTo", "");
-  emit("update:dateSort", "desc");
-  emit("update:province", "");
-  emit("update:canton", "");
-  emit("update:cai", "");
+  emit("update:caiFrom", "");
+  emit("update:caiTo", "");
 };
+
+const clearAdolescente = () => emit("update:search", null);
 
 onMounted(loadCatalogs);
 </script>

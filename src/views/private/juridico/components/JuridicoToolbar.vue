@@ -9,27 +9,14 @@
         @input="emitTermino"
       />
 
-      <div class="autocomplete" ref="adolescenteRef">
-        <input
-          type="text"
+      <div class="autocomplete search-adol">
+        <AdolescenteSearch
+          v-model="adolInternal"
+          :fetch-by-id="true"
+          :label="''"
           placeholder="Buscar adolescente..."
-          v-model="adolescenteQuery"
-          @focus="showAdolescentes = true"
+          @clear="clearAdolescente"
         />
-
-        <ul v-if="showAdolescentes && (adolescenteQuery || adolescentes.length)">
-          <li
-            v-for="a in adolescentes"
-            :key="a.id"
-            @click="selectAdolescente(a)"
-          >
-            {{ a.label }}
-          </li>
-
-          <li v-if="!adolescentes.length" class="no-results">
-            Sin resultados
-          </li>
-        </ul>
       </div>
 
       <div class="autocomplete" ref="delitoRef">
@@ -74,12 +61,12 @@
 
 <script setup>
 import { ref, watch, computed, onMounted, onBeforeUnmount } from "vue";
-import { getAdolescentes } from "@/service/adolescente.service";
 import { getDelitos } from "@/service/delito.service";
+import AdolescenteSearch from "@/components/adolescente/AdolescenteSearch.vue";
 
 const props = defineProps({
   termino: String,
-  adolescenteId: Number,
+  adolescenteId: [Number, String, null],
   delitoId: Number,
   canEdit: {
     type: Boolean,
@@ -97,21 +84,21 @@ const emit = defineEmits([
 /* ================= STATE ================= */
 
 const localTermino = ref(props.termino || "");
-const adolescenteQuery = ref("");
 const delitoQuery = ref("");
 
-const adolescentes = ref([]);
 const delitos = ref([]);
 
-const showAdolescentes = ref(false);
 const showDelitos = ref(false);
+const adolInternal = computed({
+  get: () => props.adolescenteId,
+  set: (v) => emit("update:adolescenteId", v),
+});
 
 /* ================= DETECTAR FILTROS ================= */
 
 const hasFilters = computed(() => {
   return (
     localTermino.value ||
-    adolescenteQuery.value ||
     delitoQuery.value ||
     props.adolescenteId ||
     props.delitoId
@@ -132,31 +119,6 @@ const loadDelitos = async () => {
 
 onMounted(loadDelitos);
 
-/* ================= BÚSQUEDA GLOBAL ADOLESCENTES ================= */
-
-watch(adolescenteQuery, async (newValue) => {
-  if (!newValue) {
-    adolescentes.value = [];
-    return;
-  }
-
-  // Si ya tenemos un ID seleccionado y el query coincide con el label, no buscamos de nuevo
-  if (props.adolescenteId && adolescentes.value.some(a => a.label === newValue)) return;
-
-  const res = await getAdolescentes({
-    nombre: newValue, // Usamos el parámetro correcto de tu API para búsqueda global
-    page: 1,
-    size: 20,         // Traemos más resultados para filtrar mejor
-  });
-
-  const data = res.data?.data ?? [];
-
-  adolescentes.value = data.map(a => ({
-    id: a.id,
-    label: `${a.nombre} ${a.apellido}`,
-  })).slice(0, 5); // Mostramos solo los primeros 5 en la lista desplegable
-});
-
 /* ================= FILTRO DELITOS EN MEMORIA ================= */
 
 const filteredDelitos = computed(() =>
@@ -168,12 +130,6 @@ const filteredDelitos = computed(() =>
 );
 
 /* ================= SELECT ================= */
-
-const selectAdolescente = (a) => {
-  adolescenteQuery.value = a.label;
-  showAdolescentes.value = false;
-  emit("update:adolescenteId", a.id);
-};
 
 const selectDelito = (d) => {
   delitoQuery.value = d.nombre;
@@ -191,11 +147,8 @@ const emitTermino = () => {
 
 const clearFilters = () => {
   localTermino.value = "";
-  adolescenteQuery.value = "";
   delitoQuery.value = "";
 
-  adolescentes.value = [];
-  showAdolescentes.value = false;
   showDelitos.value = false;
 
   emit("update:termino", "");
@@ -205,17 +158,15 @@ const clearFilters = () => {
 
 /* ================= CLICK OUTSIDE ================= */
 
-const adolescenteRef = ref(null);
 const delitoRef = ref(null);
 
 const handleClickOutside = (e) => {
-  if (adolescenteRef.value && !adolescenteRef.value.contains(e.target)) {
-    showAdolescentes.value = false;
-  }
   if (delitoRef.value && !delitoRef.value.contains(e.target)) {
     showDelitos.value = false;
   }
 };
+
+const clearAdolescente = () => emit("update:adolescenteId", null);
 
 onMounted(() => {
   document.addEventListener("click", handleClickOutside);
@@ -240,6 +191,10 @@ onBeforeUnmount(() => {
   gap: 12px;
   flex-wrap: wrap;
   flex: 1;
+}
+
+.search-adol :deep(.adolescente-search) {
+  max-width: 320px;
 }
 
 .toolbar input {

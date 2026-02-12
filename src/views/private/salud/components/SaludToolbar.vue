@@ -3,11 +3,12 @@
     <div class="filters">
       <label class="field">
         <span class="label-text">Adolescente</span>
-        <input
-          type="text"
-          placeholder="Ej: Juan Pérez..."
-          :value="searchNombre"
-          @input="$emit('update:searchNombre', $event.target.value)"
+        <AdolescenteSearch
+          v-model="adolInternal"
+          :fetch-by-id="true"
+          :label="''"
+          placeholder="Buscar por nombre o cédula"
+          @clear="clearFilters"
         />
       </label>
 
@@ -55,10 +56,11 @@
 
 <script setup>
 import { computed } from "vue";
+import AdolescenteSearch from "@/components/adolescente/AdolescenteSearch.vue";
 
 const props = defineProps({
   searchNombre: {
-    type: String,
+    type: [String, Number, null],
     default: "",
   },
   diagnostico: {
@@ -82,9 +84,14 @@ const emit = defineEmits([
   "create",
 ]);
 
+const adolInternal = computed({
+  get: () => props.searchNombre,
+  set: (v) => emit("update:searchNombre", v),
+});
+
 const hasFilters = computed(() => {
   return (
-    props.searchNombre.length > 0 ||
+    !!props.searchNombre ||
     props.diagnostico.length > 0 ||
     props.discapacidad !== ""
   );
@@ -116,6 +123,28 @@ const clearFilters = () => {
   flex: 1;
   flex-wrap: wrap;
   align-items: flex-end;
+}
+
+.field :deep(.adolescente-search) {
+  max-width: 360px;
+}
+
+.toolbar input,
+.toolbar select {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  outline: none;
+  font-size: 0.9rem;
+  background-color: #f8fafc;
+  transition: all 0.15s ease;
+}
+
+.toolbar input:focus,
+.toolbar select:focus {
+  border-color: #3b82f6;
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .field {

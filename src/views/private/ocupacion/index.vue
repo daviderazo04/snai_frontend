@@ -31,9 +31,11 @@
     <section class="panel">
      <OcupacionToolbar
        :search="search"
+       :adolescente-id="adolescenteId"
        :total="totalItems"
        :can-edit="canEdit"
        @update:search="search = $event"
+       @update:adolescente-id="updateAdolescenteFilter"
        @create="openCreate"
       />
 
@@ -90,7 +92,7 @@ const search = ref("");
 const currentPage = ref(1);
 const pageSize = ref(6);
 const totalPages = ref(1);
-const adolescenteId = ref("");
+const adolescenteId = ref(null);
 
 const modalOpen = ref(false);
 const modalMode = ref("create");
@@ -160,6 +162,12 @@ watch(search, () => {
   currentPage.value = 1;
   loadItems();
 });
+
+const updateAdolescenteFilter = (val) => {
+  adolescenteId.value = val ? Number(val) : null;
+  currentPage.value = 1;
+  loadItems();
+};
 
 watch(totalPages, (val) => {
   if (currentPage.value > val) currentPage.value = val;

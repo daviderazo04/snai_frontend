@@ -273,7 +273,7 @@ select {
   position: relative;
   flex: 1 1 0;
   min-width: 0; /* permite que el input se contraiga en contenedores estrechos */
-  max-width: 70%;
+  max-width: 50%;
 }
 
 .input-wrap input {
