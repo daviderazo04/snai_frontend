@@ -205,6 +205,12 @@ const onSave = () => {
 </script>
 
 <style scoped>
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 .modal-fade-enter-active,
 .modal-fade-leave-active {
   transition: opacity 0.2s ease;
@@ -304,14 +310,17 @@ const onSave = () => {
 
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 16px;
+  row-gap: 14px;
+  align-items: start;
 }
 
 .field {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .field span {
@@ -326,7 +335,10 @@ const onSave = () => {
 
 .field input,
 .field select {
+  display: block;
   width: 100%;
+  min-width: 0;
+  min-height: 42px;
   padding: 10px 14px;
   border-radius: 10px;
   border: 1px solid #e2e8f0;
@@ -335,6 +347,15 @@ const onSave = () => {
   color: #0f172a;
   background: #f8fafc;
   transition: all 0.2s ease;
+}
+
+.field select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 18px;
+  padding-right: 34px;
 }
 
 .field input:focus,
@@ -382,7 +403,7 @@ const onSave = () => {
   cursor: not-allowed;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 860px) {
   .form-grid {
     grid-template-columns: 1fr;
     gap: 12px;
