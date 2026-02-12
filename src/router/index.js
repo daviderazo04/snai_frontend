@@ -51,6 +51,7 @@ import OcupacionFormView from "../views/private/ocupacion/[id]/index.vue";
 ======================= */
 import FamiliaView from "../views/private/familia/index.vue";
 import FamiliaFormView from "../views/private/familia/[id]/index.vue"; // <-- FIX (antes apuntaba al mismo index)
+import RepresentantesView from "../views/private/representantes/index.vue";
 
 /* =======================
    SALUD (CATÁLOGO / MÓDULO)
@@ -131,6 +132,7 @@ const routes = [
 
       { path: "familia", name: "familia", component: FamiliaView },
       { path: "familia/:id", name: "familiaDetalle", component: FamiliaFormView },
+      { path: "representantes", name: "representantes", component: RepresentantesView },
 
       { path: "gdos", name: "gdos", component: GdoView },
       { path: "gdos/:id", name: "gdosDetalle", component: GdoDetalle },

@@ -124,6 +124,14 @@ const allModules = [
     icon: `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`
   },
   {
+    title: 'Representantes',
+    desc: 'Datos de representantes legales.',
+    route: '/app/representantes',
+    permission: '/representantes',
+    color: 'blue',
+    icon: `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3.5"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.3a3.5 3.5 0 0 1 0 6.8"/></svg>`
+  },
+  {
     title: 'Salud',
     desc: 'Fichas médicas y seguimiento.',
     route: '/app/salud',
