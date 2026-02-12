@@ -79,13 +79,13 @@
                     </td>
                     <td class="center">
                       <label class="switch">
-                        <input type="checkbox" v-model="p.VIEW" />
+                        <input type="checkbox" v-model="p.VIEW" @change="handleToggle(p, 'VIEW')" />
                         <span class="slider"></span>
                       </label>
                     </td>
                     <td class="center">
                       <label class="switch">
-                        <input type="checkbox" v-model="p.EDIT" />
+                        <input type="checkbox" v-model="p.EDIT" @change="handleToggle(p, 'EDIT')" />
                         <span class="slider"></span>
                       </label>
                     </td>
@@ -141,7 +141,24 @@ const isSaveDisabled = computed(() => {
 });
 
 const toggleAll = (field, value) => {
-  filteredPermissions.value.forEach(p => { p[field] = value; });
+  filteredPermissions.value.forEach(p => {
+    p[field] = value;
+    if (field === "EDIT" && value) {
+      p.VIEW = true; // EDIT siempre implica VIEW
+    }
+    if (field === "VIEW" && !value) {
+      p.EDIT = false; // sin VIEW no puede haber EDIT
+    }
+  });
+};
+
+const handleToggle = (perm, field) => {
+  if (field === "EDIT" && perm.EDIT) {
+    perm.VIEW = true;
+  }
+  if (field === "VIEW" && !perm.VIEW) {
+    perm.EDIT = false;
+  }
 };
 
 // Normaliza respuesta de endpoints (backend devuelve array directo)
@@ -190,6 +207,7 @@ const buildMatrix = async () => {
         if (match) {
           match.VIEW = !!activo.VIEW;
           match.EDIT = !!activo.EDIT;
+          if (match.EDIT && !match.VIEW) match.VIEW = true; // Garantiza VIEW si viene EDIT sin VIEW
         }
       });
     }
