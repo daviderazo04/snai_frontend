@@ -1,25 +1,26 @@
 <template>
   <div class="toolbar">
     <div class="filters">
-
-      <input
-        type="text"
-        placeholder="Buscar por N° de causa..."
-        v-model="localTermino"
-        @input="emitTermino"
-      />
-
-      <div class="autocomplete search-adol">
-        <AdolescenteSearch
+      <AdolescenteSearch
           v-model="adolInternal"
           :fetch-by-id="true"
           :label="''"
           placeholder="Buscar adolescente..."
           @clear="clearAdolescente"
-        />
+      />
+
+
+      <div class="autocomplete search-adol">
+
       </div>
 
       <div class="autocomplete" ref="delitoRef">
+        <input
+            type="text"
+            placeholder="Buscar por N° de causa..."
+            v-model="localTermino"
+            @input="emitTermino"
+        />
         <input
           type="text"
           placeholder="Buscar delito..."
