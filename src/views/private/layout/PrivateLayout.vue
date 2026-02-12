@@ -174,6 +174,7 @@ export default {
         items: [
           { label: "Adolescentes", path: "/app/adolescentes", permission: "/adolescentes", iconSvg: icons.youth },
           { label: "Familia", path: "/app/familia", permission: "/familia", iconSvg: icons.family },
+          { label: "Representantes", path: "/app/representantes", permission: "/representantes", iconSvg: icons.users },
           { label: "Salud integral", path: "/app/salud", permission: "/salud", iconSvg: icons.health },
           { label: "Educación laboral", path: "/app/educacion", permission: "/educacion", iconSvg: icons.book },
           { label: "Ocupación", path: "/app/ocupacion", permission: "/ocupacion", iconSvg: icons.job },
