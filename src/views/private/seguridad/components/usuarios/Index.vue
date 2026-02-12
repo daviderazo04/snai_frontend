@@ -17,7 +17,15 @@
         <span>{{ errorMessage }}</span>
       </div>
 
-      <UsuarioTable :items="items" @assign="openAssign" />
+      <UsuarioTable
+        :items="items"
+        :can-edit="canEdit"
+        @assign="openAssign"
+        @deactivate="handleDeactivate"
+        @reactivate="handleReactivate"
+        @update-info="openUpdateInfo"
+        @update-password="openUpdatePassword"
+      />
 
       <div class="pagination-container">
         <div class="pagination-content">
@@ -49,11 +57,29 @@
       @close="showAssign = false"
       @save="handleAssign"
     />
+
+    <UsuarioInfoModal
+      v-if="showInfoModal"
+      :open="showInfoModal"
+      :saving="saving"
+      :user="selectedUser"
+      @close="showInfoModal = false"
+      @save="handleUpdateInfo"
+    />
+
+    <UsuarioPasswordModal
+      v-if="showPasswordModal"
+      :open="showPasswordModal"
+      :saving="saving"
+      :user="selectedUser"
+      @close="showPasswordModal = false"
+      @save="handleUpdatePassword"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import {
   getUsuarios,
   register,
@@ -65,6 +91,10 @@ import UsuarioToolbar from './UsuarioToolbar.vue';
 import UsuarioTable from './UsuarioTable.vue';
 import UsuarioFormModal from './UsuarioFormModal.vue';
 import RolAsignarModal from './RolAsignarModal.vue';
+import { puedeEditar } from "@/utils/permisos";
+import { deleteUsuario, reactivateUsuario, updateUsuarioInfo, updateUsuarioPassword } from "@/service/users-roles.service.js";
+import UsuarioInfoModal from "./UsuarioInfoModal.vue";
+import UsuarioPasswordModal from "./UsuarioPasswordModal.vue";
 
 const PAGE_SIZE = 10;
 
@@ -80,6 +110,10 @@ const errorMessage = ref('');
 const showCreate = ref(false);
 const showAssign = ref(false);
 const selectedUser = ref(null);
+const showInfoModal = ref(false);
+const showPasswordModal = ref(false);
+// Algunos entornos exponen el endpoint como /usuario; evaluamos ambos.
+const canEdit = computed(() => puedeEditar("/usuarios") || puedeEditar("/usuario"));
 
 const unwrap = (maybeAxiosResponse) => {
   // Soporta ambos casos:
@@ -213,6 +247,89 @@ const handleAssign = async ({ userId, roleIds }) => {
   } catch (e) {
     const msg = e?.response?.data?.message || e?.message || 'Error desconocido';
     alert('Error al asignar: ' + msg);
+  } finally {
+    saving.value = false;
+  }
+};
+
+const handleDeactivate = async (user) => {
+  if (!canEdit.value) return;
+  if (!user?.id) return;
+  const nombre = [user.nombre, user.apellido].filter(Boolean).join(" ").trim();
+  const label = nombre || `usuario #${user.id}`;
+  if (!confirm(`¿Dar de baja al ${label}?`)) return;
+
+  try {
+    saving.value = true;
+    await deleteUsuario(user.id);
+    await load();
+    alert("Usuario dado de baja.");
+  } catch (e) {
+    const msg = e?.response?.data?.message || e?.message || "No se pudo dar de baja el usuario.";
+    alert(msg);
+  } finally {
+    saving.value = false;
+  }
+};
+
+const handleReactivate = async (user) => {
+  if (!canEdit.value) return;
+  if (!user?.id) return;
+  const nombre = [user.nombre, user.apellido].filter(Boolean).join(" ").trim();
+  const label = nombre || `usuario #${user.id}`;
+  if (!confirm(`¿Restaurar al ${label}?`)) return;
+
+  try {
+    saving.value = true;
+    await reactivateUsuario(user.id);
+    await load();
+    alert("Usuario restaurado.");
+  } catch (e) {
+    const msg = e?.response?.data?.message || e?.message || "No se pudo restaurar el usuario.";
+    alert(msg);
+  } finally {
+    saving.value = false;
+  }
+};
+
+const openUpdateInfo = (user) => {
+  if (!canEdit.value) return;
+  selectedUser.value = user;
+  showInfoModal.value = true;
+};
+
+const openUpdatePassword = (user) => {
+  if (!canEdit.value) return;
+  selectedUser.value = user;
+  showPasswordModal.value = true;
+};
+
+const handleUpdateInfo = async (payload) => {
+  if (!canEdit.value || !selectedUser.value?.id) return;
+  saving.value = true;
+  try {
+    await updateUsuarioInfo(selectedUser.value.id, payload);
+    await load();
+    alert("Información actualizada.");
+    showInfoModal.value = false;
+  } catch (e) {
+    const msg = e?.response?.data?.message || e?.message || "No se pudo actualizar la información.";
+    alert(msg);
+  } finally {
+    saving.value = false;
+  }
+};
+
+const handleUpdatePassword = async (payload) => {
+  if (!canEdit.value || !selectedUser.value?.id) return;
+  saving.value = true;
+  try {
+    await updateUsuarioPassword(selectedUser.value.id, payload);
+    alert("Contraseña actualizada.");
+    showPasswordModal.value = false;
+  } catch (e) {
+    const msg = e?.response?.data?.message || e?.message || "No se pudo actualizar la contraseña.";
+    alert(msg);
   } finally {
     saving.value = false;
   }

@@ -40,6 +40,42 @@
               <span class="icon">🔑</span>
               <span>Perfiles</span>
             </button>
+            <button
+              v-if="canEdit"
+              class="btn-action"
+              title="Actualizar información"
+              @click="$emit('update-info', u)"
+            >
+              <span class="icon">✏️</span>
+              <span>Actualizar info</span>
+            </button>
+            <button
+              v-if="canEdit"
+              class="btn-action"
+              title="Cambiar contraseña"
+              @click="$emit('update-password', u)"
+            >
+              <span class="icon">🔒</span>
+              <span>Contraseña</span>
+            </button>
+            <button
+              v-if="canEdit && safeLower(u && u.estado) !== 'inactivo'"
+              class="btn-action danger"
+              title="Dar de baja"
+              @click="$emit('deactivate', u)"
+            >
+              <span class="icon">🗑️</span>
+              <span>Dar de baja</span>
+            </button>
+            <button
+              v-if="canEdit && safeLower(u && u.estado) === 'inactivo'"
+              class="btn-action success"
+              title="Restaurar usuario"
+              @click="$emit('reactivate', u)"
+            >
+              <span class="icon">↺</span>
+              <span>Restaurar</span>
+            </button>
           </td>
         </tr>
 
@@ -57,8 +93,8 @@
 </template>
 
 <script setup>
-defineProps(['items']);
-defineEmits(['assign']);
+defineProps(['items', 'canEdit']);
+defineEmits(['assign', 'deactivate', 'reactivate', 'update-info', 'update-password']);
 
 const safeText = (val, fallback = '') => {
   if (val === null || val === undefined) return fallback;
@@ -106,6 +142,8 @@ const formatDate = (dateStr) => {
 .status-pill.inactivo { background: #fee2e2; color: #991b1b; }
 .btn-action { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #e2e8f0; background: white; padding: 8px 14px; border-radius: 10px; cursor: pointer; font-weight: 600; color: #334155; transition: all 0.2s; }
 .btn-action:hover { background: #f8fafc; border-color: #cbd5e1; color: #2563eb; transform: translateY(-1px); }
+.btn-action.danger { border: none; color: white; background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); }
+.btn-action.success { border: none; color: white; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); }
 .text-right { text-align: right; }
 .empty-row { padding: 80px 0; text-align: center; color: #94a3b8; }
 .empty-content span { font-size: 2rem; display: block; margin-bottom: 10px; }

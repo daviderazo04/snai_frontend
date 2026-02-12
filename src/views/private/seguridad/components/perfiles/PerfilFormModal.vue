@@ -42,6 +42,10 @@
             </div>
           </div>
 
+          <div class="perm-alert">
+            <strong>Importante:</strong> Para realizar acciones de escritura (EDIT) en recursos que dependen de otros catálogos (por ejemplo, asignar CAI en adolescentes o crear traslados), el perfil debe tener también permisos de lectura (VIEW) sobre esos catálogos relacionados. Habilite los VIEW necesarios antes de asignar EDIT para evitar errores al registrar o consultar datos.
+          </div>
+
           <div class="perm-section">
             <div class="perm-table-wrap">
               <table class="perm-table">
@@ -262,6 +266,7 @@ const save = () => {
 .perm-header-text h4 { margin: 0; font-size: 0.9rem; font-weight: 800; color: #1e293b; text-transform: uppercase; }
 .loading-tag { font-size: 0.7rem; color: #2563eb; background: #eff6ff; padding: 4px 12px; border-radius: 20px; font-weight: 600; }
 .search-perm { width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid #e2e8f0; font-size: 0.95rem; }
+.perm-alert { padding: 12px 14px; background: #fef9c3; border: 1px solid #facc15; border-radius: 10px; color: #854d0e; font-size: 0.9rem; line-height: 1.4; }
 .perm-section { border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; }
 .perm-table-wrap { max-height: 400px; overflow-y: auto; }
 .perm-table { width: 100%; border-collapse: collapse; }

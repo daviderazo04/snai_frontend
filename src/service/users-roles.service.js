@@ -30,6 +30,22 @@ export function asignarPerfilUsuario(userId, roleIds) {
   return api.post(`/usuario/perfil/${userId}`, { perfiles: roleIds });
 }
 
+export function deleteUsuario(id) {
+  return api.delete(`/usuario/${id}`);
+}
+
+export function reactivateUsuario(id) {
+  return api.patch(`/usuario/reactivar/${id}`);
+}
+
+export function updateUsuarioInfo(id, payload) {
+  return api.patch(`/usuario/informacion/${id}`, payload);
+}
+
+export function updateUsuarioPassword(id, payload) {
+  return api.patch(`/usuario/password/${id}`, payload);
+}
+
 /**
  * Obtener detalle completo de un usuario (incluye perfiles y permisos aplanados)
  * @param {number} id 
