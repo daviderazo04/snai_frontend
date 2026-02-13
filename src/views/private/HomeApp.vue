@@ -132,6 +132,14 @@ const allModules = [
     icon: `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3.5"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.3a3.5 3.5 0 0 1 0 6.8"/></svg>`
   },
   {
+    title: 'Vínculo representante',
+    desc: 'Relación entre adolescente y representante.',
+    route: '/app/rep-infractores',
+    permission: '/rep-infractores',
+    color: 'green',
+    icon: `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.43"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 1 0 7.07 7.07L12.5 19.57"/></svg>`
+  },
+  {
     title: 'Salud',
     desc: 'Fichas médicas y seguimiento.',
     route: '/app/salud',
