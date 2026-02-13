@@ -1,73 +1,76 @@
-<!-- src/views/private/educacion/components/EducacionToolbar.vue -->
 <template>
   <div class="toolbar">
-    <div class="title-block">
-      <div>
-        <h2>Listado de Educación</h2>
-        <p class="subtitle">{{ total }} registros disponibles</p>
+
+    <div class="filters-container">
+      
+      <div class="row row-main">
+        <div class="search-wrapper">
+          <label class="label-text">Buscar adolescente</label>
+          <AdolescenteSearch
+            v-model="adolescenteIdInternal"
+            :fetch-by-id="true"
+            :label="''"
+            placeholder="Nombre o cédula"
+            @clear="clearAdolescente"
+          />
+        </div>
       </div>
 
-      <div class="actions">
-        <!-- Botón Limpiar (solo visible si hay filtros activos) -->
-        <button
-          v-if="hasFilters"
-          class="btn-clear"
-          type="button"
-          @click="clearFilters"
-        >
-          🧹 Limpiar
-        </button>
+      <div class="row row-secondary">
+        <div class="filter-item">
+          <label class="label-text">Estudia</label>
+          <select
+            :value="estudia"
+            @change="$emit('update:estudia', $event.target.value)"
+          >
+            <option value="">Todos</option>
+            <option value="1">Sí estudia</option>
+            <option value="0">No estudia</option>
+          </select>
+        </div>
 
-        <button v-if="canEdit" class="btn-primary" type="button" @click="$emit('create')">
-          + Nuevo registro
-        </button>
+        <div class="filter-item">
+          <label class="label-text">Nivel</label>
+          <input
+            type="text"
+            placeholder="Ej: Bachillerato"
+            :value="nivel"
+            @input="$emit('update:nivel', $event.target.value)"
+          />
+        </div>
+
+        <div class="filter-item">
+          <label class="label-text">Institución</label>
+          <input
+            type="text"
+            placeholder="Ej: Colegio Nacional"
+            :value="institucion"
+            @input="$emit('update:institucion', $event.target.value)"
+          />
+        </div>
       </div>
     </div>
 
-    <div class="filters">
-      <label class="field">
-        <span class="label">Buscar adolescente</span>
-        <AdolescenteSearch
-          v-model="adolescenteIdInternal"
-          :fetch-by-id="true"
-          :label="''"
-          placeholder="Nombre o cédula"
-          @clear="clearAdolescente"
-        />
-      </label>
+    <div class="actions">
+      <button
+        v-if="hasFilters"
+        class="btn-clear-action"
+        type="button"
+        @click="clearFilters"
+      >
+        🧹 Limpiar
+      </button>
 
-      <label class="field">
-        <span class="label">Estudia</span>
-        <select
-          :value="estudia"
-          @change="$emit('update:estudia', $event.target.value)"
-        >
-          <option value="">Todos</option>
-          <option value="1">Sí estudia</option>
-          <option value="0">No estudia</option>
-        </select>
-      </label>
-
-      <label class="field">
-        <span class="label">Nivel</span>
-        <input
-          type="text"
-          placeholder="Ej: Bachillerato"
-          :value="nivel"
-          @input="$emit('update:nivel', $event.target.value)"
-        />
-      </label>
-
-      <label class="field">
-        <span class="label">Institución</span>
-        <input
-          type="text"
-          placeholder="Ej: Colegio Nacional"
-          :value="institucion"
-          @input="$emit('update:institucion', $event.target.value)"
-        />
-      </label>
+      <button
+        v-if="canEdit"
+        class="btn-primary"
+        type="button"
+        @click="$emit('create')"
+      >
+        + Nuevo registro
+      </button>
     </div>
+
   </div>
 </template>
 
@@ -81,10 +84,7 @@ const props = defineProps({
   estudia: { type: String, default: "" },
   nivel: { type: String, default: "" },
   institucion: { type: String, default: "" },
-  canEdit: {
-    type: Boolean,
-    default: true,
-  },
+  canEdit: { type: Boolean, default: true },
 });
 
 const emit = defineEmits([
@@ -100,13 +100,13 @@ const adolescenteIdInternal = computed({
   set: (val) => emit("update:adolescenteId", val),
 });
 
-/* Detectar si hay filtros activos */
+/* Detectar si hay filtros activos para mostrar el botón limpiar */
 const hasFilters = computed(() => {
   return (
-    props.adolescenteId ||
-    props.estudia ||
-    props.nivel ||
-    props.institucion
+    props.adolescenteId !== null ||
+    props.estudia !== "" ||
+    props.nivel !== "" ||
+    props.institucion !== ""
   );
 });
 
@@ -122,131 +122,131 @@ const clearFilters = () => {
 </script>
 
 <style scoped>
+/* Estructura base alineada con Jurídico/Salud */
 .toolbar {
   display: flex;
-  flex-direction: column;
-  gap: 18px;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 30px;
+  padding: 10px 0;
 }
 
-.title-block {
+.filters-container {
+  flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 16px;
 }
 
-.title-block h2 {
-  margin: 0 0 4px;
-  font-size: 1.2rem;
-  color: #0f172a;
+.row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-end;
 }
 
-.subtitle {
-  margin: 0;
+.row-main {
+  width: 100%;
+}
+
+.search-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Filtros secundarios */
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label-text {
+  font-size: 0.75rem;
+  font-weight: 700;
   color: #64748b;
-  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
+/* Inputs y Selects consistentes */
+.row-secondary input,
+.row-secondary select {
+  width: 220px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  font-size: 0.9rem;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+input:focus, select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Panel de botones derecha */
 .actions {
   display: flex;
-  gap: 12px;
   align-items: center;
+  gap: 12px;
 }
 
-/* Botón principal */
 .btn-primary {
+  height: 44px;
+  padding: 0 24px;
+  border-radius: 12px;
   border: none;
+  font-weight: 700;
   color: white;
-  padding: 10px 16px;
-  border-radius: 10px;
   cursor: pointer;
-  font-weight: 600;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.25);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background: linear-gradient(135deg, #1d4ed8 0%, #38bdf8 100%);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+  white-space: nowrap;
+  transition: all 0.2s ease;
 }
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
 }
 
-.btn-primary:active {
-  transform: translateY(1px);
-}
-
-/* Botón limpiar */
-.btn-clear {
-  padding: 10px 16px;
-  border-radius: 10px;
+/* Botón Limpiar (Estilo Jurídico) */
+.btn-clear-action {
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 12px;
   border: 1px solid #e2e8f0;
-  background: #fff;
+  background: #ffffff;
   cursor: pointer;
   font-weight: 600;
-  color: #475569;
+  color: #64748b;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   transition: all 0.2s ease;
 }
 
-.btn-clear:hover {
-  background: #f1f5f9;
+.btn-clear-action:hover {
+  background: #f8fafc;
   border-color: #cbd5e1;
+  color: #1e293b;
 }
 
-/* Filtros */
-.filters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 14px;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 0.85rem;
-  color: #475569;
-}
-
-.label {
-  text-transform: uppercase;
-  font-size: 0.72rem;
-  letter-spacing: 1px;
-  font-weight: 700;
-  color: #64748b;
-}
-
-.field input,
-.field select,
-.field :deep(.adolescente-search) {
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  background: white;
-  font-size: 0.95rem;
-  color: #0f172a;
-}
-
-.field input:focus,
-.field select:focus,
-.field :deep(.adolescente-search input) {
-  outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-}
-
-@media (max-width: 720px) {
-  .title-block {
+@media (max-width: 768px) {
+  .toolbar {
     flex-direction: column;
-    align-items: flex-start;
+    gap: 16px;
   }
-
   .actions {
     width: 100%;
-  }
-
-  .btn-primary,
-  .btn-clear {
-    width: 100%;
+    justify-content: flex-end;
   }
 }
 </style>

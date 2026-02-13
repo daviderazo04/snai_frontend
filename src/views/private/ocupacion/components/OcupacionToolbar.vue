@@ -1,33 +1,38 @@
-<!-- OcupacionToolbar.vue -->
 <template>
   <div class="toolbar">
-    <div class="filters">
-      <label class="field">
-        <span class="label">Adolescente</span>
-        <AdolescenteSearch
-          v-model="adolInternal"
-          :fetch-by-id="true"
-          :label="''"
-          placeholder="Buscar por nombre o cédula"
-          @clear="clearFilters"
-        />
-      </label>
 
-      <label class="field">
-        <span class="label">Buscar ocupación</span>
-        <input
-          type="text"
-          placeholder="Nombre del taller o actividad"
-          :value="search"
-          @input="$emit('update:search', $event.target.value)"
-        />
-      </label>
+    <div class="filters-container">
+      
+      <div class="row row-main">
+        <div class="search-wrapper">
+          <label class="label-text">Adolescente</label>
+          <AdolescenteSearch
+            v-model="adolInternal"
+            :fetch-by-id="true"
+            :label="''"
+            placeholder="Buscar por nombre o cédula"
+            @clear="clearFilters"
+          />
+        </div>
+      </div>
+
+      <div class="row row-secondary">
+        <div class="filter-item">
+          <label class="label-text">Buscar ocupación</label>
+          <input
+            type="text"
+            placeholder="Nombre del taller o actividad"
+            :value="search"
+            @input="$emit('update:search', $event.target.value)"
+          />
+        </div>
+      </div>
     </div>
 
     <div class="actions">
       <button
         v-if="search || adolInternal"
-        class="btn-clear"
+        class="btn-clear-action"
         @click="clearFilters"
         type="button"
       >
@@ -38,6 +43,7 @@
         + Nueva ocupación
       </button>
     </div>
+
   </div>
 </template>
 
@@ -75,91 +81,133 @@ const clearFilters = () => {
 </script>
 
 <style scoped>
+/* Estructura base alineada con el estándar del sistema */
 .toolbar {
   display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 30px;
+  padding: 10px 0;
+}
+
+.filters-container {
+  flex: 1;
+  display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
-.filters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 12px;
+.row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-end;
 }
 
-.field {
+.row-main {
+  width: 100%;
+}
+
+.search-wrapper {
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.label {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #475569;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+/* Filtros secundarios */
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.field input {
-  width: 100%;
-  padding: 12px 12px;
+.label-text {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Estilo de inputs consistente */
+.row-secondary input {
+  width: 320px;
+  height: 40px;
+  padding: 0 14px;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
+  background: #ffffff;
+  font-size: 0.9rem;
   outline: none;
-  font-size: 0.95rem;
-  background: #fff;
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  transition: all 0.2s ease;
 }
 
-.field input:focus,
-.field :deep(.adolescente-search input) {
-  border-color: rgba(59, 130, 246, 0.55);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+/* Panel de acciones (Derecha) */
 .actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
 }
 
-/* Botón principal */
 .btn-primary {
+  height: 44px;
+  padding: 0 24px;
+  border-radius: 12px;
   border: none;
+  font-weight: 700;
   color: white;
-  padding: 12px 14px;
-  border-radius: 14px;
   cursor: pointer;
-  font-weight: 800;
   background: linear-gradient(135deg, #1d4ed8 0%, #38bdf8 100%);
-  box-shadow: 0 14px 28px rgba(29, 78, 216, 0.22);
-  transition: transform 0.08s ease, box-shadow 0.15s ease;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+  white-space: nowrap;
+  transition: all 0.2s ease;
 }
 
 .btn-primary:hover {
-  box-shadow: 0 18px 34px rgba(29, 78, 216, 0.24);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
 }
 
-.btn-primary:active {
-  transform: translateY(1px);
-}
-
-/* Botón limpiar */
-.btn-clear {
-  padding: 12px 14px;
-  border-radius: 14px;
+/* Botón Limpiar (Estilo Estándar) */
+.btn-clear-action {
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 12px;
   border: 1px solid #e2e8f0;
-  background: #fff;
+  background: #ffffff;
   cursor: pointer;
   font-weight: 600;
   color: #475569;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
 }
 
-.btn-clear:hover {
-  background: #f1f5f9;
+.btn-clear-action:hover {
+  background: #f8fafc;
   border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .row-secondary input {
+    width: 100%;
+  }
 }
 </style>

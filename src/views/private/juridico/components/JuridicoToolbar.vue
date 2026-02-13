@@ -1,62 +1,75 @@
 <template>
   <div class="toolbar">
-    <div class="filters">
-      <AdolescenteSearch
-          v-model="adolInternal"
-          :fetch-by-id="true"
-          :label="''"
-          placeholder="Buscar adolescente..."
-          @clear="clearAdolescente"
-      />
 
-
-      <div class="autocomplete search-adol">
-
+    <div class="filters-container">
+      
+      <div class="row row-adolescente">
+        <div class="search-wrapper">
+          <AdolescenteSearch
+            v-model="adolInternal"
+            :fetch-by-id="true"
+            :label="''"
+            placeholder="Buscar adolescente..."
+            @clear="clearAdolescente"
+          />
+        </div>
       </div>
 
-      <div class="autocomplete" ref="delitoRef">
-        <input
+      <div class="row row-secondary">
+        <div class="filter-item">
+          <input
             type="text"
-            placeholder="Buscar por N° de causa..."
+            placeholder="N° de causa"
             v-model="localTermino"
             @input="emitTermino"
-        />
-        <input
-          type="text"
-          placeholder="Buscar delito..."
-          v-model="delitoQuery"
-          @input="showDelitos = true"
-          @focus="showDelitos = true"
-        />
+          />
+        </div>
 
-        <ul v-if="showDelitos && (delitoQuery || filteredDelitos.length)">
-          <li
-            v-for="d in filteredDelitos"
-            :key="d.id"
-            @click="selectDelito(d)"
-          >
-            {{ d.nombre }}
-          </li>
+        <div class="filter-item autocomplete" ref="delitoRef">
+          <input
+            type="text"
+            placeholder="Delito"
+            v-model="delitoQuery"
+            @input="showDelitos = true"
+            @focus="showDelitos = true"
+          />
 
-          <li v-if="!filteredDelitos.length" class="no-results">
-            Sin resultados
-          </li>
-        </ul>
+          <ul v-if="showDelitos && (delitoQuery || filteredDelitos.length)">
+            <li
+              v-for="d in filteredDelitos"
+              :key="d.id"
+              @click="selectDelito(d)"
+            >
+              {{ d.nombre }}
+            </li>
+            <li v-if="!filteredDelitos.length" class="no-results">
+              Sin resultados
+            </li>
+          </ul>
+        </div>
       </div>
+    </div>
 
+    <div class="actions">
       <button
         v-if="hasFilters"
-        class="btn-clear"
+        class="btn-clear-action"
         @click="clearFilters"
         type="button"
       >
-        扫 Limpiar
+        🧹 Limpiar
+      </button>
+
+      <button
+        v-if="canEdit"
+        class="btn-primary"
+        @click="$emit('create')"
+        type="button"
+      >
+        + Nuevo Registro
       </button>
     </div>
 
-    <button v-if="canEdit" class="btn-primary" @click="$emit('create')" type="button">
-      + Nuevo Registro
-    </button>
   </div>
 </template>
 
@@ -69,68 +82,39 @@ const props = defineProps({
   termino: String,
   adolescenteId: [Number, String, null],
   delitoId: Number,
-  canEdit: {
-    type: Boolean,
-    default: true,
-  },
+  canEdit: { type: Boolean, default: true },
 });
 
-const emit = defineEmits([
-  "update:termino",
-  "update:adolescenteId",
-  "update:delitoId",
-  "create",
-]);
-
-/* ================= STATE ================= */
+const emit = defineEmits(["update:termino", "update:adolescenteId", "update:delitoId", "create"]);
 
 const localTermino = ref(props.termino || "");
 const delitoQuery = ref("");
-
 const delitos = ref([]);
-
 const showDelitos = ref(false);
+
 const adolInternal = computed({
   get: () => props.adolescenteId,
   set: (v) => emit("update:adolescenteId", v),
 });
 
-/* ================= DETECTAR FILTROS ================= */
-
 const hasFilters = computed(() => {
-  return (
-    localTermino.value ||
-    delitoQuery.value ||
-    props.adolescenteId ||
-    props.delitoId
-  );
+  return !!(localTermino.value || delitoQuery.value || props.adolescenteId || props.delitoId);
 });
-
-/* ================= WATCH ================= */
 
 watch(() => props.termino, v => localTermino.value = v || "");
 
-/* ================= LOAD DELITOS (Carga Completa) ================= */
-
 const loadDelitos = async () => {
-  // Traemos 1000 para asegurar que el filtro por nombre encuentre todo
-  const { data } = await getDelitos({ size: 1000 }); 
+  const { data } = await getDelitos({ size: 1000 });
   delitos.value = data?.data ?? data ?? [];
 };
 
 onMounted(loadDelitos);
 
-/* ================= FILTRO DELITOS EN MEMORIA ================= */
-
 const filteredDelitos = computed(() =>
   delitos.value
-    .filter(d =>
-      d.nombre.toLowerCase().includes(delitoQuery.value.toLowerCase())
-    )
-    .slice(0, 5) // Solo mostramos los primeros 5 para mantener limpia la UI
+    .filter(d => d.nombre.toLowerCase().includes(delitoQuery.value.toLowerCase()))
+    .slice(0, 5)
 );
-
-/* ================= SELECT ================= */
 
 const selectDelito = (d) => {
   delitoQuery.value = d.nombre;
@@ -138,115 +122,89 @@ const selectDelito = (d) => {
   emit("update:delitoId", d.id);
 };
 
-/* ================= EMIT ================= */
-
-const emitTermino = () => {
-  emit("update:termino", localTermino.value || "");
-};
-
-/* ================= CLEAR ================= */
+const emitTermino = () => { emit("update:termino", localTermino.value || ""); };
 
 const clearFilters = () => {
   localTermino.value = "";
   delitoQuery.value = "";
-
   showDelitos.value = false;
-
   emit("update:termino", "");
   emit("update:adolescenteId", null);
   emit("update:delitoId", null);
 };
 
-/* ================= CLICK OUTSIDE ================= */
+const clearAdolescente = () => { emit("update:adolescenteId", null); };
 
 const delitoRef = ref(null);
-
 const handleClickOutside = (e) => {
-  if (delitoRef.value && !delitoRef.value.contains(e.target)) {
-    showDelitos.value = false;
-  }
+  if (delitoRef.value && !delitoRef.value.contains(e.target)) showDelitos.value = false;
 };
 
-const clearAdolescente = () => emit("update:adolescenteId", null);
-
-onMounted(() => {
-  document.addEventListener("click", handleClickOutside);
-});
-
-onBeforeUnmount(() => {
-  document.removeEventListener("click", handleClickOutside);
-});
+onMounted(() => { document.addEventListener("click", handleClickOutside); });
+onBeforeUnmount(() => { document.removeEventListener("click", handleClickOutside); });
 </script>
 
 <style scoped>
+/* ================= TOOLBAR ================= */
 .toolbar {
   display: flex;
-  gap: 12px;
-  align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 30px;
+  padding: 10px 0;
 }
 
-.filters {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+/* ================= FILTROS ================= */
+.filters-container {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.search-adol :deep(.adolescente-search) {
-  max-width: 320px;
+.row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
-.toolbar input {
-  min-width: 180px;
-  padding: 12px;
-  border-radius: 14px;
+.row-adolescente {
+  width: 100%;
+}
+
+.row-secondary {
+  gap: 12px;
+}
+
+.row-secondary .filter-item {
+  flex: 0 0 auto;
+}
+
+/* Estilos originales de inputs de Delito/Causa */
+.row-secondary input {
+  width: 220px;
+  height: 40px;
+  font-size: 0.9rem;
+}
+
+input {
+  height: 44px;
+  width: 100%;
+  padding: 0 16px;
+  border-radius: 12px;
   border: 1px solid #e2e8f0;
-  outline: none;
+  background: #ffffff;
   font-size: 0.95rem;
+  outline: none;
+  transition: all 0.2s ease;
 }
 
-.toolbar input:focus {
-  border-color: rgba(59, 130, 246, 0.55);
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
+input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.no-results {
-  padding: 10px 16px;
-  color: #94a3b8;
-  font-style: italic;
-  font-size: 0.85rem;
-}
-
-/* Botones */
-.btn-primary {
-  border: none;
-  color: white;
-  padding: 12px 14px;
-  border-radius: 14px;
-  cursor: pointer;
-  font-weight: 800;
-  background: linear-gradient(135deg, #1d4ed8 0%, #38bdf8 100%);
-}
-
-.btn-clear {
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid #e2e8f0;
-  background: #fff;
-  cursor: pointer;
-  font-weight: 600;
-  color: #475569;
-  transition: background 0.15s ease;
-}
-
-.btn-clear:hover {
-  background: #f1f5f9;
-}
-
-/* ================= AUTOCOMPLETE ================= */
-
+/* ================= AUTOCOMPLETE DELITO ================= */
 .autocomplete {
   position: relative;
 }
@@ -261,11 +219,11 @@ onBeforeUnmount(() => {
   border: 1px solid #e2e8f0;
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.15);
   padding: 6px 0;
-  z-index: 10;
+  z-index: 100;
   max-height: 220px;
   overflow-y: auto;
-  animation: fadeDown 0.15s ease-out;
   list-style: none;
+  margin: 0;
 }
 
 .autocomplete ul li {
@@ -279,8 +237,52 @@ onBeforeUnmount(() => {
   background: #f1f5f9;
 }
 
-@keyframes fadeDown {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+.no-results {
+  padding: 10px 16px;
+  color: #94a3b8;
+  font-style: italic;
+  font-size: 0.85rem;
+}
+
+/* ================= ACCIONES (DERECHA) ================= */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-primary {
+  height: 44px;
+  padding: 0 24px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 700;
+  color: white;
+  cursor: pointer;
+  background: linear-gradient(135deg, #1d4ed8 0%, #38bdf8 100%);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+  white-space: nowrap;
+}
+
+.btn-clear-action {
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  cursor: pointer;
+  font-weight: 600;
+  color: #64748b;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-clear-action:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #1e293b;
 }
 </style>

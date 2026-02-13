@@ -1,6 +1,6 @@
 <template>
   <Transition name="modal-fade">
-    <div v-if="open" class="modal-backdrop" @click.self="closeAndReset">
+    <div v-if="open" class="modal-backdrop">
       <div class="modal">
         
         <div class="modal-header">
@@ -8,7 +8,9 @@
             <h3>{{ mode === "create" ? "Nuevo Registro Jurídico" : "Editar Registro Jurídico" }}</h3>
             <p class="subtitle">Búsqueda global habilitada para todos los registros</p>
           </div>
-          <button class="btn-close" type="button" @click="closeAndReset" :disabled="saving">✕</button>
+          <button class="btn-close" type="button" @click="closeAndReset" :disabled="saving">
+            <span></span><span></span>
+          </button>
         </div>
 
         <form class="form-content" @submit.prevent="handleSaveInternal">
@@ -81,8 +83,25 @@
             <div class="form-grid">
               <label class="field"><span>Recurso Apelación</span><input v-model="form.recApelMod" /></label>
               <label class="field"><span>Fecha Apelación</span><input type="date" v-model="form.RecApelFecha" /></label>
-              <label class="field"><span>Recurso Casación</span><input v-model="form.casacionRecurso" placeholder="Ej: No presentado" /></label>
-              <label class="field"><span>Fecha Casación</span><input type="date" v-model="form.casacionFecha" /></label>
+              
+              <label class="field">
+                <span>¿Casación?</span>
+                <select v-model="form.casacionRecurso">
+                  <option value="n">NO</option>
+                  <option value="s">SI</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span>Fecha Casación {{ form.casacionRecurso === 'n' ? '🔒' : '' }}</span>
+                <input 
+                  type="date" 
+                  v-model="form.casacionFecha" 
+                  :disabled="form.casacionRecurso === 'n'" 
+                  :class="{ 'readonly-input': form.casacionRecurso === 'n' }" 
+                />
+              </label>
+
               <label class="field"><span>Fecha Egreso Real</span><input type="date" v-model="form.egresoFecha" /></label>
               <label class="field full-width"><span>Motivo Egreso</span><textarea rows="2" v-model="form.egresoMotivo"></textarea></label>
             </div>
@@ -97,7 +116,7 @@
               :class="{ 'btn-disabled': !isFormValid }"
             >
               <span v-if="saving" class="loader"></span>
-              {{ saving ? 'Guardando...' : 'Guardar y Cerrar' }}
+              {{ saving ? 'Guardando...' : 'Guardar' }}
             </button>
           </div>
         </form>
@@ -122,13 +141,13 @@ const emptyForm = () => ({
   adolescenteId: null, delitoId: null, numeroCausa: "", juez: "", defensor: "", fiscal: "",
   medidas: "", boletaPreventivo: "", boletaCarcel: "", fechaInicio: "", fechaAudiencia: "", 
   fechaSentencia: "", tiempoAnio: 0, tiempoMes: 0, sentenciaDia: 0, fechaFin: "", 
-  fecha60: "", fecha80: "", recApelMod: "", RecApelFecha: "", casacionRecurso: "", 
+  fecha60: "", fecha80: "", recApelMod: "", RecApelFecha: "", casacionRecurso: "n", 
   casacionFecha: "", egresoFecha: "", egresoMotivo: "",
 });
 
 const form = reactive(emptyForm());
 
-// --- BÚSQUEDA DE DELITOS (CARGA COMPLETA AL INICIO) ---
+// --- BÚSQUEDA DE DELITOS ---
 const selectDelito = (d) => {
   form.delitoId = d.id;
   delitoQuery.value = d.nombre;
@@ -139,17 +158,22 @@ const filteredDelitos = computed(() => {
   const query = delitoQuery.value.toLowerCase();
   return delitos.value
     .filter(d => d.nombre.toLowerCase().includes(query))
-    .slice(0, 10); // Mostramos solo los primeros 10 que coincidan
+    .slice(0, 10);
 });
 
 onMounted(async () => {
-  // Cargamos una lista grande de delitos para filtrar localmente sin problemas de página
   const { data } = await getDelitos({ size: 1000 });
   delitos.value = data?.data || data || [];
 });
 
 const handleSaveInternal = () => {
   const payload = JSON.parse(JSON.stringify(form));
+  
+  // Limpieza estricta: Si casación es 'n', la fecha debe ir nula
+  if (payload.casacionRecurso === 'n') {
+    payload.casacionFecha = null;
+  }
+
   const toISO = (d) => (d ? new Date(d).toISOString() : null);
   payload.RecApelFecha = toISO(payload.RecApelFecha);
   payload.casacionFecha = toISO(payload.casacionFecha);
@@ -209,8 +233,6 @@ const isFormValid = computed(() => {
     form.fechaInicio
   );
 });
-
-
 </script>
 
 <style scoped>
@@ -239,58 +261,14 @@ const isFormValid = computed(() => {
 .loader { width: 14px; height: 14px; border: 2px solid #FFF; border-bottom-color: transparent; border-radius: 50%; display: inline-block; animation: rotation 1s linear infinite; margin-right: 8px; }
 @keyframes rotation { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-.btn-primary:disabled,
-.btn-disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background: #94a3b8 !important; /* gris elegante */
-}
+.btn-primary:disabled, .btn-disabled { opacity: 0.5; cursor: not-allowed; background: #94a3b8 !important; }
 
 .btn-close {
-  position: relative;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: relative; width: 40px; height: 40px; border-radius: 12px; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
-
-/* Líneas de la X */
-.btn-close span {
-  position: absolute;
-  width: 18px;
-  height: 2px;
-  background: #64748b;
-  border-radius: 2px;
-  transition: all 0.2s ease;
-}
-
-.btn-close span:first-child {
-  transform: rotate(45deg);
-}
-
-.btn-close span:last-child {
-  transform: rotate(-45deg);
-}
-
-/* Hover elegante */
-.btn-close:hover {
-  background: #f1f5f9;
-}
-
-.btn-close:hover span {
-  background: #ef4444; /* rojo suave */
-}
-
-/* Disabled */
-.btn-close:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
+.btn-close span { position: absolute; width: 18px; height: 2px; background: #64748b; border-radius: 2px; transition: all 0.2s; }
+.btn-close span:first-child { transform: rotate(45deg); }
+.btn-close span:last-child { transform: rotate(-45deg); }
+.btn-close:hover { background: #f1f5f9; }
+.btn-close:hover span { background: #ef4444; }
 </style>

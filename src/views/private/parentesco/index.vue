@@ -23,7 +23,7 @@
         <div class="stat-card">
           <span class="label">Pagina</span>
           <strong>{{ currentPage }} / {{ totalPages }}</strong>
-          <span class="hint">Paginacion activa</span>
+          <span class="hint">Paginación activa</span>
         </div>
       </div>
     </section>

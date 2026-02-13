@@ -27,7 +27,7 @@
         type="button"
         @click="clearFilters"
       >
-        Limpiar
+        🧹 Limpiar
       </button>
     </div>
 
