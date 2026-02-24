@@ -1,7 +1,7 @@
 // src/api/apiClient.js
 import axios from 'axios';
 
-export const BACK_URL = 'https://snaibackend-production.up.railway.app';
+export const BACK_URL = import.meta.env.VITE_BACK_URL;
 
 export const api = axios.create({
   baseURL: BACK_URL,
